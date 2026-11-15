@@ -352,8 +352,8 @@ export function scoreOutfit(ps, mode, opts = {}) {
   if (pr.veto) return null; // one deal-breaker outweighs any number of good points
   const finish = Math.min(2, ps.filter(p => p.cat === 'Accessories').length) * 0.3; // a hat / chain finishes the look
   const st = style(ps), e = ech[0], good = st.find(([v]) => v > 0); // the caption says what works; warnings go to the builder's tip (fixTip)
-  const note = e ? `${e.p.name} picks up the ${colorName(e.p.color)} in the ${e.from.name}` : good && pr.score >= 0 ? good[1] : pr.note;
-  return { score: base + pr.score + finish + Math.min(2, ech.length) * 0.7 + st.reduce((t, [x]) => t + x, 0) + tb, note: tb >= 1 && !e ? `${note} · you wear these together` : note };
+  const note = e ? `${e.p.name} picks up the ${colorName(e.p.color)} in the ${e.from.name}` : good ? good[1] : pr.note; // never pitches a look with its flaw
+  return { score: base + pr.score + finish + Math.min(2, ech.length) * 0.7 + st.reduce((t, [x]) => t + x, 0) + tb, warn: pr.score < 0, note: tb >= 1 && !e ? `${note} · like looks you've saved` : note };
 }
 
 // Graphic/print colors: an item's `accents` are the colors in it besides its base color (the red logo on a black tee).
@@ -394,11 +394,11 @@ export const slotOf = p => Object.keys(SLOTS).find(k => SLOTS[k](p));
 export function flatLayout(slots) {
   const has = x => slots.includes(x), hat = has('Hat'), acc = has('Accessory'), layer = has('Layers');
   const y0 = hat ? 20 : 3, th = hat ? 38 : 50, side = acc ? 22 : 0, tw = 100 - side - 4, box = {};
-  if (hat) box.Hat = [39, 2, 22, 16];
+  if (hat) box.Hat = [38, 1, 24, 18];
   if (layer) { box.Layers = [2, y0, tw * 0.52, th]; box.Tops = [2 + tw * 0.52, y0 + 2, tw * 0.48, th - 4]; }
   else box.Tops = [2 + tw * 0.1, y0, tw * 0.8, th];
   if (acc) box.Accessory = [100 - side, y0 + 6, side - 2, 24];
-  const by = y0 + th + 2; box.Bottoms = [26, by, 48, 102 - by]; box.Shoes = [28, 104, 44, 19];
+  const by = y0 + th + 2; box.Bottoms = [26, by, 48, 100 - by]; box.Shoes = [24, 101, 52, 22]; // shoes big enough to read
   return Object.fromEntries(Object.entries(box).filter(([k]) => slots.includes(k)).map(([k, [x, y, w, h]]) => [k, [x, y / 1.25, w, h / 1.25].map(v => +v.toFixed(2))]));
 }
 
@@ -458,7 +458,7 @@ export function generate(items, mode, { anchor, fixed = [], palette, inspo, n = 
     const key = ps.map(p => p.id).sort().join();
     if (seen.has(key)) continue;
     const r = scoreOutfit(ps, mode, opts);
-    if (r) seen.set(key, { key, items: ps, note: r.note, score: r.score + rand() * 0.3 });
+    if (r) seen.set(key, { key, items: ps, note: r.note, warn: r.warn, score: r.score + rand() * 0.3 });
     else if (MODES[mode].score(ps, opts) != null) { // color rule passed, so the shape is what blocked it
       const pr = proportion(ps); if (pr.veto) blocked.set(pr.note, (blocked.get(pr.note) ?? 0) + 1);
     }

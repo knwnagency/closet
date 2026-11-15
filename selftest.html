@@ -30,7 +30,7 @@ if (tap('[data-action="capsules"]')) { await wait(400); log(!!d().querySelector(
 if (tap('[data-action="filters"]')) { await wait(400); fits('Filter'); await close(); }
 tap('nav [data-go="closet"]'); await wait(900); { const im = [...d().querySelectorAll('main img')]; log(im.every(i => i.complete && i.naturalWidth), `Closet photos load (${im.filter(i => i.complete && i.naturalWidth).length}/${im.length})`); }
 if (tap('.item[data-open]')) { await wait(500); log(!!d().querySelector('#sheet .pname'), 'A piece opens'); fits('Piece page'); await close(); }
-tap('nav [data-go="build"]'); await wait(900); log(!!d().querySelector('.bstack'), 'Builder shows its slots'); fits('Builder');
+tap('nav [data-go="build"]'); await wait(900); log(!!d().querySelector('.stage'), 'Builder shows the outfit stage'); fits('Builder');
 if (tap('[data-swap]')) { await wait(500); fits('Pick list'); await close(); }
 for (const t of ['Calendar', 'Week']) { tap('nav [data-go="outfits"]'); await wait(700); const b = [...d().querySelectorAll('.subnav button')].find(x => x.textContent === t); b?.click(); await wait(500); fits(`Favorites tab · ${t}`); }
 // deeper flows: select mode, long-press, capsule editing, piece Adjust, pattern review, build possibilities
@@ -40,7 +40,7 @@ if (tap('[data-action="selmode"]')) { await wait(300); tap('[data-selitem]'); aw
 if (tap('[data-action="capsules"]')) { await wait(400); if (d().querySelector('[data-capedit]')) { tap('[data-capedit]'); await wait(400); log(!!d().querySelector('#sheet .pickgrid'), 'Capsule pieces picker opens'); fits('Capsule picker'); } await close(); }
 if (tap('.item[data-open]')) { await wait(500); if (tap('[data-edit]')) { await wait(600); log(!!d().getElementById('ec'), 'Adjust photo opens'); } await close(); }
 if (d().querySelector('[data-action="patreview"]')) { tap('[data-action="patreview"]'); await wait(400); log(!!d().querySelector('[data-patset]'), 'Pattern review opens'); fits('Pattern review'); await close(); }
-tap('nav [data-go="build"]'); await wait(900); if (!d().querySelector('.bc:not(.empty)')) { tap('.starters [data-buildkey]'); await wait(800); }
+tap('nav [data-go="build"]'); await wait(900); if (!d().querySelector('.stage .sp:not(.add)')) { tap('.starters [data-buildkey]'); await wait(800); }
 if (tap('[data-action="possible"]')) { await wait(1500); fits('Outfit possibilities'); await close(); }
 tap('nav [data-go="me"]'); await wait(800); log(!!d().querySelector('[data-go="inspo"]'), 'Me links to Inspo'); fits('Me');
 log(!errors.length, errors.length ? `errors: ${errors.join(' | ')}` : 'no errors');

@@ -447,16 +447,7 @@
   .dbtns { grid-template-columns: 48px 48px minmax(0, 1fr) 48px; } .dbtns .round { height: 48px; } .dbtns .btn { height: 48px; }
   .tbar svg { width: 20px; height: 20px; stroke-width: 1.5; } .capbtn svg { width: 16px; height: 16px; }
   /* Build: stacked hat → shoes, tap a piece to change it */
-  .bstack { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; max-width: 520px; margin: 0 auto; }
-  .bc { display: flex; flex-direction: column; min-width: 0; padding: 10px 10px 4px; background: var(--tile); } .bc.wide { grid-column: 1 / -1; }
-  .bc .lab { font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-  .bc .pic { display: block; height: 200px; padding: 6px 0; } .bc.small .pic { height: 110px; } .bc.wide .pic { height: 260px; } .bc.wide.short .pic { height: 130px; }
-  .bc .pic img { width: 100%; height: 100%; object-fit: contain; filter: var(--shadow); } .bc .nm { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bc .ops { display: flex; align-items: center; margin: 2px -6px 0; } .bc .ops .mono { flex: 1; text-align: center; font-size: 11px; }
-  .bc .ops button { width: 44px; height: 44px; display: grid; place-items: center; } .bc .ops svg { width: 18px; height: 18px; }
-  .bc.empty { align-items: center; justify-content: center; gap: 2px; min-height: 150px; background: transparent; box-shadow: inset 0 0 0 1px rgb(20 20 20 / .25); color: var(--ink); }
-  .bc.empty.small { min-height: 110px; } .bc.empty.wide { min-height: 120px; } .bc.empty b { font-size: 24px; font-weight: 300; } .bc.empty span { font-size: 13px; } .bc.empty small { font-size: 11px; color: var(--muted); }
-  .bc.drop { animation: drop .4s cubic-bezier(.2, 1.4, .4, 1); } .starters { margin: 0 -18px 12px; } .resume { margin: 0 0 12px; }
+  .starters { margin: 0 -18px 12px; } .resume { margin: 0 0 12px; }
   /* closet: more room for the clothes */
   .item .ph { padding: 7%; } .shelf .item { flex-basis: 150px; }
   /* favorites */
@@ -561,13 +552,42 @@
   .streaktag { min-height: 44px; } .ctbar { margin: 0 0 12px; } .revimg { height: 42dvh; background: var(--tile); border-radius: var(--rad); display: grid; place-items: center; padding: 16px; } .revimg img { max-width: 100%; max-height: 100%; object-fit: contain; filter: var(--shadow); } .revname { font-size: 15px; }
   /* Today: the card leaves room for its buttons on an iPhone */
   .dcard .flatwrap { width: min(100%, calc(44dvh * .8)); margin: 0 auto 10px; } .dcard .tags { flex-wrap: nowrap; overflow: hidden; } .morelike { flex: none; }
-  /* photo lost on this phone */
-  .nophoto { display: grid; place-items: center; align-content: center; gap: 4px; width: 100%; height: 100%; color: var(--muted); font-size: 13px; text-align: center; box-shadow: inset 0 0 0 1px var(--hair); border-radius: 12px; }
-  .nophoto small { font-size: 11px; text-decoration: underline; }
   /* "see what you can make": a big decision area inside the piece page */
   .decide { margin: 4px -18px 0; padding: 0 18px; } .decide .deck { margin: 0 -18px; padding: 0 18px; } .decide .dcard.slide { flex-basis: 86%; }
   .decide .flatwrap { width: 100%; } .madewhy { margin: 0 0 10px; font-size: 13px; color: var(--muted); } .decide .row .btn { height: 48px; }
-  /* Build: big clothes */
-  .bstack { gap: 10px; } .bc .pic { height: 300px; } .bc.wide .pic { height: 330px; } .bc.wide.short .pic { height: 180px; } .bc.small .pic { height: 150px; }
-  .bstack.layered .bc:not(.wide):not(.small) .pic { height: 280px; } .bc.empty { min-height: 220px; } .bc.empty.wide { min-height: 260px; } .bc.empty.wide.short { min-height: 160px; }
   .addopt { display: flex; gap: 6px; flex-wrap: wrap; max-width: 520px; margin: 10px auto 0; } .addopt:empty { display: none; }
+  /* ============ v4.2 ============ */
+  /* Build: the whole outfit on one big flat lay. Tap a piece to swap it; slim rows below cycle each slot. */
+  .build .flat.stage { width: min(100%, calc(56dvh * .75)); aspect-ratio: 3 / 4; margin: 0 auto 12px; max-width: none; }
+  .stage .sp { position: absolute; display: block; padding: 0; } .stage .sp img { width: 100%; height: 100%; object-fit: contain; filter: var(--shadow); }
+  .stage .sp.drop { animation: drop .4s cubic-bezier(.2, 1.4, .4, 1); }
+  .stage .sp.add { display: grid; place-items: center; align-content: center; gap: 4px; border-radius: 14px; box-shadow: inset 0 0 0 1.5px rgb(26 25 23 / .18); color: var(--muted); font-size: 13px; }
+  .stage .sp.add svg { width: 48px; height: 48px; fill: rgb(26 25 23 / .06); stroke: rgb(26 25 23 / .25); stroke-width: .6; } .stage .sp.add:disabled { opacity: .4; }
+  .stagehint { text-align: center; }
+  .srows { display: grid; gap: 6px; max-width: 520px; margin: 0 auto; }
+  .srow { display: flex; align-items: center; gap: 2px; padding: 0 2px 0 14px; min-height: 52px; background: var(--s1); border-radius: 14px; }
+  .srname { flex: 1; min-width: 0; text-align: left; display: grid; gap: 2px; padding: 6px 0; } .srname .lab { font: 500 11px/1 var(--mono); color: var(--muted); text-transform: lowercase; }
+  .srname b { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .srow .ops { display: flex; align-items: center; } .srow .ops .mono { min-width: 34px; text-align: center; font-size: 11px; }
+  .srow .ops button { width: 40px; height: 44px; display: grid; place-items: center; } .srow .ops svg { width: 18px; height: 18px; } .srow .ops button:disabled { opacity: .25; }
+  /* Piece page: the photo leads; photo fixes in reach */
+  .sheet .hero { height: 46dvh; padding: 28px; } dialog.sheet:has(.hero) { min-height: 86dvh; } dialog.sheet:focus { outline: none; }
+  .photofix { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0 0; } .photofix .mono { width: 100%; }
+  /* Closet: one row of controls, then search */
+  .tbar.ctrl { overflow-x: auto; scrollbar-width: none; margin: 0 -18px 8px; padding: 0 18px; } .tbar.ctrl::-webkit-scrollbar { display: none; } .tbar.ctrl > * { flex: none; }
+  .sortsel { height: 44px; padding: 0 14px; border: 0; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--hair); background: transparent; color: var(--ink); font: 500 11px/1 var(--mono); letter-spacing: .02em; -webkit-appearance: none; appearance: none; }
+  .ctools.solo { grid-template-columns: minmax(0, 1fr); } .ctools input { font-size: 16px; }
+  /* one lowercase voice; names keep their own case */
+  .item span, .nudge b, .plus, .day .plus, .bars div, .pickh, .weekbar, .light, .pill, .sheet .tools button, .seeall, .meta p, .dmeta p, .chip, .empty h2, .gap-top b, .wish b, .badge b, .strip .none, .shop, .cell .cname, #toast, #toast button, .update, .update button, .capbar button, .ring span { text-transform: lowercase; letter-spacing: .02em; }
+  .pname, .pickgrid span, .recap b, .capsel b, .cvs.empty span, .pal div, .palrow button { text-transform: none; letter-spacing: 0; }
+  .pname::first-letter { text-transform: uppercase; } .nc { text-transform: none; }
+  /* update banner: a light pill at the top, never over the buttons */
+  .update { top: calc(env(safe-area-inset-top) + 8px); bottom: auto; background: var(--bg); color: var(--ink); border-radius: 999px; box-shadow: 0 6px 24px rgb(0 0 0 / .12), inset 0 0 0 1px var(--hair); font: 500 13px/1 var(--display, inherit); padding: 6px 6px 6px 16px; }
+  .update button { color: var(--bg); background: var(--ink); box-shadow: none; border-radius: 999px; height: 36px; padding: 0 16px; }
+  /* Me: quiet bars */
+  .bars i { height: 4px; border-radius: 2px; background: var(--s1); } .bars i b { background: var(--muted); border-radius: 2px; } .bars div { font-weight: 500; }
+  /* week: readable empty days */
+  .day .plus { color: var(--muted); font-weight: 500; }
+  /* Today: the card + Wear button fit one iPhone screen */
+  .wxcard { grid-template-columns: 28px auto minmax(0, 1fr); padding: 8px 12px; gap: 10px; } .wxi svg { width: 22px; height: 22px; } .wxt b { font-size: 18px; } .wxl { font-size: 12px; line-height: 1.3; }
+  .dcard .flatwrap { width: min(100%, calc(37dvh * .8)); } .dcard .tags { align-items: center; } .dcard .tags .morelike { min-height: 28px; height: 28px; }
