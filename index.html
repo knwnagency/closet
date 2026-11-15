@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#f0efeb" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#111110" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f0efeb">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
 <meta name="apple-mobile-web-app-title" content="Closet">
@@ -366,8 +366,8 @@
   :root { --bg: #f0efeb; --s1: #fafaf7; --tile: #e2e1dc; --ink: #0c0c0c; --muted: #55554f; --hair: rgb(12 12 12 / .14); --accent: #ff4d00; --bad: #c2341b;
     --display: Anton, "HelveticaNeue-CondensedBlack", "Arial Narrow", Impact, sans-serif; --mono: ui-monospace, "SF Mono", Menlo, monospace; --r: 0px;
     --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    --shadow: drop-shadow(0 5px 6px rgb(0 0 0 / .2)); color-scheme: light; }
-  @media (prefers-color-scheme: dark) { :root { --bg: #111110; --s1: #1b1b19; --tile: #232320; --ink: #f1f0ec; --muted: #a6a59e; --hair: rgb(241 240 236 / .14); --bad: #ff7a5c; color-scheme: dark; --shadow: drop-shadow(0 5px 8px rgb(0 0 0 / .55)); } }
+    --shadow: drop-shadow(0 5px 6px rgb(0 0 0 / .2)); color-scheme: light; } /* light only: the user turned dark mode off */
+  
   body { font-size: 15px; }
   h1, .display { font-family: var(--display); font-weight: 400; text-transform: uppercase; letter-spacing: .005em; line-height: .92; }
   h1 { font-size: 46px; } .pickhead h2 { font-family: var(--display); font-weight: 400; font-size: 30px; letter-spacing: .01em; }
@@ -392,12 +392,10 @@
   .flat { background-color: color-mix(in srgb, var(--tint, var(--tile)) 16%, var(--tile)); }
   /* nav: black bar, orange dot */
   nav { background: var(--ink); border-top: 0; } nav .tabs button { color: rgb(255 255 255 / .55); font-size: 11px; } nav .tabs button.on { color: #fff; } nav .tabs button.on::after { background: var(--accent); width: 6px; height: 6px; margin-left: -3px; border-radius: 0; }
-  @media (prefers-color-scheme: dark) { nav { background: #000; } }
+  
   nav .add { background: var(--accent); color: #fff; }
-  /* dark-mode fixes for colors that were hard-coded */
-  /* dark mode: clothes still sit on a light studio surface, so black pieces don't vanish */
-  @media (prefers-color-scheme: dark) { :root { --tile: #d6d5d0; } .item b, .item span { color: var(--ink); } .pickgrid span { color: #0c0c0c; } .cday span { color: #0c0c0c; } }
-  @media (prefers-color-scheme: dark) { .verdict.bad, .why-list b.neg { color: var(--bad); } dialog::backdrop { background: rgb(0 0 0 / .6); } .wheel { filter: brightness(.95); } }
+      
+  
   #toast { font-family: var(--mono); display: flex; align-items: center; gap: 14px; white-space: nowrap; } #toast button { color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 0 2px; height: 28px; }
   /* Today */
   .thead { margin-bottom: 12px; } .tbar { display: flex; gap: 5px; align-items: center; margin: 0 0 14px; } .tbar .sp { flex: 1; } .tbar svg { width: 16px; height: 16px; }
@@ -446,11 +444,17 @@
   .capacts { display: flex; } .capacts .icon { width: 40px; } .capacts .icon svg { width: 18px; height: 18px; } .capacts .armed svg { stroke: var(--bad); }
   .caps > .mono { margin-top: 14px; }
   .recap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 0 0 14px; } .recap > div { background: var(--ink); color: var(--bg); padding: 10px; min-width: 0; }
-  .recap .mono { color: rgb(255 255 255 / .6); font-size: 10px; } @media (prefers-color-scheme: dark) { .recap .mono { color: rgb(0 0 0 / .55); } }
+  .recap .mono { color: rgb(255 255 255 / .6); font-size: 10px; } 
   .recap b { display: block; font-family: var(--display); font-weight: 400; font-size: 18px; line-height: 1; margin-top: 4px; text-transform: uppercase; overflow-wrap: anywhere; } .recap small { font-size: 11px; }
   .cday .selfie { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; } .dayview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; } .dayview:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
   .selfie.big { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; } .wxcopy { margin: -6px 0 12px; font-size: 13px; color: var(--muted); }
   .selbar select { max-width: 104px; }
+  /* favorites */
+  .favbtn { display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 10px; box-shadow: inset 0 0 0 2px var(--ink); font: 700 13px/1 var(--mono); } .favbtn svg { width: 16px; height: 16px; fill: var(--accent); stroke: var(--accent); }
+  .feed.favs .outfit { background: var(--s1); padding: 8px; box-shadow: inset 0 0 0 2px var(--ink); } .ftitle { font-size: 20px; margin: 8px 0 6px; border: 0; padding: 0; letter-spacing: .01em; font-family: var(--display); font-weight: 400; }
+  .facts { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 4px; align-items: center; } .facts .btn { height: 40px; padding: 0 8px; } .facts .icon.on svg { fill: var(--accent); stroke: var(--accent); }
+  .feed.favs > .outfit:first-child { grid-column: auto; } .feed.favs > .outfit:first-child .flat { max-width: none; }
+  .seeall { font: 600 11px/1 var(--mono); text-transform: uppercase; color: var(--accent); min-height: 32px; }
   /* update banner */
   .update { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 70px); z-index: 8; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; background: var(--accent); color: #fff; font-family: var(--mono); font-size: 12px; font-weight: 700; text-transform: uppercase; }
   .update button { color: #fff; box-shadow: inset 0 0 0 2px #fff; height: 36px; padding: 0 12px; font-weight: 700; }
@@ -480,7 +484,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, combo, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.15 · v3.1'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.15 · v3.2'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -836,6 +840,10 @@ function flat(items) {
   }).join('')}</div>`;
 }
 
+// A saved look: its vibe as the title, Wear it right there, tap the picture to open it in the builder.
+function favCard(o) { const [title] = vibeOf({ ...o, mode: S.saved.find(s => s.key === o.key)?.mode }), worn = S.log.find(l => l.day === dayKey())?.key === o.key;
+  return `<article class="outfit fav" style="--tint:${tintOf(o.items)}"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open ${esc(title)} in the builder">${flat(o.items)}</button>
+    <h3 class="display ftitle">${esc(title)}</h3><div class="facts"><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${o.key}">${worn ? 'Worn today' : 'Wear it'}</button><button class="icon on" data-save="${o.key}" aria-label="Remove from favorites">${heart}</button></div></article>`; }
 function outfitCard(o) {
   const isSaved = S.saved.some(s => s.key === o.key);
   return `<article class="outfit"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in builder">${flat(o.items)}</button>
@@ -892,7 +900,7 @@ function outfitsView() {
   if (S.tab === 'saved') {
     const inC = o => !c || o.items.every(p => c.ids.includes(p.id)); // in a collection: only favorites made entirely from it
     const list = S.saved.map(s => ({ key: s.key, items: s.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items) && inC(o)); // a piece was deleted or re-tagged
-    return top + (list.length ? `<div class="feed">${list.map(outfitCard).join('')}</div>`
+    return top + (list.length ? `<p class="sub">${list.length} saved look${list.length > 1 ? 's' : ''}${c ? ` from ${esc(c.name)}` : ''}. Tap one to open it in the builder.</p><div class="feed favs">${list.map(o => favCard(o)).join('')}</div>`
       : `<div class="empty"><h2>No favorites ${c ? `in ${esc(c.name)} ` : ''}yet</h2><p>Swipe right on a look in Today, or tap Save in the builder. Your keepers land here.</p><button class="btn" data-go="today">Go to Today</button></div>`);
   }
   if (!complete(items)) return top + `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs at least a top, bottoms and shoes.` : 'Add at least one top, one bottom and one pair of shoes to start getting outfits.'}</p>
@@ -966,7 +974,7 @@ function todayView() {
     setTimeout(() => toast(S.profile.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up', { label: 'Back up', fn: exportBackup }), 900); } // once a day, a week after the last backup
   const date = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const nf = (S.mode !== 'today' ? 1 : 0) + (S.occ ? 1 : 0);
-  const top = `<header class="thead"><div><div class="eyebrow">${greet()} · ${date}</div><h1>Today</h1></div><div class="right">${streakChip()}</div></header>
+  const top = `<header class="thead"><div><div class="eyebrow">${greet()} · ${date}</div><h1>Today</h1></div><div class="right">${`<button class="favbtn" data-favs aria-label="Favorites, ${S.saved.length} saved">${heart}<b>${S.saved.length}</b></button>`}${streakChip()}</div></header>
     <div class="tbar">${capBtn()}${w ? `<span class="tag" title="${esc(wxLine(w))}">${tempText(w.t)} ${esc(WX[w.code] ?? '')}</span>${w.lo != null && w.lo < w.t - 6 ? `<span class="tag o">${tempText(w.lo)} later</span>` : ''}` : `<button class="tag o" data-action="weather">+ Weather</button>`}
       <span class="sp"></span><button class="tag o" data-action="filters" aria-label="Filter">${ic('filter')}${nf ? ` ${nf}` : ''}</button><button class="tag o" data-action="shuffle" aria-label="Shuffle">${ic('shuffle')}</button></div>`;
   if (!complete(items)) return top + `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs at least a top, bottoms and shoes.` : 'Add at least one top, one bottom and one pair of shoes. Then this is where your looks land every morning.'}</p>
@@ -1017,8 +1025,8 @@ const mini = (r, on) => { const items = r.ids.map(byId).filter(Boolean);
   return complete(items) ? `<div class="look"><button data-buildkey="${r.key}" aria-label="Open look">${flat(items)}</button><button class="icon ${on ? 'on' : ''}" data-save="${r.key}" aria-label="Favorite">${heart}</button></div>` : ''; };
 // What you actually wore (logged with Wear today or on the calendar), newest first. Looks you only glanced at in the builder don't count.
 const wornLooks = () => S.log.slice().sort((a, b) => b.day.localeCompare(a.day)).filter((l, i, a) => a.findIndex(x => x.key === l.key) === i);
-const recentHtml = () => { const list = wornLooks().filter(h => h.key !== keyOf(S.build)).slice(0, 12);
-  return `<div id="recent">${list.length ? `<div class="looks-h"><span>Recently worn</span><span>tap to wear again</span></div><div class="looks">${list.map(h => mini(h, isFav(h.key))).join('')}</div>` : ''}</div>`; };
+const recentHtml = () => { const list = wornLooks().filter(h => h.key !== keyOf(S.build)).slice(0, 12), favs = S.saved.filter(h => h.key !== keyOf(S.build)).slice(0, 12);
+  return `<div id="recent">${favs.length ? `<div class="looks-h"><span>Favorites</span><button class="seeall" data-favs>See all ${S.saved.length} ›</button></div><div class="looks">${favs.map(h => mini(h, true)).join('')}</div>` : ''}${list.length ? `<div class="looks-h"><span>Recently worn</span><span>tap to wear again</span></div><div class="looks">${list.map(h => mini(h, isFav(h.key))).join('')}</div>` : ''}</div>`; };
 
 // What you can pick from: the collection, plus whatever the outfit is already wearing (it may come from outside it).
 const buildItems = () => [...new Set([...pool(), ...S.build])];
@@ -1309,7 +1317,7 @@ function meView() {
   const colors = Object.entries(items.reduce((t, i) => { const n = colorName(i.color); (t[n] ??= { n: 0, hex: i.color }).n++; return t; }, {})).sort((a, b) => b[1].n - a[1].n);
   const strip = list => `<div class="strip">${list.map(i => `<button data-open="${i.id}"><img src="${src(i)}" alt="${esc(i.name)}">${i.wears ? `<em>${i.wears}×</em>` : ''}</button>`).join('')}</div>`;
   return `<header><div><div class="eyebrow">${items.length} pieces</div><h1>Me</h1></div><div class="right">${streakChip()}</div></header>
-    <div class="tiles"><div><span class="mono">Pieces</span><b>${items.length}</b></div><div><span class="mono">Favorites</span><b>${S.saved.length}</b></div>
+    <div class="tiles"><div><span class="mono">Pieces</span><b>${items.length}</b></div><button data-favs><span class="mono">Favorites ›</span><b>${S.saved.length}</b></button>
       <div><span class="mono">Outfits worn</span><b>${S.log.length}</b></div><button data-go="progress"><span class="mono">Streak &amp; badges ›</span><b>${st.cur}</b></button>
       <button data-go="list"><span class="mono">Shopping list ›</span><b>${S.wish.filter(w => !w.got).length}</b></button></div>
     <h3><span>Closet value</span><span>${priced.length} of ${items.length} priced</span></h3>
@@ -1837,6 +1845,7 @@ document.addEventListener('click', async e => {
     if (k === 'dup') { const gone = it; await del('items', id); S.items = S.items.filter(i => i.id !== id); sheet.close(); render(); return toast('Deleted the duplicate', { label: 'Undo', fn: async () => { await put('items', gone); S.items.push(gone); render(); } }); }
     if (k === 'turn') { for (let i = 0; i < +v; i++) await rotate(it); delete it.turnHint; } else it[k] = k === 'fit' ? +v : v; await put('items', it); S.ideas = null; S.cs = {}; toast('Fixed'); const n = S.items.find(issueOf); if (n) openSheet(n.id); else { sheet.close(); } }
   else if (ds.tagok) { const it = byId(ds.tagok); it.tagOk = true; it.dupOk = true; delete it.turnHint; await put('items', it); const n = S.items.find(issueOf); if (n) openSheet(n.id); else openSheet(it.id); }
+  else if ('favs' in ds) { if (sheet.open) { sheet.onclose = null; sheet.close(); } S.view = 'outfits'; S.tab = 'saved'; render(); scrollTo(0, 0); }
   else if (ds.calday) openDay(ds.calday);
   else if (ds.selfie) { const i = selfieIn(); i.day = ds.selfie; i.click(); }
   else if (ds.hair) { S.profile = { k: 'me', ...S.profile, hair: S.profile?.hair === ds.hair ? null : ds.hair }; await put('profile', S.profile); syncTaste(); S.deck = null; render(); }
