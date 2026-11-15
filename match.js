@@ -62,7 +62,9 @@ const hues = ps => colored(ps).map(p => hexToHsl(p.color).h);
 // Prints that compete: a big graphic or an all-over pattern. A small chest logo doesn't count, and neither does a plain piece.
 // p.pattern: 'solid' | 'logo' | 'graphic' | 'allover'; older pieces only have p.patterned (true = graphic).
 export const patternOf = p => p.pattern ?? (p.patterned ? 'graphic' : 'solid');
-const prints = ps => ps.filter(p => patternOf(p) === 'graphic' || patternOf(p) === 'allover').length;
+// Prints are a clothes thing: a swoosh on a sneaker or a logo strap on a bag is detail, not a second print fighting the tee.
+export const PRINTABLE = ['Tops', 'Layers', 'Bottoms'];
+const prints = ps => ps.filter(p => PRINTABLE.includes(p.cat) && (patternOf(p) === 'graphic' || patternOf(p) === 'allover')).length;
 const vibe = (ps, v) => ps.filter(p => [].concat(p.vibe).includes(v)).length; // an item can carry several vibes
 const pairs = a => a.flatMap((x, i) => a.slice(i + 1).map(y => [x, y]));
 

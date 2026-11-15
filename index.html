@@ -38,10 +38,10 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges } from './progress.js';
-import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
+import { CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v4.3'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v4.4'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -138,7 +138,7 @@ const KIND_ALIAS = { 't-shirt': /\btees?\b|\bt-?shirt/i, sweater: /sweater|sweat
 const guessKind = it => Object.keys(KINDS).filter(k => KINDS[k] === it.cat).find(k => (KIND_ALIAS[k] ?? new RegExp(`\\b${k.split(/[\s-]/).pop()}`, 'i')).test(it.name));
 // Tags that contradict each other (AI guesses): a "denim jacket" filed under Tops, Air Force 1s called sleek. "It's right" silences it.
 const issueOf = it => { if (it.review) return null;
-  if ((patternOf(it) === 'graphic' || patternOf(it) === 'allover') && !it.accents?.length && !it.tagOk) return { text: 'Tagged as a print, but no print colors were found. Plain?', fix: 'pattern:solid', label: 'Mark as solid' };
+  if (PRINTABLE.includes(it.cat) && (patternOf(it) === 'graphic' || patternOf(it) === 'allover') && !it.accents?.length && !it.tagOk) return { text: 'Tagged as a print, but no print colors were found. Plain?', fix: 'pattern:solid', label: 'Mark as solid' };
   if (it.person && !it.tagOk) return { text: 'A person is in this photo, so their legs, arms or shoes come along. Erase them, or use a photo of just the piece.', fix: 'touch:1', label: 'Touch up' };
   if (it.broken) return { text: "This photo is missing on this phone. Restore it from a backup (Me › Restore backup), or take a new one.", fix: 'photo:1', label: 'New photo' };
   if (it.turnHint) return { text: 'This may be lying sideways', fix: `turn:${it.turnHint}`, label: 'Turn it upright' };
@@ -468,7 +468,7 @@ function closetView() {
   return head(`${S.items.length} pieces`, 'Closet') + `
     ${[toReview && `<button class="nudge glass" data-action="review"><div><span class="mono">AI guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>`,
     S.items.some(i => i.broken) && `<button class="nudge glass" data-action="import"><div><span class="mono">This phone lost ${S.items.filter(i => i.broken).length} photos</span><b>Restore them from a backup</b></div><span class="plus">Pick file →</span></button>`,
-    S.items.some(i => !i.pattern) && `<button class="nudge glass" data-action="patreview"><div><span class="mono">Quick check · makes print warnings accurate</span><b>Is it plain or printed? ${S.items.filter(i => !i.pattern).length} pieces</b></div><span class="plus">Start →</span></button>`,
+    S.items.some(i => !i.pattern && PRINTABLE.includes(i.cat)) && `<button class="nudge glass" data-action="patreview"><div><span class="mono">Quick check · makes print warnings accurate</span><b>Is it plain or printed? ${S.items.filter(i => !i.pattern && PRINTABLE.includes(i.cat)).length} pieces</b></div><span class="plus">Start →</span></button>`,
     issues && `<button class="nudge glass" data-action="fixtags"><div><span class="mono">Tags that don't add up</span><b>Check ${issues} piece${issues > 1 ? 's' : ''}</b></div><span class="plus">Fix →</span></button>`,
     false && `<button class="nudge glass" data-action="export"><div><span class="mono">${S.profile?.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up'}</span><b>Save a backup of ${S.items.length} pieces</b></div><span class="plus">Export →</span></button>`,
     best && `<button class="nudge glass" data-go="list" data-listtab="ideas">${ghostEl(best.ghost)}<div><span class="mono">Next best add</span><b>${esc(best.ghost.name)}</b></div><span class="plus">+${best.count} outfits</span></button>`].find(Boolean) || '' /* one banner at a time, so the clothes stay up top */}
@@ -742,8 +742,9 @@ async function shareLook(ps) {
 }
 // Pattern review: one piece at a time, four big answers, next. Only pieces from before patterns had four kinds.
 function patReview() {
-  const it = S.items.find(i => !i.pattern); if (!it) { sheet.close(); return toast('All patterns checked'); }
-  const left = S.items.filter(i => !i.pattern).length;
+  const ask = i => !i.pattern && PRINTABLE.includes(i.cat); // shoes and bags aren't asked: their logos never count as a print
+  const it = S.items.find(ask); if (!it) { sheet.close(); return toast('All patterns checked'); }
+  const left = S.items.filter(ask).length;
   showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${left} left · tap the one that fits</div><h2>Plain or printed?</h2></div>${closeBtn}</div>
     <div class="revimg"><img src="${srcFull(it)}" alt="${esc(it.name)}"></div><b class="revname">${esc(it.name)}</b>
     <div class="quick">${[['solid', 'Solid (plain)'], ['logo', 'Small logo'], ['graphic', 'Big graphic'], ['allover', 'All-over pattern (stripes, camo, plaid)']].map(([v, l]) => `<button class="btn ${v === patternOf(it) ? '' : 'ghost'}" data-patset="${it.id}|${v}">${l}</button>`).join('')}</div></div>`);
@@ -1099,7 +1100,7 @@ function openSheet(id) {
   <form>
     <div class="phead"><h2 class="display pname">${esc(it.name)}</h2>
       <div class="sees" aria-label="What your stylist sees">${[['color', `<i style="background:${it.color}"></i>${colorName(it.color)}`], ['material', it.material ?? 'material?'],
-        ['pattern', { solid: 'solid', logo: 'small logo', graphic: 'big graphic', allover: 'all-over pattern' }[patternOf(it)]], ...(it.cat === 'Accessories' ? [] : [['fit', (FITS[it.cat] ?? FITS.default)[it.fit ?? 1].toLowerCase()], ['dress', ['sporty', 'everyday', 'dressy'][dress(it)]]]), ['kind', it.kind || 'type?']]
+        ...(PRINTABLE.includes(it.cat) ? [['pattern', { solid: 'solid', logo: 'small logo', graphic: 'big graphic', allover: 'all-over pattern' }[patternOf(it)]]] : []), ...(it.cat === 'Accessories' ? [] : [['fit', (FITS[it.cat] ?? FITS.default)[it.fit ?? 1].toLowerCase()], ['dress', ['sporty', 'everyday', 'dressy'][dress(it)]]]), ['kind', it.kind || 'type?']]
         .map(([f, l]) => `<button type="button" class="see" data-field="${f}">${l}</button>`).join('')}</div>
       <div class="tags">${it.review ? `<span class="tag hot">New${left > 1 ? ` · ${n} of ${left}` : ''}</span>` : ''}${it.dirty ? '<span class="tag hot">In the laundry</span>' : ''}${stale(it) ? `<span class="tag o">Haven't worn in a while</span>` : ''}${it.bought ? `<span class="tag o">Bought ${ago(new Date(it.bought).getTime())}${it.from ? ` · ${esc(it.from)}` : ''}</span>` : ''}${(it.tags ?? []).map(t => `<span class="tag o">#${esc(t)}</span>`).join('')}</div></div>
     ${it.review ? `<div class="review"><p>The AI tagged it as above. Right?</p><div class="row"><button type="button" class="btn go" data-confirm="${it.id}">Looks right${left > 1 ? ' · next' : ''}</button><button type="button" class="btn ghost" data-action="opendetails">Fix tags</button></div></div>` : ''}
