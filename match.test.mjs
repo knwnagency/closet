@@ -196,3 +196,33 @@ console.log('fit+accents ok');
   assert.equal(m.closestOwned([cap], { cat: 'Accessories', kind: 'beanie', color: '#402d2d' }), null, 'brown cap is not a black beanie');
 }
 console.log('shop ok');
+{
+  const m = await import('./match.js'), S = await import('./style.js');
+  const it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, ...x });
+  // every combo word maps to real app color names
+  const real = new Set(Object.keys(m.SWATCHES).concat('lime', 'magenta'));
+  for (const c of S.COMBOS) for (const w of c.split(':')[0].split('+')) for (const n of (S.ALIAS[w.trim()] ?? w.trim()).split('|')) assert.ok(real.has(n), `combo word "${w}" in "${c}"`);
+  for (const t of [S.JEANS, S.TROUSERS]) for (const [k, [, ws]] of Object.entries(t)) { assert.ok(real.has(k), k); for (const w of ws.split('+')) assert.ok(S.ALIAS[w.trim()], `pairing word ${w}`); }
+  const forest = it('f', 'Tops', m.SWATCHES.forest), cream = it('c', 'Bottoms', m.SWATCHES.beige, { kind: 'trousers' }), wshoe = it('s', 'Shoes', m.SWATCHES.white, { kind: 'sneakers' });
+  assert.match(m.combo([forest, cream, wshoe]).label, /grounded/);
+  const r = m.scoreOutfit([forest, cream, wshoe], 'combos');
+  assert.ok(r && /Forest \+ cream/.test(r.note), 'combos mode + vibe note');
+  assert.equal(m.scoreOutfit([forest, it('p', 'Bottoms', m.SWATCHES.pink), wshoe], 'combos'), null, 'forest + pink is not in the book');
+  // all black = monochrome combo, shoes ignored
+  assert.match(m.combo([it('t', 'Tops', '#151515'), it('b', 'Bottoms', '#1b1a19'), wshoe]).label, /confident/);
+  // dark wash jeans + burgundy tee is a listed pairing
+  const dark = it('j', 'Bottoms', '#2c3d5a', { kind: 'jeans' }); // real dark wash, reads navy
+  assert.ok(m.style([it('t', 'Tops', m.SWATCHES.burgundy), dark, wshoe]).some(([, n]) => /Dark wash jeans with burgundy/.test(n)));
+  // double denim: one wash apart is marked down, far apart is fine
+  const mid = it('mj', 'Layers', m.SWATCHES.denim, { kind: 'denim jacket' }), light = it('lj', 'Layers', '#a9c4dd', { kind: 'denim jacket' });
+  const tee = it('t', 'Tops', m.SWATCHES.white);
+  assert.ok(m.style([tee, mid, dark, wshoe]).some(([s]) => s < 0), 'mid jacket + dark jeans = near miss');
+  assert.ok(m.style([tee, light, dark, wshoe]).some(([s, n]) => s > 0 && /far apart/.test(n)), 'light jacket + dark jeans works');
+  // builder hints
+  assert.equal(m.fixTip([it('t', 'Tops', '#7d7b78'), it('b', 'Bottoms', m.SWATCHES.navy), it('s', 'Shoes', '#f6f5f1'), it('c', 'Accessories', '#151515')]), null, 'finished fit, no tip');
+  assert.match(m.fixTip([it('t', 'Tops', '#7d7b78'), it('b', 'Bottoms', m.SWATCHES.navy), it('s', 'Shoes', '#f6f5f1')]), /Plain/);
+  assert.match(m.combo([it('t', 'Tops', '#151515'), it('b', 'Bottoms', '#7d7b78'), it('s', 'Shoes', '#151515')]).label, /stoic/, 'grey reads as grey, not taupe');
+  assert.equal(m.combo([it('t', 'Tops', m.SWATCHES.orange), it('b', 'Bottoms', '#7d7b78'), it('s', 'Shoes', m.SWATCHES.forest)]), null, 'combo must explain the orange top');
+  assert.match(m.fixTip([it('t', 'Tops', m.SWATCHES.red), it('b', 'Bottoms', m.SWATCHES.yellow), it('s', 'Shoes', m.SWATCHES.blue)]), /Busy/);
+}
+console.log('style notes ok');

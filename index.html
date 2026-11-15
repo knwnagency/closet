@@ -255,7 +255,7 @@
   /* builder */
   .build .flat { max-width: 440px; margin: 0 auto; }
   .verdict { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: -10px auto 14px; max-width: 520px; color: var(--ink); }
-  .verdict svg { width: 14px; height: 14px; flex: none; } .verdict.bad { color: #9b3b2e; }
+  .verdict svg { width: 14px; height: 14px; flex: none; } .verdict.bad { color: #9b3b2e; } .verdict.hint { color: var(--muted); margin-top: -8px; }
   .build .actions { max-width: 520px; margin: 14px auto 0; position: sticky; bottom: calc(env(safe-area-inset-bottom) + 59px); z-index: 4; background: var(--bg); padding: 8px 0; box-shadow: 0 -1px 0 var(--hair); } /* always reachable, sits above the menu */ .build .actions [data-action=planthis] { flex: 0 0 auto; padding: 0 16px; }
   .hint { text-align: center; margin: 18px auto 4px; font-size: 12px; }
   .strip { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 2px; }
@@ -341,7 +341,7 @@
 
 <script type="module">
 import { dayKey, prevDay, streaks, badges } from './progress.js';
-import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
+import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha } from './cutout.js';
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
@@ -672,7 +672,7 @@ function outfitsView() {
 const ROWS = ['Layers', 'Tops', 'Bottoms', 'Shoes'], EXTRAS = ['Hat', 'Accessory'], OPTIONAL = ['Layers', 'Hat', 'Accessory'];
 const isFav = k => S.saved.some(s => s.key === k);
 const verdictHtml = o => { const v = bestMode(o);
-  return `<p class="verdict ${v?.score == null ? 'bad' : ''}" id="verdict">${v?.score == null ? svg('M12 4 2.5 20h19L12 4zM12 10v4M12 17v.5') : svg('M5 12l5 5 9-10')}${v?.score == null ? `Doesn't work · ${esc(v?.note ?? 'needs a top, bottoms and shoes')}` : `Works as ${MODES[v.mode].label} · ${esc(v.note)}`}</p>`; };
+  return `<p class="verdict ${v?.score == null ? 'bad' : ''}" id="verdict">${v?.score == null ? svg('M12 4 2.5 20h19L12 4zM12 10v4M12 17v.5') : svg('M5 12l5 5 9-10')}${v?.score == null ? `Doesn't work · ${esc(v?.note ?? 'needs a top, bottoms and shoes')}` : `Works as ${MODES[v.mode].label} · ${esc(v.note)}`}</p>${v?.score != null && fixTip(o) ? `<p class="verdict hint">${svg('M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z')}${esc(fixTip(o))}</p>` : ''}`; };
 const actionsHtml = o => { const k = keyOf(o), worn = S.log.find(l => l.day === dayKey())?.key === k, off = complete(o) ? '' : 'disabled';
   return `<div class="actions" id="bactions"><button class="btn ${isFav(k) ? '' : 'ghost'} sm" data-save="${k}" ${off}>${isFav(k) ? '♥ Favorited' : '♡ Favorite'}</button><button class="btn ghost sm" data-action="planthis" ${off}>Plan</button><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${k}" ${off}>${worn ? 'Logged today ✓' : 'Wear today'}</button></div>`; };
 const mini = (r, on) => { const items = r.ids.map(byId).filter(Boolean);

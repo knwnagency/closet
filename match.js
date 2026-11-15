@@ -1,4 +1,5 @@
 // Color + outfit matching. Pure functions, no DOM — tested by match.test.mjs.
+import { ALIAS, COMBOS, JEANS, TROUSERS } from './style.js';
 export const CATS = ['Tops', 'Layers', 'Bottoms', 'Shoes', 'Accessories'];
 
 export function hexToHsl(hex) {
@@ -113,6 +114,16 @@ export const MODES = {
       return (up === 2 && down === 2 ? -1.5 : 0) + 3 - c + vibe(ps, 'formal') * 0.5 + vibe(ps, 'casual') * 0.3 - prints(ps) - vibe(ps, 'streetwear') * 0.5;
     },
   },
+  combos: {
+    label: 'Combos', blurb: 'Color combos from your style notes.',
+    score(ps) {
+      const c = combo(ps);
+      if (!c || prints(ps) > 1) return null;
+      const ok = new Set([...c.slots.flat(), ...ACHRO]);
+      if (names(ps).some(n => !ok.has(n))) return null; // every other piece stays black, white or grey
+      return 2.2 + c.slots.length * 0.3;
+    },
+  },
   street: {
     label: 'Streetwear', blurb: 'Sneakers, layers, one statement piece.',
     score(ps) {
@@ -187,6 +198,55 @@ export function colorDist(a, b) {
   return Math.sqrt((2 + rm / 256) * (r1 - r2) ** 2 + 4 * (g1 - g2) ** 2 + (2 + (255 - rm) / 256) * (b1 - b2) ** 2);
 }
 
+// ---------- your style notes (style.js) ----------
+const alt = w => (ALIAS[w.trim()] ?? w.trim()).split('|');
+const BOOK = COMBOS.map(c => { const [cs, label] = c.split(':'); return { text: cs.trim(), label: label.trim(), slots: cs.split('+').map(alt) }; });
+const CLOTHES = ['Tops', 'Layers', 'Bottoms', 'Shoes'], ACHRO = ['black', 'white', 'grey', 'light grey'];
+const names = ps => ps.filter(p => CLOTHES.includes(p.cat)).map(p => colorName(p.color));
+// Each slot needs its own piece (navy + navy combo can't be met by one navy tee).
+const fits = (slots, ns, used = []) => !slots.length || ns.some((n, i) => !used.includes(i) && slots[0].includes(n) && fits(slots.slice(1), ns, [...used, i]));
+// Biggest combo from the book this outfit wears. One-color combos = top, bottoms (and layer) all that color; shoes don't count.
+export function combo(ps) {
+  const ns = names(ps), body = ps.filter(p => CLOTHES.includes(p.cat) && p.cat !== 'Shoes').map(p => colorName(p.color));
+  const loud = colored(ps.filter(p => CLOTHES.includes(p.cat))).map(p => colorName(p.color)); // a combo has to explain every real color you wear
+  let best = null, top = 0;
+  for (const c of BOOK) {
+    if (!loud.every(n => c.slots.some(sl => sl.includes(n)))) continue;
+    if (!(c.slots.length === 1 ? body.length >= 2 && body.every(n => c.slots[0].includes(n)) : fits(c.slots, ns))) continue;
+    // head-to-toe one color is the whole statement; ties go to the combo worn on the body, then to exact color words (grey over "taupe")
+    const r = (c.slots.length === 1 ? 2.6 : c.slots.length + (fits(c.slots, body) ? 0.5 : 0)) - c.slots.flat().length * 0.01 + c.slots.filter(sl => ns.includes(sl[0])).length * 0.005; // ties go to the combo worn on the body, not the one leaning on white sneakers
+    if (r > top) { best = c; top = r; }
+  }
+  return best;
+}
+export const isDenim = p => /jean|denim|jort/i.test(`${p.kind ?? ''} ${p.name ?? ''}`);
+const WASH = ({ s, l }) => l > 0.85 ? 0 : l > 0.6 ? 1 : l > 0.4 ? 2 : l > 0.22 ? 3 : s < 0.15 ? 5 : 4; // white, light, mid, dark, raw, black
+const cap = s => s[0].toUpperCase() + s.slice(1);
+// Small nudges from the notes: [score, note] list, strongest first.
+export function style(ps) {
+  const out = [], c = combo(ps), b = ps.find(p => p.cat === 'Bottoms');
+  if (c) out.push([0.4, `${cap(c.text)} · ${c.label}`]);
+  const row = b && (isDenim(b) ? JEANS : TROUSERS)[colorName(b.color)];
+  const hit = row && ps.find(p => (p.cat === 'Tops' || p.cat === 'Layers') && row[1].split('+').some(w => alt(w).includes(colorName(p.color))));
+  if (hit) out.push([0.4, `${row[0]} with ${colorName(hit.color)}, a go-to pairing`]);
+  const d = ps.filter(p => (p.cat === 'Bottoms' || p.cat === 'Layers' || p.cat === 'Tops') && isDenim(p));
+  if (d.length >= 2) { // double denim: far apart or an exact match. One shade off reads as a miss.
+    const gap = Math.abs(WASH(hexToHsl(d[0].color)) - WASH(hexToHsl(d[1].color)));
+    out.push(gap >= 2 ? [0.6, 'Denim washes far apart, clearly on purpose'] : colorDist(d[0].color, d[1].color) < 30 ? [0.6, 'Same denim head to toe, a matching set']
+      : [-1.5, gap ? 'Denim washes one shade apart look like a near miss' : 'Almost-matching denim looks like a mistake']);
+  }
+  return out.sort((x, y) => Math.abs(y[0]) - Math.abs(x[0]));
+}
+
+// One fix for a fit that feels off (builder hint). null = nothing to add.
+export function fixTip(ps) {
+  const hs = new Set(colored(ps).map(p => colorName(p.color)));
+  if (hs.size >= 3) return 'Busy? Keep one main color, let the rest go neutral';
+  if (!hs.size && !prints(ps) && !ps.some(p => p.cat === 'Accessories')) return 'Plain? Add a cap, a chain or one pop of color';
+  if (!ps.some(p => p.cat === 'Accessories')) return 'Details make the fit: add a hat, chain or bag';
+  return null;
+}
+
 // Returns { score, note } or null. Color mode decides if it's allowed; proportions can veto or boost.
 export function scoreOutfit(ps, mode, opts = {}) {
   if (vibe(ps, 'formal') && vibe(ps, 'athletic')) return null; // suit + joggers: never
@@ -196,8 +256,9 @@ export function scoreOutfit(ps, mode, opts = {}) {
   const pr = proportion(ps);
   if (pr.veto) return null; // one deal-breaker outweighs any number of good points
   const finish = Math.min(2, ps.filter(p => p.cat === 'Accessories').length) * 0.3; // a hat / chain finishes the look
-  const e = ech[0], note = e ? `${e.p.name} picks up the ${colorName(e.p.color)} in the ${e.from.name}` : pr.note;
-  return { score: base + pr.score + finish + Math.min(2, ech.length) * 0.7, note };
+  const st = style(ps), e = ech[0]; // a shape problem outranks a nice combo; otherwise your notes explain the fit
+  const note = e ? `${e.p.name} picks up the ${colorName(e.p.color)} in the ${e.from.name}` : st[0] && (st[0][0] < 0 || pr.score >= 0) ? st[0][1] : pr.note;
+  return { score: base + pr.score + finish + Math.min(2, ech.length) * 0.7 + st.reduce((t, [x]) => t + x, 0), note };
 }
 
 // Graphic/print colors: an item's `accents` are the colors in it besides its base color (the red logo on a black tee).
