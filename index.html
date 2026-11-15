@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v4.2'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v4.3'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -705,11 +705,16 @@ function carouselFor(slot, cur) {
   return cs;
 }
 // Shuffle: each unlocked slot gets a random pick from its 5 best matches (given what's already chosen).
+// The hat / chain / layer you're wearing stay in while the top, bottoms and shoes are picked, so the new fit is chosen to go with them
+// (picking them last used to leave no cap that matched, and the cap vanished). Then each one gets its own turn to change.
 function shuffleBuild() {
-  let next = S.build.filter(p => S.locks.has(slotOf(p)));
+  let next = S.build.filter(p => S.locks.has(slotOf(p)) || OPTIONAL.includes(slotOf(p)));
   for (const s of ['Bottoms', 'Tops', 'Shoes', 'Layers', 'Hat', 'Accessory']) {
     if (S.locks.has(s) || !S.build.some(SLOTS[s])) continue; // only refill slots you're wearing
-    const good = rankSwaps(buildItems(), next, s).filter(r => r.score != null).slice(0, 5); if (good.length) next.push(good[Math.floor(Math.random() * good.length)].item);
+    const cur = S.build.find(SLOTS[s]), rest = next.filter(p => !SLOTS[s](p));
+    const good = rankSwaps(buildItems(), rest, s).filter(r => r.score != null).slice(0, 5), fresh = good.filter(r => r.item.id !== cur.id);
+    const opts = fresh.length ? fresh : good; // something different whenever anything else fits
+    next = [...rest, opts.length ? opts[Math.floor(Math.random() * opts.length)].item : cur];
   }
   if (!complete(next)) return toast('Not enough options to shuffle'); setBuild(next);
 }
