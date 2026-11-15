@@ -331,3 +331,20 @@ console.log('batch2 ok');
   assert.equal(picks.length, 6, 'a full deck'); assert.equal(count('Tops'), 1, 'a new top on every card'); assert.ok(count('Bottoms') <= 2, 'pants at most twice');
 }
 console.log('variety ok');
+{
+  const m = await import('./match.js');
+  const it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, ...x });
+  // olive cargos and cream pants were reading grey
+  assert.equal(m.colorName('#736a53'), 'olive'); assert.equal(m.colorName('#b7b3a8'), 'beige'); assert.equal(m.colorName('#b1afaf'), 'light grey'); assert.equal(m.colorName('#73726e'), 'grey');
+  for (const [n, h] of Object.entries(m.SWATCHES)) assert.equal(m.colorName(h), n, `swatch ${n} still names itself`);
+  assert.equal(m.knownFit({ cat: 'Tops', name: 'Essentials cream tee', fit: 1 }), 2, 'Essentials tees run oversized');
+  const tee = it('t', 'Tops', '#f6f5f1', { kind: 't-shirt' }), pants = it('p', 'Bottoms', '#151515', { kind: 'jeans' }), kicks = it('k', 'Shoes', '#151515', { kind: 'sneakers' });
+  assert.ok(m.style([tee, pants, kicks, it('c', 'Accessories', '#c0c0c0', { kind: 'chain necklace' })]).some(([v, n]) => v > 0 && /Chain over/.test(n)));
+  assert.ok(m.style([tee, pants, kicks, it('bt', 'Accessories', '#151515', { kind: 'belt' })]).some(([v, n]) => v > 0 && /Belt repeats the black/.test(n)));
+  assert.ok(m.style([tee, it('sh', 'Bottoms', '#1e2a45', { kind: 'shorts' }), it('bo', 'Shoes', '#5b3e2a', { kind: 'boots' })]).some(([v]) => v < 0));
+  m.setTaste({ hair: 'black' }); assert.ok(m.style([tee, pants, kicks]).some(([, n]) => /hair/.test(n)));
+  m.setTaste({ likedColors: [['black', 'olive'], ['black', 'olive']] });
+  const ol = it('o', 'Bottoms', '#5c5b33', { kind: 'cargo pants' }), bk = it('bt2', 'Tops', '#151515', { kind: 't-shirt' });
+  const withLike = m.scoreOutfit([bk, ol, kicks], 'classic').score; m.setTaste(); assert.ok(withLike > m.scoreOutfit([bk, ol, kicks], 'classic').score, 'colors you keep choosing score higher');
+}
+console.log('v3 rules ok');

@@ -29,6 +29,8 @@ export function colorName(hex) {
   const { h, s, l } = hexToHsl(hex);
   if (l < 0.13 || (l < 0.25 && s < 0.25)) return 'black'; // a washed black tee is still black, not grey
   if (l > 0.9) return 'white';
+  // warm, barely-colored: olive cargos and cream pants photograph almost grey, but they're olive and cream (true greys sit near s 0.02)
+  if (s >= 0.07 && s < 0.18 && h >= 30 && h <= 65 && l > 0.2 && l < 0.85) return l >= 0.55 ? 'beige' : h >= 40 ? 'olive' : 'brown';
   if (s < 0.18) return l > 0.6 ? 'light grey' : 'grey';
   if (h >= 190 && h <= 250 && l < 0.3) return 'navy';
   if (h >= 190 && h <= 250 && s < 0.45) return 'denim';
@@ -261,6 +263,20 @@ export function style(ps) {
     else if (fam.length === 1 && fam[0][1] <= 0.15) out.push([0.3, `${cap(fam[0][0])} as the small pop, the 10 in 60/30/10`]);
   }
   if (prints(ps) >= 2) out.push([-0.6, 'Two prints compete, let one stand out']);
+  // jewelry and necklines: a chain shows on a tee, tank or open collar; it disappears under a hood or turtleneck
+  const chain = ps.find(p => p.cat === 'Accessories' && /chain|necklace|pendant/i.test(`${p.kind} ${p.name}`)), neck = layer && /hoodie|turtleneck|zip/i.test(`${layer.kind} ${layer.name}`) ? layer : top;
+  if (chain && neck) /turtleneck|hoodie/i.test(`${neck.kind} ${neck.name}`) ? out.push([-0.2, 'A chain gets lost under a high neck']) : /tee|t-shirt|tank|button|polo|jersey/i.test(`${neck.kind} ${neck.name}`) && out.push([0.2, `Chain over a ${/button|polo/i.test(neck.kind) ? 'open collar' : 'crewneck'}`]);
+  // belts: blend in, or repeat a color from the fit (shoes, bag, cap)
+  const belt = ps.find(p => p.cat === 'Accessories' && /belt/i.test(`${p.kind} ${p.name}`));
+  if (belt) { const n = colorName(belt.color), rep = ps.find(p => p !== belt && p.cat !== 'Bottoms' && colorName(p.color) === n); if (rep) out.push([0.3, `Belt repeats the ${n} in the ${rep.kind || rep.cat.toLowerCase()}`]); }
+  // layering: short over long (a cropped jacket over a regular top)
+  if (layer && top && layer.fit === 3 && top.fit !== 3) out.push([0.3, 'Short over long, the layering rule']);
+  // shorts: boots are a hard look, clean sneakers or loafers work
+  if (b && /short/i.test(`${b.kind} ${b.name}`) && shoes) /boot/i.test(`${shoes.kind} ${shoes.name}`) ? out.push([-0.6, 'Boots with shorts is a hard look']) : /sneaker|loafer|sandal|slide/i.test(`${shoes.kind} ${shoes.name}`) && out.push([0.2, `Shorts with ${shoes.kind || 'clean shoes'}`]);
+  // your hair (Me): match it or contrast it near the face
+  const HAIR = { blonde: ['purple', 'black', 'navy'], red: ['forest', 'green', 'olive', 'blue', 'navy'], brown: ['blue', 'light blue', 'navy', 'denim', 'teal'], black: ['white', 'light grey', 'beige', 'light blue', 'pink', 'yellow'], grey: ['navy', 'burgundy', 'black'] };
+  const faceCol = ps.filter(p => p.cat === 'Tops' || p.cat === 'Layers' || isHat(p)).map(p => colorName(p.color));
+  if (TASTE.hair && faceCol.some(n => HAIR[TASTE.hair]?.includes(n))) out.push([0.25, `Plays off your ${TASTE.hair} hair`]);
   // your palette (Me): colors that suit you near the face, colors you avoid
   const face = ps.filter(p => p.cat === 'Tops' || p.cat === 'Layers' || isHat(p)).map(p => colorName(p.color));
   if (face.some(n => TASTE.avoid.includes(n))) out.push([-0.6, "A color you said doesn't suit you, near your face"]);
@@ -291,21 +307,27 @@ export function fixTip(ps) {
 // ---------- your taste: learned from favorites, wears and "not for me" ----------
 // Pairs of pieces you keep putting together score higher; pairs from looks you rejected score lower; a rejected look never comes back.
 // ponytail: module-level state set by the app (setTaste) so every scorer sees it without threading opts through. Fine for one user.
-let TASTE = { pair: new Map(), nope: new Set(), good: [], avoid: [] };
-export function setTaste({ liked = [], worn = [], nope = [], good = [], avoid = [] } = {}) { // liked/worn/nope: lists of piece-id arrays. good/avoid: color names
+let TASTE = { pair: new Map(), nope: new Set(), good: [], avoid: [], hair: null, cpair: new Map() };
+// liked/worn/nope: lists of piece-id arrays. good/avoid: color names. hair: black|brown|blonde|red|grey. likedColors: color-name lists of looks you saved or wore.
+export function setTaste({ liked = [], worn = [], nope = [], good = [], avoid = [], hair = null, likedColors = [] } = {}) {
   const pair = new Map(), bump = (ids, w) => { for (const [a, b] of pairs([...ids].sort())) pair.set(a + '|' + b, (pair.get(a + '|' + b) ?? 0) + w); };
   liked.forEach(ids => bump(ids, 1)); worn.forEach(ids => bump(ids, 0.5)); nope.forEach(ids => bump(ids, -1));
-  TASTE = { pair, nope: new Set(nope.map(ids => [...ids].sort().join())), good, avoid };
+  const cpair = new Map(); // color pairs you keep choosing (black + olive), not just piece pairs
+  for (const ns of likedColors) for (const [a, b] of pairs([...new Set(ns)].sort())) cpair.set(a + '|' + b, (cpair.get(a + '|' + b) ?? 0) + 1);
+  TASTE = { pair, nope: new Set(nope.map(ids => [...ids].sort().join())), good, avoid, hair, cpair };
 }
 const taste = ps => {
   const ids = ps.map(p => p.id).sort(); if (TASTE.nope.has(ids.join())) return null;
   const t = pairs(ids).reduce((s, [a, b]) => s + (TASTE.pair.get(a + '|' + b) ?? 0), 0);
-  return Math.max(-1.5, Math.min(1.5, t * 0.25));
+  const cs = pairs([...new Set(ps.filter(p => p.cat !== 'Accessories').map(p => colorName(p.color)))].sort()).reduce((s, [a, b]) => s + (TASTE.cpair.get(a + '|' + b) ?? 0), 0);
+  return Math.max(-1.5, Math.min(1.5, t * 0.25 + Math.min(0.6, cs * 0.1)));
 };
 
 // Known sneakers have a known shape: the AI's fit guess shouldn't call Air Force 1s sleek. null = not a model we know.
 const SHOE_FITS = [[/yeezy ?(500|700)|foam|bapesta|triple ?s|platform|chunky|runner/i, 2], [/air ?force|af1|dunk|jordan ?1|aj1|350|vans|converse|chuck/i, 1], [/loafer|oxford|derby|chelsea|samba|gazelle|spezial|ballet/i, 0]];
-export const knownFit = p => p.cat === 'Shoes' ? SHOE_FITS.find(([re]) => re.test(`${p.name ?? ''}`))?.[1] ?? null : null;
+const BRAND_FITS = [[/essentials|fear of god|\bfog\b|gallery dept|balenciaga|vetements|represent|cole buxton|entire studios/i, 2]]; // tops these brands cut oversized
+export const knownFit = p => p.cat === 'Shoes' ? SHOE_FITS.find(([re]) => re.test(`${p.name ?? ''}`))?.[1] ?? null
+  : (p.cat === 'Tops' || p.cat === 'Layers') && p.fit !== 3 ? BRAND_FITS.find(([re]) => re.test(`${p.brand ?? ''} ${p.name ?? ''}`))?.[1] ?? null : null;
 
 // Returns { score, note } or null. Color mode decides if it's allowed; proportions can veto or boost.
 export function scoreOutfit(ps, mode, opts = {}) {

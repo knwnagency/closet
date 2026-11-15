@@ -1,0 +1,39 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Closet self-test</title>
+<style>
+  body { margin: 0; font: 14px/1.4 ui-monospace, Menlo, monospace; background: #f0efeb; color: #0c0c0c; display: flex; gap: 16px; padding: 16px; flex-wrap: wrap; }
+  iframe { width: 390px; height: 844px; border: 2px solid #0c0c0c; background: #fff; flex: none; }
+  ol { margin: 0; padding-left: 20px; min-width: 300px; } .ok { color: #1a7f37; } .bad { color: #c2341b; font-weight: 700; } h1 { font-size: 16px; margin: 0 0 8px; }
+</style>
+<!-- Taps through every screen of the real app at iPhone width (390px) and checks: nothing wider than the screen, the screen
+     actually changed, sheets open, no errors. Open /selftest.html after a change; it runs on your real closet in this browser. -->
+<iframe id="f" src="./"></iframe>
+<div><h1 id="sum">Running…</h1><ol id="out"></ol></div>
+<script type="module">
+const f = document.getElementById('f'), out = document.getElementById('out'), wait = ms => new Promise(r => setTimeout(r, ms));
+let fails = 0; const errors = [];
+const log = (ok, msg) => { const li = document.createElement('li'); li.className = ok ? 'ok' : 'bad'; li.textContent = (ok ? '✓ ' : '✕ ') + msg; out.append(li); if (!ok) fails++; };
+await new Promise(r => f.onload = r); await wait(1500);
+const w = f.contentWindow, d = () => w.document;
+w.addEventListener('error', e => errors.push(e.message)); w.addEventListener('unhandledrejection', e => errors.push(String(e.reason)));
+const fits = where => { const sw = d().documentElement.scrollWidth; log(sw <= 390, `${where}: ${sw}px wide`); const sh = d().getElementById('sheet'); if (sh.open) log(sh.scrollWidth <= 390, `${where} sheet: ${sh.scrollWidth}px wide`); };
+const tap = sel => { const el = d().querySelector(sel); if (!el) { log(false, `missing ${sel}`); return false; } el.click(); return true; };
+const close = async () => { const sh = d().getElementById('sheet'); if (sh.open) { sh.close(); await wait(300); } };
+for (const [go, title] of [['today', 'Today'], ['closet', 'Closet'], ['build', 'Build'], ['outfits', 'Calendar'], ['me', 'Me']]) {
+  tap(`nav [data-go="${go}"]`); await wait(900);
+  const h = d().querySelector('main header h1')?.textContent; log(h === title, `${title} tab opens (got "${h}")`); fits(title);
+}
+tap('nav [data-go="today"]'); await wait(900);
+log(!!d().querySelector('.dcard.live, .empty'), 'Today shows a card (or an empty state)');
+if (tap('[data-action="capsules"]')) { await wait(400); log(!!d().querySelector('.caprow'), 'Capsules sheet lists capsules'); fits('Capsules'); await close(); }
+if (tap('[data-action="filters"]')) { await wait(400); fits('Filter'); await close(); }
+tap('nav [data-go="closet"]'); await wait(900);
+if (tap('.item[data-open]')) { await wait(500); log(!!d().querySelector('#sheet .pname'), 'A piece opens'); fits('Piece page'); await close(); }
+tap('nav [data-go="build"]'); await wait(900); log(!!d().querySelector('.canvas'), 'Builder canvas shows'); fits('Builder');
+if (tap('[data-swap]')) { await wait(500); fits('Pick list'); await close(); }
+for (const t of ['Week', 'Favorites']) { tap('nav [data-go="outfits"]'); await wait(700); const b = [...d().querySelectorAll('.subnav button')].find(x => x.textContent === t); b?.click(); await wait(500); fits(`Calendar · ${t}`); }
+log(!errors.length, errors.length ? `errors: ${errors.join(' | ')}` : 'no errors');
+document.getElementById('sum').textContent = fails ? `${fails} problem${fails > 1 ? 's' : ''}` : 'All good';
+document.title = fails ? `✕ ${fails}` : '✓ all good';
+</script>
