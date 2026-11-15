@@ -347,4 +347,10 @@ console.log('variety ok');
   const ol = it('o', 'Bottoms', '#5c5b33', { kind: 'cargo pants' }), bk = it('bt2', 'Tops', '#151515', { kind: 't-shirt' });
   const withLike = m.scoreOutfit([bk, ol, kicks], 'classic').score; m.setTaste(); assert.ok(withLike > m.scoreOutfit([bk, ol, kicks], 'classic').score, 'colors you keep choosing score higher');
 }
+{ const m = await import('./match.js');
+  assert.equal(m.colorName('#37372c'), 'olive', 'dark olive trousers are not black'); assert.equal(m.colorName('#473833'), 'brown', 'dark brown trousers');
+  assert.equal(m.colorName('#2a2929'), 'black'); assert.equal(m.colorName('#1d2128'), 'black', 'black tee with a cool cast is not navy'); assert.equal(m.colorName('#1e2a45'), 'navy'); assert.equal(m.colorName('#13192f'), 'navy', 'very dark navy polo'); assert.equal(m.colorName('#151413'), 'black');
+  assert.equal(m.FITS.Bottoms[3], 'Relaxed (loose straight)'); assert.equal(m.patternOf({ patterned: true }), 'graphic'); assert.equal(m.patternOf({ pattern: 'logo', patterned: false }), 'logo');
+  const it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, ...x });
+  assert.ok(m.bestMode([it('t', 'Tops', '#151515', { pattern: 'logo' }), it('b', 'Bottoms', '#f6f5f1', { pattern: 'logo' }), it('s', 'Shoes', '#151515', { kind: 'sneakers' })]).score != null, 'black and white with small logos is not a clash'); }
 console.log('v3 rules ok');

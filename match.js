@@ -27,12 +27,17 @@ const HUES = [[15, 'red'], [40, 'orange'], [65, 'yellow'], [85, 'lime'], [172, '
 export const SWATCHES = { black: '#1b1a19', grey: '#7d7b78', 'light grey': '#c9c7c3', white: '#f6f5f1', navy: '#1e2a45', denim: '#4d6a8c', 'light blue': '#9cc3e6', blue: '#2f5fb5', teal: '#2a8085', green: '#3f7a52', forest: '#22402c', olive: '#5c5b33', sage: '#8aa877', beige: '#d8c7a6', camel: '#b2874e', brown: '#5b3e2a', rust: '#a8522b', orange: '#e2782c', yellow: '#e9c548', red: '#c0392b', burgundy: '#6b1e2a', pink: '#e9a2b9', purple: '#6c4a90' };
 export function colorName(hex) {
   const { h, s, l } = hexToHsl(hex);
-  if (l < 0.13 || (l < 0.25 && s < 0.25)) return 'black'; // a washed black tee is still black, not grey
+  if (l < 0.13) return h >= 200 && h <= 250 && s >= 0.4 && l >= 0.09 ? 'navy' : 'black'; // a very dark but clearly blue polo is navy
+  if (l < 0.25 && s < 0.25) { // dark and muted: a washed black tee is black (s ≈ 0.02), but dark olive or brown trousers keep their color
+    if (s >= 0.1 && h >= 5 && h < 100) return h >= 45 ? "olive" : "brown";
+    if (s >= 0.12 && h >= 100 && h < 170) return 'forest';
+    return 'black';
+  }
   if (l > 0.9) return 'white';
   // warm, barely-colored: olive cargos and cream pants photograph almost grey, but they're olive and cream (true greys sit near s 0.02)
   if (s >= 0.07 && s < 0.18 && h >= 30 && h <= 65 && l > 0.2 && l < 0.85) return l >= 0.55 ? 'beige' : h >= 40 ? 'olive' : 'brown';
   if (s < 0.18) return l > 0.6 ? 'light grey' : 'grey';
-  if (h >= 190 && h <= 250 && l < 0.3) return 'navy';
+  if (h >= 190 && h <= 250 && l < 0.3) return s >= 0.28 ? 'navy' : 'black'; // a black tee shot in cool light reads blue-ish, not navy
   if (h >= 190 && h <= 250 && s < 0.45) return 'denim';
   if (h >= 15 && h <= 50 && s < 0.5) return l > 0.6 ? 'beige' : l > 0.42 ? 'camel' : 'brown';
   if (h >= 50 && h <= 100 && s < 0.35 && l < 0.45) return 'olive';
@@ -54,7 +59,10 @@ export const hueDist = (a, b) => { const d = Math.abs(a - b) % 360; return Math.
 
 const colored = ps => ps.filter(p => !isNeutral(p.color));
 const hues = ps => colored(ps).map(p => hexToHsl(p.color).h);
-const prints = ps => ps.filter(p => p.patterned).length;
+// Prints that compete: a big graphic or an all-over pattern. A small chest logo doesn't count, and neither does a plain piece.
+// p.pattern: 'solid' | 'logo' | 'graphic' | 'allover'; older pieces only have p.patterned (true = graphic).
+export const patternOf = p => p.pattern ?? (p.patterned ? 'graphic' : 'solid');
+const prints = ps => ps.filter(p => patternOf(p) === 'graphic' || patternOf(p) === 'allover').length;
 const vibe = (ps, v) => ps.filter(p => [].concat(p.vibe).includes(v)).length; // an item can carry several vibes
 const pairs = a => a.flatMap((x, i) => a.slice(i + 1).map(y => [x, y]));
 
@@ -63,8 +71,11 @@ const compOff = hs => Math.min(Infinity, ...pairs(hs).map(([a, b]) => Math.abs(h
 
 // ---------- proportions ----------
 // fit: 0 slim / 1 regular / 2 baggy, named per category. Missing = regular. 3 = cropped (tops and layers): regular width, short length.
-export const FITS = { Tops: ['Fitted', 'Regular', 'Oversized', 'Cropped'], Layers: ['Fitted', 'Regular', 'Oversized', 'Cropped'], Bottoms: ['Slim', 'Straight', 'Baggy'], Shoes: ['Sleek', 'Regular', 'Chunky'], default: ['Slim', 'Regular', 'Baggy'] };
-const fit = p => p?.fit === 3 ? 1 : p?.fit ?? 1, cropped = p => p?.fit === 3;
+// Index = stored fit value. 0/1/2 drive the proportion rules (slim/regular/wide); 3 and 4 are named variants that score like 1.
+export const FITS = { Tops: ['Fitted', 'Regular', 'Oversized', 'Cropped'], Layers: ['Fitted', 'Regular', 'Oversized', 'Cropped'], Bottoms: ['Slim', 'Straight', 'Wide / baggy', 'Relaxed (loose straight)', 'Flared'],
+  Shoes: ['Sleek (low profile)', 'Regular', 'Chunky (thick sole)'], default: ['Slim', 'Regular', 'Baggy'] };
+export const FIT_ORDER = { Bottoms: [0, 1, 3, 2, 4] }; // how the picker lists them: slim → wide, then flared
+const fit = p => p?.fit === 3 || p?.fit === 4 ? 1 : p?.fit ?? 1, cropped = p => p?.fit === 3 && (p.cat === 'Tops' || p.cat === 'Layers');
 
 // Layering ladder (style notes): tank < tee/polo/shirt < knit/hoodie < jacket/overshirt < coat. Order matters: "flannel overshirt" is a jacket, not a shirt.
 const LEVELS = [[/coat|puffer|parka|trench/i, 4], [/jacket|blazer|overshirt|flannel|vest|bomber|windbreaker|cardigan/i, 3], [/sweater|hoodie|knit|crewneck|sweatshirt|zip/i, 2], [/tank/i, 0]];
@@ -375,20 +386,18 @@ export const SLOTS = {
 };
 export const slotOf = p => Object.keys(SLOTS).find(k => SLOTS[k](p));
 
-// Flat-lay boxes for a 100 × 125 card: { slot: [left%, top%, width%, height%] }. Boxes never overlap and are sized to
-// rough real-world scale (~0.62 units per cm; hat/extras/shoes ×1.25 so they still read), so a cap can't come out tee-sized.
-// Clothes stack on the left; hat, extras and shoes share the right column, spaced evenly whatever is missing.
-const SIDE = { Hat: [24, 17], Accessory: [26, 26], Shoes: [28, 22] };
+// Flat-lay boxes for a 100 × 125 card: { slot: [left%, top%, width%, height%] }, never overlapping.
+// Stacked the way it's worn: hat on top, layer + top, chain or bag beside the torso, pants, shoes at the bottom.
+// Pieces get as much room as the card allows (big and even beats true-to-scale), but a cap still stays smaller than a tee.
 export function flatLayout(slots) {
-  const layer = slots.includes('Layers'), box = {};
-  if (layer) { box.Layers = [4, 4, 43, 46]; box.Tops = [53, 6, 40, 44]; } else box.Tops = [6, 5, 44, 47];
-  box.Bottoms = layer ? [8, 56, 36, 65] : [10, 56, 36, 65];
-  const side = Object.keys(SIDE).filter(s => slots.includes(s)), col = layer ? [50, 54, 46, 68] : [55, 5, 41, 116];
-  const f = Math.min(layer ? 1 : 1.25, (col[3] - 4 * (side.length - 1)) / side.reduce((t, s) => t + SIDE[s][1], 0)); // shrink only if they can't fit; with no layer the side column is wide, so cap/chain/shoes grow into it
-  const gap = (col[3] - side.reduce((t, s) => t + SIDE[s][1] * f, 0)) / (side.length + 1);
-  let y = col[1] + gap;
-  for (const s of side) { const [w, h] = SIDE[s].map(v => v * f); box[s] = [col[0] + (col[2] - w) / 2, y, w, h]; y += h + gap; }
-  return Object.fromEntries(Object.entries(box).filter(([s]) => slots.includes(s)).map(([s, [x, y, w, h]]) => [s, [x, y / 1.25, w, h / 1.25].map(v => +v.toFixed(2))]));
+  const has = x => slots.includes(x), hat = has('Hat'), acc = has('Accessory'), layer = has('Layers');
+  const y0 = hat ? 20 : 3, th = hat ? 38 : 50, side = acc ? 22 : 0, tw = 100 - side - 4, box = {};
+  if (hat) box.Hat = [39, 2, 22, 16];
+  if (layer) { box.Layers = [2, y0, tw * 0.52, th]; box.Tops = [2 + tw * 0.52, y0 + 2, tw * 0.48, th - 4]; }
+  else box.Tops = [2 + tw * 0.1, y0, tw * 0.8, th];
+  if (acc) box.Accessory = [100 - side, y0 + 6, side - 2, 24];
+  const by = y0 + th + 2; box.Bottoms = [26, by, 48, 102 - by]; box.Shoes = [28, 104, 44, 19];
+  return Object.fromEntries(Object.entries(box).filter(([k]) => slots.includes(k)).map(([k, [x, y, w, h]]) => [k, [x, y / 1.25, w, h / 1.25].map(v => +v.toFixed(2))]));
 }
 
 // Builder: try every piece that fits `slot` in the current outfit, best first. score null = breaks every style rule.
