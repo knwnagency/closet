@@ -322,3 +322,12 @@ console.log('orient ok');
   const e = m.explain([shirt, trousers, loafers]); assert.ok(e && e.rows.length >= 2 && e.rows.some(([l]) => /Color rule/.test(l)));
 }
 console.log('batch2 ok');
+{
+  const m = await import('./match.js');
+  const it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, ...x });
+  const closet = [...Array(8)].map((_, i) => it('t' + i, 'Tops', ['#151515', '#7d7b78', '#f6f5f1', '#1e2a45'][i % 4], { kind: 't-shirt' }))
+    .concat([...Array(4)].map((_, i) => it('b' + i, 'Bottoms', ['#151515', '#1e2a45', '#7d7b78', '#d8c7a6'][i], { kind: 'jeans' })), [...Array(3)].map((_, i) => it('s' + i, 'Shoes', ['#f6f5f1', '#151515', '#7d7b78'][i], { kind: 'sneakers' })));
+  const picks = m.today(closet, { n: 6 }), count = cat => Math.max(...Object.values(picks.flatMap(o => o.items.filter(p => p.cat === cat)).reduce((t, p) => (t[p.id] = (t[p.id] ?? 0) + 1, t), {})));
+  assert.equal(picks.length, 6, 'a full deck'); assert.equal(count('Tops'), 1, 'a new top on every card'); assert.ok(count('Bottoms') <= 2, 'pants at most twice');
+}
+console.log('variety ok');

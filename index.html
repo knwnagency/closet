@@ -35,7 +35,7 @@
   .glass { background: var(--s1); border-radius: var(--r); }
   .spot { background: var(--tile); border-radius: var(--r); }
 
-  .chips { display: flex; gap: 20px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 22px; padding: 0 18px; border-bottom: 1px solid var(--hair); }
+  .chips { display: flex; gap: 20px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; margin: 0 -18px 22px; padding: 0 18px; border-bottom: 1px solid var(--hair); }
   .chip { flex: none; min-height: 44px; display: inline-flex; align-items: flex-end; padding: 0 0 10px; margin-bottom: -1px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); border-bottom: 1px solid transparent; }
   .chip.on { color: var(--ink); border-color: var(--ink); }
   .chip small { font-size: 11px; font-weight: 400; margin-left: 4px; }
@@ -66,7 +66,7 @@
   .seg { display: inline-flex; gap: 16px; }
   .seg button { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); padding-bottom: 3px; border-bottom: 1px solid transparent; }
   .seg button.on { color: var(--ink); border-color: var(--ink); }
-  .seg.subnav { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; margin: -6px 0 18px; box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); }
+  .seg.subnav { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0; margin: -6px 0 18px; box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); }
   .seg.subnav button { height: 44px; padding: 0 4px; border: 0; } .seg.subnav button.on { background: var(--ink); color: var(--bg); }
   .backup { display: flex; justify-content: center; gap: 24px; margin-top: 48px; } .empty .backup { margin-top: 22px; }
   .blurb .row2, .wx .row2 { display: flex; gap: 6px; flex: none; }
@@ -103,7 +103,7 @@
   .gap-top { display: flex; align-items: center; gap: 12px; }
   .gap-top .gh { width: 52px; height: 52px; flex: none; background: var(--tile); padding: 6px; }
   .gap-top div { flex: 1; min-width: 0; } .gap-top b { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 3px; }
-  .minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 14px 0 12px; }
+  .minis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 14px 0 12px; }
   .scan { display: grid; place-items: center; gap: 16px; padding: 90px 20px; }
   .scan i { width: 40px; height: 1px; background: var(--ink); animation: load 1s ease-in-out infinite alternate; transform-origin: left; }
   @keyframes load { from { transform: scaleX(.1) } to { transform: scaleX(1) } }
@@ -122,11 +122,11 @@
   .x { color: var(--muted); font-size: 20px; width: 44px; height: 44px; flex: none; }
 
   /* progress */
-  .hud { display: grid; grid-template-columns: 1fr auto; align-items: end; padding: 22px 20px; gap: 10px; }
+  .hud { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding: 22px 20px; gap: 10px; }
   .hud .big { font-size: 112px; line-height: .82; font-weight: 700; letter-spacing: -.05em; }
   .hud .stats { display: grid; gap: 14px; text-align: right; }
   .hud .stats b { display: block; font-size: 22px; font-weight: 700; margin-top: 2px; }
-  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 4px; }
+  .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }
   .week div { display: grid; justify-items: center; gap: 8px; padding: 12px 0; background: var(--s1); }
   .week i { width: 14px; height: 14px; box-shadow: inset 0 0 0 1px var(--hair); }
   .week .on i { background: var(--ink); box-shadow: none; }
@@ -176,10 +176,10 @@
   .sheet .hero img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
   .sheet .close { position: absolute; top: 12px; right: 12px; }
   .sheet form { padding: 20px 18px calc(env(safe-area-inset-bottom) + 22px); display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .incoll > .vibes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } .vibes .pill { width: 100%; }
+  .incoll > .vibes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; } .vibes .pill { width: 100%; }
   .dayrow { justify-content: flex-start; gap: 10px; } .dayrow > span:first-child { flex: 1; text-align: left; } .dthumb { width: 30px; flex: none; }
   .pieceacts { display: grid; gap: 8px; } .acchint { flex: 1; text-align: right; }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
   .group { border-top: 1px solid var(--hair); }
   .cell { display: flex; align-items: center; gap: 12px; min-height: 52px; border-bottom: 1px solid var(--hair); }
   .cell > span:first-child { flex: none; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; }
@@ -211,7 +211,7 @@
   button:disabled { opacity: .3; pointer-events: none; }
 
   /* builder: one card per slot */
-  .bgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 520px; margin: 0 auto; }
+  .bgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; max-width: 520px; margin: 0 auto; }
   .bcard { display: flex; flex-direction: column; background: var(--s1); border-radius: var(--r); padding: 10px 10px 4px; min-width: 0; }
   .bcard .lab { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
   .bcard .pic { display: block; width: 100%; height: 124px; padding: 6px; } .bcard .pic img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
@@ -224,27 +224,33 @@
   .carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; height: 124px; margin: 6px 0; overscroll-behavior-x: contain; } .carousel::-webkit-scrollbar { display: none; }
   .carousel img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: contain; scroll-snap-align: center; scroll-snap-stop: always; padding: 0 6px; }
   .bgrid.small .carousel { height: 84px; } .bcard .lab { display: flex; justify-content: space-between; } .bcard .lab em { font-style: normal; font-weight: 500; letter-spacing: .04em; }
-  .ctools { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; margin: 0 0 14px; } .ctools input, .ctools select { height: 44px; border: 1px solid var(--hair); border-radius: var(--r); background: var(--s1); color: var(--ink); padding: 0 12px; min-width: 0; }
+  .ctools { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; margin: 0 0 14px; } .ctools input, .ctools select { height: 44px; border: 1px solid var(--hair); border-radius: var(--r); background: var(--s1); color: var(--ink); padding: 0 12px; min-width: 0; }
   .laundry { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 13px; color: var(--muted); }
   .ph.dirty img { opacity: .35; } .issue { display: grid; gap: 8px; padding: 12px; margin: 0 0 12px; border-radius: var(--r); background: var(--s1); font-size: 13px; } .issue .row { display: flex; gap: 6px; }
-  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 0 0 14px; } .cal > b { font-size: 11px; text-align: center; color: var(--muted); font-weight: 600; padding: 4px 0; }
+  .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 0 0 14px; } .cal > b { font-size: 11px; text-align: center; color: var(--muted); font-weight: 600; padding: 4px 0; }
   .cday { position: relative; aspect-ratio: 4 / 5; border-radius: 6px; background: var(--s1); overflow: hidden; } .cday span { position: absolute; left: 4px; top: 3px; font-size: 11px; z-index: 1; }
   .cday.today { box-shadow: inset 0 0 0 1.5px var(--ink); } .cday.future { background: none; box-shadow: inset 0 0 0 1px var(--hair); } .cday .flat { position: absolute; inset: 0; }
   .cday .dotp { position: absolute; left: 50%; bottom: 8px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--muted); }
   .item.picked .ph { box-shadow: inset 0 0 0 2px var(--ink); } .item.picked b::before { content: '✓ '; }
   .selbar { position: sticky; top: 48px; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; background: var(--bg); font-size: 13px; } .selbar .row2 { display: flex; gap: 6px; } .selbar select { height: 36px; border: 1px solid var(--hair); border-radius: var(--r); background: var(--s1); max-width: 120px; }
-  .occ { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: -6px -18px 12px; padding: 0 18px; } .occ .pill { flex: none; }
+  .occ { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; margin: -6px -18px 12px; padding: 0 18px; } .occ .pill { flex: none; }
   .why-list > div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--hair); font-size: 13px; } .why-list b.neg { color: #9b3b2e; } .why-list .tot { border: 0; font-weight: 600; }
   .pickgrid small.why { display: block; font-size: 11px; color: var(--muted); line-height: 1.3; margin-top: 2px; }
   .cpref { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; } .cpref button { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 8px; border-radius: var(--r); font-size: 11px; box-shadow: inset 0 0 0 1px var(--hair); }
   .cpref i { width: 14px; height: 14px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); } .cpref .good { box-shadow: inset 0 0 0 2px var(--ink); } .cpref .avoid { opacity: .45; text-decoration: line-through; }
   .day .dl em { display: block; font-style: normal; font-size: 11px; color: var(--muted); } .dest input { width: 100%; height: 44px; margin: 0 0 10px; padding: 0 12px; border: 1px solid var(--hair); border-radius: var(--r); background: var(--s1); }
+  .deck { display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; margin: 0 -18px; padding: 0 18px; scroll-padding: 0 18px; }
+  .deck::-webkit-scrollbar { display: none; } .dcard { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+  .dcard .flatbtn { display: block; width: min(100%, calc(40dvh * .8)); margin: 0 auto; } /* card + its buttons fit on an iPhone screen under the menus */ .dmeta { padding: 10px 0 0; } .dmeta p { margin: 4px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .wxline { font-size: 13px; font-weight: 600; } .dacts { display: flex; align-items: center; gap: 4px; } .dacts .mono { flex: 1; } .sub.center { text-align: center; margin: 12px auto 0; }
+  .hexin { display: flex; align-items: center; gap: 10px; margin: 0 auto 16px; max-width: 300px; } .hexin i { width: 28px; height: 28px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
+  .hexin input { flex: 1; height: 44px; padding: 0 12px; border: 1px solid var(--hair); border-radius: var(--r); background: var(--s1); color: var(--ink); font-family: ui-monospace, monospace; text-transform: uppercase; }
   .copybox { width: 100%; height: 50dvh; font: 12px/1.4 ui-monospace, monospace; } .version { margin: 28px 0 0; text-align: center; }
   .bcard.more { gap: 6px; justify-content: center; background: none; box-shadow: inset 0 0 0 1px var(--hair); padding: 10px; } .bcard.more .pill { width: 100%; color: var(--ink); }
   .addrow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; max-width: 520px; margin-inline: auto; } .addrow .pill { color: var(--ink); }
   .pickh { padding: 0 18px; margin: 4px 0 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
   .actions .icon.on svg { fill: var(--bg); }
-  .looks { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 2px; }
+  .looks { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 2px; }
   .looks .look { flex: 0 0 92px; position: relative; } .looks .look > button:first-child { display: block; width: 100%; }
   .looks .look .icon { position: absolute; right: 0; bottom: 0; width: 40px; height: 40px; } .looks .look .icon svg { width: 15px; height: 15px; }
   .looks-h { display: flex; justify-content: space-between; margin: 26px 0 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; } .looks-h span:last-child { color: var(--muted); font-weight: 500; }
@@ -253,22 +259,22 @@
   /* week planner */
   .weekbar { display: flex; justify-content: space-between; align-items: center; margin: 0 0 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
   .days { display: grid; gap: 6px; }
-  .day { display: grid; grid-template-columns: 44px 110px 1fr; gap: 12px; align-items: center; padding: 8px 10px 8px 12px; background: var(--s1); border-radius: var(--r); }
+  .day { display: grid; grid-template-columns: 44px 110px minmax(0, 1fr); gap: 12px; align-items: center; padding: 8px 10px 8px 12px; background: var(--s1); border-radius: var(--r); }
   .day.today { box-shadow: inset 0 0 0 1.5px var(--ink); } .day.past { opacity: .5; }
-  .day.open { grid-template-columns: 44px 1fr; padding-block: 4px; } .day.open .plus { width: 100%; aspect-ratio: auto; height: 44px; justify-content: start; padding: 0 14px; display: flex; align-items: center; }
+  .day.open { grid-template-columns: 44px minmax(0, 1fr); padding-block: 4px; } .day.open .plus { width: 100%; aspect-ratio: auto; height: 44px; justify-content: start; padding: 0 14px; display: flex; align-items: center; }
   .day .dl b { display: block; font-size: 11px; letter-spacing: .14em; } .day .dl span { font-size: 22px; font-weight: 700; }
   .day .slotbtn { display: block; width: 110px; } .day .plus { width: 110px; aspect-ratio: 4 / 5; display: grid; place-items: center; box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
   .day .acts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: center; } .day .acts .mono { width: 100%; text-align: right; }
-  .picklooks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .picklooks button { display: block; }
+  .picklooks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; } .picklooks button { display: block; }
   .chk { display: flex; gap: 12px; align-items: center; min-height: 44px; font-size: 13px; } .chk input { width: 22px; height: 22px; margin: 0; accent-color: var(--ink); }
   /* shop the look + packing */
-  .lookrow { display: grid; grid-template-columns: 44px 1fr 44px; gap: 4px 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hair); }
+  .lookrow { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 4px 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hair); }
   .lookrow .gh { width: 44px; height: 44px; } .lookrow img { width: 44px; height: 44px; object-fit: contain; background: var(--tile); border-radius: var(--r); }
   .lookrow b { display: block; font-size: 13px; } .lookrow .acts { grid-column: 2 / -1; display: flex; gap: 6px; align-items: center; } .lookrow .acts:empty { display: none; }
 
   .packdays { display: flex; align-items: center; gap: 14px; justify-content: center; } .packdays .btn { width: 52px; padding: 0; font-size: 22px; font-weight: 400; } .packdays b { font-size: 34px; min-width: 2ch; text-align: center; }
-  .packfits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .packfits span { display: block; margin-top: 4px; } .packfits button, .picklooks button { display: block; width: 100%; }
-  .packlist button { display: grid; grid-template-columns: 22px 44px 1fr; gap: 12px; align-items: center; width: 100%; padding: 6px 0; text-align: left; font-size: 13px; }
+  .packfits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; } .packfits span { display: block; margin-top: 4px; } .packfits button, .picklooks button { display: block; width: 100%; }
+  .packlist button { display: grid; grid-template-columns: 22px 44px minmax(0, 1fr); gap: 12px; align-items: center; width: 100%; padding: 6px 0; text-align: left; font-size: 13px; }
   .packlist i { width: 20px; height: 20px; box-shadow: inset 0 0 0 1.5px var(--ink); border-radius: 3px; display: grid; place-items: center; font-style: normal; font-size: 12px; }
   .packlist button.on i { background: var(--ink); color: var(--bg); } .packlist button.on span { text-decoration: line-through; color: var(--muted); }
   .packlist img { width: 44px; height: 44px; object-fit: contain; background: var(--tile); border-radius: var(--r); }
@@ -286,7 +292,7 @@
   .strip em { position: absolute; right: 4px; bottom: 3px; font-style: normal; font-size: 11px; font-weight: 700; }
 
   /* collections */
-  .colls { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 16px; padding: 0 18px; }
+  .colls { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; margin: 0 -18px 16px; padding: 0 18px; }
   .pill { flex: none; height: 44px; padding: 0 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); white-space: nowrap; }
   .pill.on { background: var(--ink); color: var(--bg); box-shadow: none; }
   .pill small { font-size: 11px; font-weight: 400; margin-left: 6px; opacity: .7; }
@@ -307,13 +313,13 @@
   .chips:not(.wrap) { mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent); } /* says "scroll for more" instead of clipping a word */
   .touch { padding: 18px 18px calc(env(safe-area-inset-bottom) + 22px); display: grid; gap: 14px; }
   .touch canvas { width: 100%; max-height: 62dvh; object-fit: contain; touch-action: none; background: repeating-conic-gradient(var(--s1) 0 25%, var(--bg) 0 50%) 0 0 / 16px 16px; border-radius: var(--r); }
-  .touch .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .touch .row3 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
   .incoll { display: grid; gap: 10px; } .incoll > div { display: flex; flex-wrap: wrap; gap: 6px; }
   .pickhead { display: flex; justify-content: space-between; align-items: center; padding: 20px 18px 14px; position: sticky; top: 0; background: var(--bg); z-index: 2; }
   .pad .pickhead { padding: 0; }
   .pickhead h2 { margin: 2px 0 0; font-size: 22px; text-transform: uppercase; }
-  .pickgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 18px 30px; }
-  .pickgrid button { background: var(--tile); aspect-ratio: 3 / 4; padding: 10px 8px 22px; position: relative; border-radius: var(--r); }
+  .pickgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0 18px 30px; }
+  .pickgrid button { min-width: 0; background: var(--tile); aspect-ratio: 3 / 4; padding: 10px 8px 22px; position: relative; border-radius: var(--r); }
   .pickgrid img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
   .pickgrid span { position: absolute; left: 6px; right: 6px; bottom: 5px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pickgrid button.on { box-shadow: inset 0 0 0 2px var(--ink); }
@@ -333,11 +339,11 @@
   .palrow button.off { opacity: .2; }
 
   /* me */
-  .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
   .tiles > * { padding: 16px; background: var(--s1); text-align: left; border-radius: var(--r); }
   .tiles small { display: block; margin-top: 4px; font-size: 11px; }
   .tiles b { display: block; font-size: 34px; font-weight: 700; letter-spacing: -.02em; margin-top: 6px; }
-  .bars { display: grid; gap: 8px; } .bars div { display: grid; grid-template-columns: 96px 1fr 28px; align-items: center; gap: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
+  .bars { display: grid; gap: 8px; } .bars div { display: grid; grid-template-columns: 96px minmax(0, 1fr) 28px; align-items: center; gap: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
   .bars i { height: 8px; background: var(--s1); } .bars i b { display: block; height: 100%; background: var(--ink); } .bars em { font-style: normal; text-align: right; }
   .colorbar { display: flex; height: 44px; border-radius: var(--r); overflow: hidden; box-shadow: inset 0 0 0 1px var(--hair); }
   .legend { margin-top: 10px; line-height: 1.7; }
@@ -374,7 +380,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.15 · v2.3'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.15 · v2.4'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -504,7 +510,7 @@ function askWeather() {
   }, () => toast('Location blocked. Allow it in Settings to use weather'), { maximumAge: 36e5, timeout: 15000 });
 }
 const RAINY = c => (c >= 51 && c <= 67) || (c >= 80 && c <= 99);
-const todayPicks = (items, t) => today(items, { t, rain: RAINY(S.profile?.wx?.code ?? 0), occasion: S.occ, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
+const todayPicks = (items, t) => today(items, { t, rain: RAINY(S.profile?.wx?.code ?? 0), occasion: S.occ, n: 12, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
 
 // Gaps are slow-ish to compute, so cache until something about the closet changes.
 const sig = () => S.items.map(i => [i.id, i.cat, i.color, i.fit, i.vibe, i.patterned, i.name, i.kind].join()).join('|');
@@ -747,7 +753,7 @@ function outfitsView() {
   if (S.tab === 'week') return top + weekView();
   if (S.tab === 'cal') return top + calView();
   if (S.tab === 'history') {
-    const list = S.history.map(h => ({ key: h.key, items: h.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items));
+    const list = wornLooks().map(h => ({ key: h.key, items: h.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items));
     return top + (list.length ? `<p class="sub blurb">Every look you stopped on in the builder. Heart one to keep it, tap to go back to it.</p><div class="feed">${list.map(outfitCard).join('')}</div>`
       : `<div class="empty"><h2>No history yet</h2><p>Every look you put together in the builder lands here.</p><button class="btn" data-action="build">Open builder</button></div>`);
   }
@@ -761,6 +767,7 @@ function outfitsView() {
     <button class="btn" data-action="${c ? 'collpick' : 'add'}">${c ? 'Add pieces' : 'Add clothes'}</button></div>`;
   if (!MODES[S.mode] && S.mode !== 'today') S.mode = 'today';
   const isToday = S.mode === 'today', w = weatherNow();
+  if (isToday && !S.profile?.wx && !S.profile?.wxAsked) { S.profile = { k: 'me', ...S.profile, wxAsked: true }; put('profile', S.profile); setTimeout(askWeather, 400); } // once: the phone asks to share location
   S.ideas ??= isToday ? (S.anchor && byId(S.anchor) ? madeWith(items, byId(S.anchor), 12) : todayPicks(items, w?.t)) : generate(items, S.mode, { anchor: S.anchor && byId(S.anchor), palette: S.palette, inspo: S.inspoColors });
   const dots = cs => cs.map(col => `<i class="dot" style="background:${col}"></i>`).join('');
   const modes = [['today', { label: 'For today' }], ...Object.entries(MODES).filter(([k, m]) => !m.hidden || (k === 'palette' && S.palette) || (k === 'inspo' && S.inspoColors))];
@@ -768,7 +775,7 @@ function outfitsView() {
     ${isToday ? `<div class="occ">${[['', 'Any'], ...Object.entries(OCCASIONS).map(([k, o]) => [k, o.label])].map(([k, l]) => `<button class="pill ${(S.occ ?? '') === k ? 'on' : ''}" data-occ="${k}">${l}</button>`).join('')}</div><div class="wx">${w ? `<span><b>${tempText(w.t)}</b> ${WX[w.code] ?? ''} · ${w.t >= 24 ? 'no heavy layers' : w.t < 12 ? 'layer up' : 'anything goes'}</span>` : `<span>Five looks from every style</span>`}<span class="row2">${w ? '' : `<button class="btn ghost sm" data-action="weather">Use weather</button>`}<button class="btn ghost sm" data-action="shuffle">Shuffle</button></span></div>`
       : `<div class="blurb"><span>${MODES[S.mode].blurb}</span><span class="row2"><button class="btn ghost sm" data-action="shuffle">Shuffle</button></span></div>`}
     ${S.anchor && byId(S.anchor) ? `<button class="anchor" data-action="unanchor"><img src="${src(byId(S.anchor))}" alt="">Built around ${esc(byId(S.anchor).name)} ✕</button>` : ''}
-    ${S.ideas.length ? `<div class="feed">${S.ideas.map(outfitCard).join('')}</div>`
+    ${S.ideas.length && isToday ? deckHtml(S.ideas) : S.ideas.length ? `<div class="feed">${S.ideas.map(outfitCard).join('')}</div>`
       : `<div class="empty"><h2>No ${MODES[S.mode]?.label ?? ''} matches</h2><p>${S.ideas.blocked
         ? `Most combos break a proportion rule: <b>${S.ideas.blocked.toLowerCase()}</b>. If a fit tag is wrong, tap the piece in your closet and fix it.`
         : S.mode === 'classic' ? 'Add more neutral basics.' : 'Your closet needs more colors that fit this rule. Try another style.'}</p></div>`}`;
@@ -777,6 +784,14 @@ function outfitsView() {
 // Builder: one card per slot (like Cladwell). Tap a card or Swap to pick from a list, best matches first.
 const ROWS = ['Layers', 'Tops', 'Bottoms', 'Shoes'], EXTRAS = ['Hat', 'Accessory'], OPTIONAL = ['Layers', 'Hat', 'Accessory'];
 const isFav = k => S.saved.some(s => s.key === k);
+// Today's picks, one big card at a time: swipe for the next. Each card says why it fits the weather.
+const wxWhy = o => { const w = weatherNow(); if (!w) return '';
+  const rain = RAINY(w.code), why = w.t < 12 ? (o.items.some(p => p.cat === 'Layers') ? 'layered up' : 'warmest pieces') : w.t >= 24 ? 'light, nothing heavy' : 'mild, anything goes';
+  return `${tempText(w.t)}${rain ? ' and rain' : ''} · ${why}${rain ? ', no suede' : ''}`; };
+const deckHtml = list => `<div class="deck">${list.map((o, i) => `<article class="dcard"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in builder">${flat(o.items)}</button>
+    <div class="dmeta">${wxWhy(o) ? `<span class="wxline">${wxWhy(o)}</span>` : ''}<p>${esc(o.note ?? '')}</p>
+      <div class="dacts"><span class="mono">${i + 1} / ${list.length}</span><button class="icon" data-nope="${o.key}" aria-label="Not for me">${svg('M7 14V4M7 14l4 6c1.2 0 2-1 1.7-2.2L12 14h5.5a2 2 0 0 0 2-2.3l-1-6A2 2 0 0 0 16.5 4H7M7 14H4V4h3')}</button><button class="icon ${isFav(o.key) ? 'on' : ''}" data-save="${o.key}" aria-label="Favorite">${heart}</button><button class="btn sm go" data-wear="${o.key}">Wear today</button></div></div></article>`).join('')}</div>
+  <p class="sub center">Swipe for the next look · ${list.length} for today</p>`;
 const verdictHtml = o => { if (!complete(o)) return `<p class="verdict" id="verdict">${svg('M12 5v14M5 12h14')}${o.length ? 'Add the rest. Best matches show first' : 'Start with any piece. Best matches show first'}</p>`;
   const v = bestMode(o);
   return `<p class="verdict ${v?.score == null ? 'bad' : ''}" id="verdict">${v?.score == null ? svg('M12 4 2.5 20h19L12 4zM12 10v4M12 17v.5') : svg('M5 12l5 5 9-10')}${v?.score == null ? `Doesn't work · ${esc(v?.note ?? 'needs a top, bottoms and shoes')}` : `Works as ${MODES[v.mode].label} · ${esc(v.note)}`}</p>${v?.score != null && fixTip(o) ? `<p class="verdict hint">${svg('M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z')}${esc(fixTip(o))}</p>` : ''}`; };
@@ -784,8 +799,10 @@ const actionsHtml = o => { const k = keyOf(o), worn = S.log.find(l => l.day === 
   return `<div class="actions" id="bactions"><button class="btn ${isFav(k) ? '' : 'ghost'} sm" data-save="${k}" ${off}>${isFav(k) ? '♥ Favorited' : '♡ Favorite'}</button><button class="btn ghost sm" data-action="planthis" ${off}>Plan</button><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${k}" ${off}>${worn ? 'Logged today ✓' : 'Wear today'}</button></div>`; };
 const mini = (r, on) => { const items = r.ids.map(byId).filter(Boolean);
   return complete(items) ? `<div class="look"><button data-buildkey="${r.key}" aria-label="Open look">${flat(items)}</button><button class="icon ${on ? 'on' : ''}" data-save="${r.key}" aria-label="Favorite">${heart}</button></div>` : ''; };
-const recentHtml = () => { const list = S.history.filter(h => h.key !== keyOf(S.build)).slice(0, 12);
-  return `<div id="recent">${list.length ? `<div class="looks-h"><span>Recent looks</span><span>tap to go back</span></div><div class="looks">${list.map(h => mini(h, isFav(h.key))).join('')}</div>` : ''}</div>`; };
+// What you actually wore (logged with Wear today or on the calendar), newest first. Looks you only glanced at in the builder don't count.
+const wornLooks = () => S.log.slice().sort((a, b) => b.day.localeCompare(a.day)).filter((l, i, a) => a.findIndex(x => x.key === l.key) === i);
+const recentHtml = () => { const list = wornLooks().filter(h => h.key !== keyOf(S.build)).slice(0, 12);
+  return `<div id="recent">${list.length ? `<div class="looks-h"><span>Recently worn</span><span>tap to wear again</span></div><div class="looks">${list.map(h => mini(h, isFav(h.key))).join('')}</div>` : ''}</div>`; };
 
 // What you can pick from: the collection, plus whatever the outfit is already wearing (it may come from outside it).
 const buildItems = () => [...new Set([...pool(), ...S.build])];
@@ -793,7 +810,7 @@ const PICK_TITLE = { Tops: 'Pick a top', Layers: 'Pick a layer', Bottoms: 'Pick 
 function buildView() {
   const items = buildItems(), o = S.build, has = s => items.some(SLOTS[s]), worn = s => o.some(SLOTS[s]);
   const card = s => { const cur = o.find(SLOTS[s]), lab = SLOT_LABEL[s], cs = cur && carouselFor(s, cur);
-    return cur ? `<div class="bcard"><span class="lab">${lab}<em>${cs.at + 1}/${cs.ids.length}</em></span><div class="carousel" data-cslot="${s}" aria-label="Swipe for other ${lab.toLowerCase()} options">${cs.ids.map(id => `<img src="${src(byId(id))}" alt="${esc(byId(id).name)}" loading="lazy">`).join('')}</div><span class="nm">${esc(cur.name)}</span>
+    return cur ? `<div class="bcard"><span class="lab">${lab}<em>${cs.at + 1}/${cs.ids.length}</em></span><div class="carousel" data-cslot="${s}" aria-label="Swipe for other ${lab.toLowerCase()} options">${cs.ids.map(id => `<img src="${src(byId(id))}" alt="${esc(byId(id).name)}">`).join('')}</div><span class="nm">${esc(cur.name)}</span>
         <div class="ops"><button data-swap="${s}">⇄ Swap</button><button data-lock="${s}" aria-pressed="${S.locks.has(s)}" aria-label="${S.locks.has(s) ? 'Unlock' : 'Lock'} ${lab.toLowerCase()}">${S.locks.has(s) ? '🔒' : '🔓'}</button><button data-unwear="${s}">Remove</button></div></div>`
       : `<button class="bcard add" data-swap="${s}"><b>+</b>Add ${lab.toLowerCase()}</button>`; };
   // Optional slots you're not wearing are small "+" buttons, not big empty boxes. With no layer they fill the 4th cell.
@@ -834,7 +851,7 @@ function openWhy() {
 function setBuild(next, keepSlot = null) {
   S.past = [...S.past, S.build ?? []].slice(-20); S.build = next;
   for (const k of Object.keys(S.cs)) if (k !== keepSlot) delete S.cs[k];
-  remember(S.build); put('profile', { k: 'draft', ids: S.build.map(p => p.id) }); render();
+  put('profile', { k: 'draft', ids: S.build.map(p => p.id) }); render();
 }
 // Pick a piece for one slot. Pieces that go with the rest of the outfit come first; the others sit under their own heading, never greyed out.
 function openSwap(slot) {
@@ -846,13 +863,7 @@ function openSwap(slot) {
     ${good.length ? `<p class="pickh">Goes with this outfit</p><div class="pickgrid">${good.map(tile).join('')}</div>` : ''}
     ${rest.length ? `<p class="pickh">${good.length ? 'Also yours · clashes a bit' : 'Nothing here matches perfectly'}</p><div class="pickgrid">${rest.map(tile).join('')}</div>` : ''}`);
 }
-// A look you stopped on for a beat goes in History (newest first, 40 max) so you can go back and favorite it.
-async function remember(o) {
-  if (!complete(o)) return;
-  const key = keyOf(o);
-  S.history = [{ key, ids: o.map(p => p.id), at: Date.now() }, ...S.history.filter(h => h.key !== key)].slice(0, 40);
-  await put('profile', { k: 'history', list: S.history });
-}
+
 
 // ---------- week planner ----------
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -883,7 +894,7 @@ function weekView() {
 function openPlanPicker(k) {
   const f = S.profile?.wx?.daily?.[k]; // that day's forecast: a cold Thursday gets a layer, a rainy one skips suede
   const ideas = (f ? today(pool(), { t: f.t, rain: RAINY(f.code), occasion: S.occ }) : S.ideas?.length ? S.ideas : S.mode === 'today' ? todayPicks(pool()) : generate(pool(), S.mode)).slice(0, 6).map(o => ({ key: o.key, ids: o.items.map(p => p.id) }));
-  const seen = new Set(), list = [...S.saved, ...S.history, ...ideas].filter(r => !seen.has(r.key) && seen.add(r.key) && complete(r.ids.map(byId).filter(Boolean)));
+  const seen = new Set(), list = [...S.saved, ...wornLooks(), ...ideas].filter(r => !seen.has(r.key) && seen.add(r.key) && complete(r.ids.map(byId).filter(Boolean)));
   const cur = S.plan.weekly[dowOf(k)];
   showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${DOW[dowOf(k)]} ${new Date(k + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div><h2>Plan a look</h2></div>${closeBtn}</div>
     <label class="chk"><input type="checkbox" id="planrepeat" ${cur ? 'checked' : ''}> Repeat every ${DOW[dowOf(k)]} (gym day, work day…)</label>
@@ -918,17 +929,17 @@ function calView() {
   const logged = [...Array(days)].filter((_, i) => S.log.some(l => l.day === key(i + 1))).length;
   const cell = d => { const k = key(d), l = S.log.find(x => x.day === k), items = l?.ids.map(byId).filter(Boolean) ?? [], p = !l && k > today && plannedFor(k);
     return `<button class="cday ${k === today ? 'today' : ''} ${k > today ? 'future' : ''} ${l ? 'worn' : ''}" data-calday="${k}" aria-label="${k}${l ? ', outfit logged' : ''}"><span>${d}</span>${l && complete(items) ? flat(items) : p ? '<i class="dotp"></i>' : ''}</button>`; };
-  const hist = S.history.map(h => ({ key: h.key, items: h.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items)).slice(0, 12);
+  const hist = wornLooks().map(h => ({ key: h.key, items: h.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items)).slice(0, 12);
   return `<div class="weekbar"><button class="icon" data-cal="-1" aria-label="Previous month">${svg('M15 5l-7 7 7 7')}</button><span>${first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })} · ${logged} logged</span><button class="icon" data-cal="1" aria-label="Next month">${svg('M9 5l7 7-7 7')}</button></div>
     <div class="cal">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<b>${d}</b>`).join('')}${'<i></i>'.repeat(lead)}${[...Array(days)].map((_, i) => cell(i + 1)).join('')}</div>
     <p class="sub">Tap a day to see what you wore, or log a look for a day you missed.</p>
-    ${hist.length ? `<div class="looks-h"><span>Recent looks from the builder</span><span>tap to open</span></div><div class="feed">${hist.map(outfitCard).join('')}</div>` : ''}`;
+    ${hist.length ? `<div class="looks-h"><span>Recently worn</span><span>tap to open</span></div><div class="feed">${hist.map(outfitCard).join('')}</div>` : ''}`;
 }
 // A day: what you wore (change or remove it), or pick a look to log. Future days go to the planner.
 function openDay(k) {
   if (k > dayKey()) return openPlanPicker(k);
   const l = S.log.find(x => x.day === k), items = l?.ids.map(byId).filter(Boolean) ?? [];
-  const seen = new Set(), list = [...S.saved, ...S.history].filter(r => !seen.has(r.key) && seen.add(r.key) && r.key !== l?.key && complete(r.ids.map(byId).filter(Boolean)));
+  const seen = new Set(), list = [...S.saved, ...wornLooks()].filter(r => !seen.has(r.key) && seen.add(r.key) && r.key !== l?.key && complete(r.ids.map(byId).filter(Boolean)));
   const date = new Date(k + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
   showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${date}</div><h2>${l ? 'You wore' : 'Log a look'}</h2></div>${closeBtn}</div>
     ${l && complete(items) ? `<button class="slotbtn" data-buildkey="${l.key}" aria-label="Open in builder">${flat(items)}</button><div class="row"><button class="btn ghost sm" data-unlog="${k}">Remove</button></div><p class="pickh">Or change it to</p>` : ''}
@@ -1018,6 +1029,7 @@ function inspoView() {
     <div class="chips">${Object.entries(HARMONIES).map(([k, v]) => `<button class="chip ${S.wheel.harmony === k ? 'on' : ''}" data-harmony="${k}">${v.label}</button>`).join('')}</div>
     <div class="wheel" id="wheel"><svg id="lines"></svg><div id="handles"></div></div>
     <label class="light">Dark<input id="light" type="range" min="0.15" max="0.85" step="0.01" value="${S.wheel.l}">Light</label>
+    <label class="hexin"><i id="hexdot"></i><input id="hex" value="" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="#3F7A52" aria-label="Hex color code"></label>
     <div id="wheelOut"></div>`;
   if (!S.inspo.length) return top + `<div class="empty"><h2>Pin your inspo here</h2><p>Save looks from Pinterest or Instagram to your phone, or screenshot them, and add them here. Each one gets its colors pulled out, then rebuilt from what you own.</p><button class="btn" data-action="addinspo">Add inspo</button></div>`;
   return top + `<p class="sub">Tap a look to rebuild it from your closet.</p><div class="board">${S.inspo.slice().sort((a, b) => b.at - a.at).map(i => { const on = i.palette.filter(h => !i.off.includes(h)); return `<button data-inspo="${i.id}" aria-label="Inspo look in ${on.map(colorName).join(', ')}. Tap to rebuild"><img src="${src(i)}" alt="">
@@ -1077,11 +1089,16 @@ function progressView() {
       ${b.done ? '<span class="mono">Unlocked</span>' : `<div class="bar"><i style="width:${b.v / b.goal * 100}%"></i></div><span class="mono">${b.unit === '%' ? `${b.v}% worn` : `${b.v} of ${b.goal}`}</span>`}</div>`).join('')}</div>`;
 }
 
-function paintWheel() {
+// full = false while dragging: move the handles only (cheap, every frame). The closet matches below redraw when you let go.
+function paintWheel(full = true) {
+  if (!document.getElementById('handles')) return; // a late redraw after you left the wheel
   const { h, s, l, harmony: hk } = S.wheel, cols = harmony(h, s, l, hk);
   const pos = c => [50 + 50 * c.s * Math.sin(c.h * Math.PI / 180), 50 - 50 * c.s * Math.cos(c.h * Math.PI / 180)];
   document.getElementById('handles').innerHTML = cols.map(c => { const [x, y] = pos(c); return `<i class="h ${c.base ? 'base' : ''}" style="left:${x}%;top:${y}%;background:${c.hex}"></i>`; }).join('');
   document.getElementById('lines').innerHTML = cols.map(c => { const [x, y] = pos(c); return `<line x1="50%" y1="50%" x2="${x}%" y2="${y}%" stroke="#fff" stroke-width="2" opacity=".8"/>`; }).join('');
+  const base = cols.find(c => c.base)?.hex ?? cols[0].hex, hx = document.getElementById('hex'); document.getElementById('hexdot').style.background = base;
+  if (hx && document.activeElement !== hx) hx.value = base.toUpperCase();
+  if (!full) return;
   const neutrals = S.items.filter(i => isNeutral(i.color));
   const uniq = [...new Map(cols.map(c => [Math.round(c.h), c])).values()]; // mono = one hue, three shades
   document.getElementById('wheelOut').innerHTML = `
@@ -1098,7 +1115,7 @@ function paintWheel() {
 const VIEWS = { closet: closetView, outfits: outfitsView, build: buildView, inspo: inspoView, list: listView, me: meView, progress: progressView };
 const NAV_OF = { progress: 'me', list: 'me' };
 function render() {
-  const app = document.getElementById('app'), scrollers = () => document.querySelectorAll('.strip, .colls, .chips');
+  const app = document.getElementById('app'), scrollers = () => document.querySelectorAll('.strip, .colls, .chips, .deck, .occ');
   const keep = render.view === S.view ? [...scrollers()].map(e => e.scrollLeft) : []; // swapping in the builder keeps each strip where it was
   app.innerHTML = VIEWS[S.view]();
   scrollers().forEach((e, i) => { e.scrollLeft = keep[i] ?? 0; });
@@ -1121,9 +1138,9 @@ const kindOptions = it => { const ks = Object.keys(KINDS).filter(k => KINDS[k] =
 const fitOptions = it => (FITS[it.cat] ?? FITS.default).map((f, i) => `<option value="${i}" ${(it.fit ?? 1) === i ? 'selected' : ''}>${f}</option>`).join('');
 
 const looksWith = it => {
-  const fav = S.saved.filter(r => r.ids.includes(it.id)), seen = S.history.filter(r => r.ids.includes(it.id) && !isFav(r.key));
+  const fav = S.saved.filter(r => r.ids.includes(it.id)), seen = wornLooks().filter(r => r.ids.includes(it.id) && !isFav(r.key));
   const cards = [...fav.map(r => mini(r, true)), ...seen.map(r => mini(r, false))].join('');
-  return cards ? `<div><div class="looks-h"><span>Looks with this piece</span><span>${fav.length} favorite${fav.length === 1 ? '' : 's'} · ${seen.length} from history</span></div><div class="looks">${cards}</div></div>` : '';
+  return cards ? `<div><div class="looks-h"><span>Looks with this piece</span><span>${fav.length} favorite${fav.length === 1 ? '' : 's'} · ${seen.length} worn</span></div><div class="looks">${cards}</div></div>` : '';
 };
 let openItem = null;
 const vibes = it => [].concat(it.vibe ?? []);
@@ -1375,7 +1392,7 @@ fileInput.onchange = () => { addFiles(fileInput.files); fileInput.value = ''; };
 function outfitByKey(k) {
   const idea = S.ideas?.find(o => o.key === k) ?? S.made?.find(o => o.key === k); if (idea) return idea;
   if (S.build && keyOf(S.build) === k) return { key: k, items: S.build };
-  const s = S.saved.find(x => x.key === k) ?? S.history.find(x => x.key === k) ?? [...Object.values(S.plan.days), ...Object.values(S.plan.weekly)].find(x => x.key === k); return s && { key: k, items: s.ids.map(byId).filter(Boolean) };
+  const s = S.saved.find(x => x.key === k) ?? S.log.find(x => x.key === k) ?? [...Object.values(S.plan.days), ...Object.values(S.plan.weekly)].find(x => x.key === k); return s && { key: k, items: s.ids.map(byId).filter(Boolean) };
 }
 // Builder from a piece: just that piece, the rest blank (each slot then lists best matches first). From the tab: blank.
 function buildWith(it) { sheet.close(); startBuild([it]); }
@@ -1400,13 +1417,14 @@ function wheelAt(e) {
   const r = document.getElementById('wheel').getBoundingClientRect(), dx = e.clientX - r.left - r.width / 2, dy = e.clientY - r.top - r.height / 2;
   S.wheel.h = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
   S.wheel.s = Math.min(1, Math.hypot(dx, dy) / (r.width / 2));
-  paintWheel();
+  if (!wheelAt.raf) wheelAt.raf = requestAnimationFrame(() => { wheelAt.raf = 0; paintWheel(false); }); // one redraw per frame, handles only
 }
-document.addEventListener('pointerdown', e => { if (e.target.id === 'wheel') { S.dragging = true; wheelAt(e); } });
+document.addEventListener('pointerdown', e => { const w = e.target.closest?.('#wheel'); if (w) { S.dragging = true; w.setPointerCapture?.(e.pointerId); wheelAt(e); } });
 document.addEventListener('pointermove', e => { if (S.dragging) wheelAt(e); });
-document.addEventListener('pointerup', () => { S.dragging = false; });
+document.addEventListener('pointerup', () => { if (S.dragging) { S.dragging = false; paintWheel(true); } });
 document.addEventListener('input', async e => {
-  if (e.target.id === 'light') { S.wheel.l = +e.target.value; paintWheel(); }
+  if (e.target.id === 'light') { S.wheel.l = +e.target.value; paintWheel(false); clearTimeout(paintWheel.t); paintWheel.t = setTimeout(paintWheel, 150); }
+  if (e.target.id === 'hex') { const v = e.target.value.trim().replace(/^#?/, '#'); if (/^#[0-9a-f]{6}$/i.test(v)) { const c = hexToHsl(v); Object.assign(S.wheel, { h: c.h, s: c.s, l: Math.min(0.85, Math.max(0.15, c.l)) }); document.getElementById('light').value = S.wheel.l; paintWheel(); } }
   if (e.target.form?.id === 'measure') { S.profile ??= { k: 'me', done: true, styles: [], goals: [] }; (S.profile.measure ??= {})[e.target.name] = e.target.value.slice(0, 80); await put('profile', S.profile); }
 });
 

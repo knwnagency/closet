@@ -411,7 +411,7 @@ export function extractPalette(px, k = 5, min = 0.06) {
 }
 
 // ponytail: random sampling, not exhaustive search. Fine for a few hundred items; enumerate if results get repetitive.
-export function generate(items, mode, { anchor, palette, inspo, n = 12, tries = 1500, rand = Math.random } = {}) {
+export function generate(items, mode, { anchor, palette, inspo, n = 12, tries = 1500, rand = Math.random, layerOdds = 0.5 } = {}) {
   const by = Object.fromEntries(Object.keys(SLOTS).map(s => [s, items.filter(SLOTS[s])]));
   if (anchor) by[slotOf(anchor)] = [anchor];
   if (!by.Tops.length || !by.Bottoms.length || !by.Shoes.length) return [];
@@ -420,7 +420,7 @@ export function generate(items, mode, { anchor, palette, inspo, n = 12, tries = 
   for (let t = 0; t < tries; t++) {
     const ps = [pick(by.Tops), pick(by.Bottoms), pick(by.Shoes)];
     const add = (slot, odds) => { if (by[slot].length && (anchor && slotOf(anchor) === slot || rand() < odds)) ps.push(pick(by[slot])); };
-    add('Layers', 0.5); add('Hat', 0.8); add('Accessory', 0.5); // hats + chains/bags in most fits, not all
+    add('Layers', layerOdds); add('Hat', 0.8); add('Accessory', 0.5); // hats + chains/bags in most fits, not all
     const key = ps.map(p => p.id).sort().join();
     if (seen.has(key)) continue;
     const r = scoreOutfit(ps, mode, opts);
@@ -445,20 +445,27 @@ export function generate(items, mode, { anchor, palette, inspo, n = 12, tries = 
 
 // ---------- "see what you can make" + today's picks ----------
 const VISIBLE = () => Object.keys(MODES).filter(k => !MODES[k].hidden);
-// Best outfits across every style, varied: a top, bottoms or shoes other than the anchor shows up at most twice.
-function varied(list, n) {
-  const used = new Map(), out = [];
-  for (const o of list.sort((a, b) => b.score - a.score)) {
-    const main = o.items.filter(p => ['Tops', 'Bottoms', 'Shoes', 'Layers'].includes(p.cat) && p !== o.anchor);
-    if (main.some(p => (used.get(p.id) ?? 0) >= 2)) continue;
+// Best outfits across every style, varied: caps how often one piece (other than the anchor) can show up, so a deck isn't
+// twelve looks around the same pants and cap. A second, looser pass fills up if the closet is too small for the caps.
+function varied(list, n, base = { Tops: 2, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }) {
+  const used = new Map(), out = [], sorted = list.sort((a, b) => b.score - a.score);
+  // scarce kinds may repeat more (3 layers on a cold day can't cover 12 cards once each); plentiful ones stay at the base cap
+  // need = how many of that kind n outfits use (a hat and a chain each = 2 accessories per card), own = how many different ones exist
+  const of = (o, cat) => o.items.filter(p => p.cat === cat && p !== o.anchor);
+  const own = cat => new Set(list.flatMap(o => of(o, cat).map(p => p.id))).size || 1, need = cat => n * list.reduce((t, o) => t + of(o, cat).length, 0) / (list.length || 1);
+  const caps = Object.fromEntries(Object.entries(base).map(([c, v]) => [c, Math.max(v, Math.ceil(need(c) / own(c)))]));
+  for (const cap of [caps, null]) for (const o of sorted) {
+    if (out.length === n) return out;
+    if (out.includes(o)) continue;
+    const main = o.items.filter(p => p !== o.anchor);
+    if (cap && main.some(p => (used.get(p.id) ?? 0) >= (cap[p.cat] ?? 2))) continue;
     out.push(o); main.forEach(p => used.set(p.id, (used.get(p.id) ?? 0) + 1));
-    if (out.length === n) break;
   }
   return out;
 }
-const collect = (items, opts, modes = VISIBLE()) => {
+const collect = (items, opts, modes = VISIBLE(), per = 10) => {
   const best = new Map();
-  for (const m of modes) for (const o of generate(items, m, { n: 10, ...opts })) if ((best.get(o.key)?.score ?? -99) < o.score) best.set(o.key, { ...o, mode: m, anchor: opts.anchor });
+  for (const m of modes) for (const o of generate(items, m, { n: per, ...opts })) if ((best.get(o.key)?.score ?? -99) < o.score) best.set(o.key, { ...o, mode: m, anchor: opts.anchor });
   return [...best.values()];
 };
 export const madeWith = (items, anchor, n = 5) => varied(collect(items, { anchor }), n);
@@ -480,8 +487,9 @@ export const occasionFit = (ps, occ) => { const o = OCCASIONS[occ]; if (!o) retu
 export function today(items, { t = null, rain = false, occasion = null, n = 5, rand = Math.random, skip = [] } = {}) {
   // skip: what you wore yesterday. Tops and layers rest a day; pants and shoes can repeat.
   const pool = forWeather(items, t, rain).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
-  const list = collect(pool, { rand }).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
-  return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + rand() * 1.5 })), n);
+  const list = collect(pool, { rand, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
+  // a new top every card, pants and shoes at most twice, the same cap or chain at most twice. Jackets may repeat: you wear the same coat all week.
+  return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + rand() * 1.5 })), n, { Tops: 1, Layers: n, Bottoms: 2, Shoes: 2, Accessories: 2 });
 }
 
 // Every rule that scored a look, biggest first: the builder's "Why?". null = no style rule takes it.
