@@ -254,17 +254,37 @@ export function fixTip(ps) {
   return null;
 }
 
+// ---------- your taste: learned from favorites, wears and "not for me" ----------
+// Pairs of pieces you keep putting together score higher; pairs from looks you rejected score lower; a rejected look never comes back.
+// ponytail: module-level state set by the app (setTaste) so every scorer sees it without threading opts through. Fine for one user.
+let TASTE = { pair: new Map(), nope: new Set() };
+export function setTaste({ liked = [], worn = [], nope = [] } = {}) { // each: lists of piece-id arrays
+  const pair = new Map(), bump = (ids, w) => { for (const [a, b] of pairs([...ids].sort())) pair.set(a + '|' + b, (pair.get(a + '|' + b) ?? 0) + w); };
+  liked.forEach(ids => bump(ids, 1)); worn.forEach(ids => bump(ids, 0.5)); nope.forEach(ids => bump(ids, -1));
+  TASTE = { pair, nope: new Set(nope.map(ids => [...ids].sort().join())) };
+}
+const taste = ps => {
+  const ids = ps.map(p => p.id).sort(); if (TASTE.nope.has(ids.join())) return null;
+  const t = pairs(ids).reduce((s, [a, b]) => s + (TASTE.pair.get(a + '|' + b) ?? 0), 0);
+  return Math.max(-1.5, Math.min(1.5, t * 0.25));
+};
+
+// Known sneakers have a known shape: the AI's fit guess shouldn't call Air Force 1s sleek. null = not a model we know.
+const SHOE_FITS = [[/yeezy ?(500|700)|foam|bapesta|triple ?s|platform|chunky|runner/i, 2], [/air ?force|af1|dunk|jordan ?1|aj1|350|vans|converse|chuck/i, 1], [/loafer|oxford|derby|chelsea|samba|gazelle|spezial|ballet/i, 0]];
+export const knownFit = p => p.cat === 'Shoes' ? SHOE_FITS.find(([re]) => re.test(`${p.name ?? ''}`))?.[1] ?? null : null;
+
 // Returns { score, note } or null. Color mode decides if it's allowed; proportions can veto or boost.
 export function scoreOutfit(ps, mode, opts = {}) {
   // A cap or shoes repeating a color from the print up top belongs to that print's palette, so the color rule judges the fit without them.
   const ech = echoes(ps), base = MODES[mode].score(ps, opts) ?? (ech.length ? MODES[mode].score(ps.filter(p => !ech.some(e => e.p === p)), opts) : null);
   if (base == null) return null;
+  const tb = taste(ps); if (tb == null) return null; // you said "not for me" to this exact look
   const pr = proportion(ps);
   if (pr.veto) return null; // one deal-breaker outweighs any number of good points
   const finish = Math.min(2, ps.filter(p => p.cat === 'Accessories').length) * 0.3; // a hat / chain finishes the look
   const st = style(ps), e = ech[0]; // a shape problem outranks a nice combo; otherwise your notes explain the fit
   const note = e ? `${e.p.name} picks up the ${colorName(e.p.color)} in the ${e.from.name}` : st[0] && (st[0][0] < 0 || pr.score >= 0) ? st[0][1] : pr.note;
-  return { score: base + pr.score + finish + Math.min(2, ech.length) * 0.7 + st.reduce((t, [x]) => t + x, 0), note };
+  return { score: base + pr.score + finish + Math.min(2, ech.length) * 0.7 + st.reduce((t, [x]) => t + x, 0) + tb, note: tb >= 1 && !e ? `${note} · you wear these together` : note };
 }
 
 // Graphic/print colors: an item's `accents` are the colors in it besides its base color (the red logo on a black tee).
@@ -418,8 +438,9 @@ export function forWeather(items, t) {
   return items.filter(p => !/puffer|parka/i.test(k(p)));
 }
 // Today: n varied outfits from every style, a little random so each visit (or Shuffle) is different. Cold days want a layer.
-export function today(items, { t = null, n = 5, rand = Math.random } = {}) {
-  const pool = forWeather(items, t), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
+export function today(items, { t = null, n = 5, rand = Math.random, skip = [] } = {}) {
+  // skip: what you wore yesterday. Tops and layers rest a day; pants and shoes can repeat.
+  const pool = forWeather(items, t).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
   const list = collect(pool, { rand }).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
   return varied(list.map(o => ({ ...o, score: o.score + rand() * 1.5 })), n);
 }

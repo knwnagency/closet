@@ -264,3 +264,20 @@ console.log('style notes ok');
   assert.equal(d[(20 * w + 20) * 4 + 3], 255, 'tee stays'); assert.equal(d[(5 * w + 5) * 4 + 3], 0, 'mat inside the frame goes');
 }
 console.log('redesign ok');
+{
+  const m = await import('./match.js');
+  const it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, ...x });
+  const t1 = it('t1', 'Tops', '#151515'), t2 = it('t2', 'Tops', '#7d7b78'), b = it('b', 'Bottoms', '#151515'), s = it('s', 'Shoes', '#f6f5f1', { kind: 'sneakers' });
+  const base = m.scoreOutfit([t1, b, s], 'classic').score;
+  m.setTaste({ liked: [['t1', 'b', 's']] });
+  assert.ok(m.scoreOutfit([t1, b, s], 'classic').score > base, 'a favorite pairing scores higher');
+  m.setTaste({ nope: [['t1', 'b', 's']] });
+  assert.equal(m.scoreOutfit([t1, b, s], 'classic'), null, '"not for me" never comes back');
+  assert.ok(m.scoreOutfit([t2, b, s], 'classic').score < m.scoreOutfit([t2, it('b2', 'Bottoms', '#151515'), s], 'classic').score + 0.01, 'disliked pair (b+s) weighs on other looks too');
+  m.setTaste();
+  assert.equal(m.knownFit({ cat: 'Shoes', name: 'Air Force 1 white' }), 1); assert.equal(m.knownFit({ cat: 'Shoes', name: 'Yeezy 500' }), 2);
+  assert.equal(m.knownFit({ cat: 'Shoes', name: 'Black loafers' }), 0); assert.equal(m.knownFit({ cat: 'Tops', name: 'Dunk tee' }), null);
+  const picks = m.today([t1, t2, b, s], { skip: ['t1'], n: 5 });
+  assert.ok(picks.length && picks.every(o => !o.items.includes(t1)), "yesterday's top rests");
+}
+console.log('v2 ok');
