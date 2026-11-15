@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v4.0'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v4.1'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -137,7 +137,7 @@ const guessKind = it => Object.keys(KINDS).filter(k => KINDS[k] === it.cat).find
 const issueOf = it => { if (it.review) return null;
   if ((patternOf(it) === 'graphic' || patternOf(it) === 'allover') && !it.accents?.length && !it.tagOk) return { text: 'Tagged as a print, but no print colors were found. Plain?', fix: 'pattern:solid', label: 'Mark as solid' };
   if (it.person && !it.tagOk) return { text: 'A person is in this photo, so their legs, arms or shoes come along. Erase them, or use a photo of just the piece.', fix: 'touch:1', label: 'Touch up' };
-  if (it.broken) return { text: "This photo didn't load", fix: 'photo:1', label: 'Replace photo' };
+  if (it.broken) return { text: "This photo is missing on this phone. Restore it from a backup (Me › Restore backup), or take a new one.", fix: 'photo:1', label: 'New photo' };
   if (it.turnHint) return { text: 'This may be lying sideways', fix: `turn:${it.turnHint}`, label: 'Turn it upright' };
   if (it.tagOk) return null;
   if (KINDS[it.kind] && KINDS[it.kind] !== it.cat) { const g = guessKind(it); // the name usually knows: "Grey stripe sweatpants" tagged hoodie → the type is wrong, not the category
@@ -417,7 +417,7 @@ async function addInspo(files) {
 const badge = it => { const b = it.review || Date.now() - (it.createdAt ?? 0) < 864e5 ? ['New', 'hot'] : it.dirty ? ['Wash', ''] : it.stored ? ['Stored', 'o'] : it.wears ? [`×${it.wears}`, ''] : null;
   return b ? `<span class="tag ${b[1]} corner">${b[0]}</span>` : ''; };
 const itemCard = it => `<button class="item ${S.sel?.has(it.id) ? 'picked' : ''}" ${S.sel ? `data-selitem="${it.id}" aria-pressed="${S.sel.has(it.id)}"` : `data-open="${it.id}"`}>
-  <div class="ph spot ${it.dirty || it.stored ? 'dirty' : ''}"><img src="${src(it)}" alt=""><i style="background:${it.color}"></i>${badge(it)}</div>
+  <div class="ph spot ${it.dirty || it.stored ? 'dirty' : ''}">${it.broken ? '<span class="nophoto">photo missing<small>tap to fix</small></span>' : `<img src="${src(it)}" alt="">`}<i style="background:${it.color}"></i>${badge(it)}</div>
   <b>${esc(it.name)}</b><span>${it.dirty ? 'In the laundry' : it.stored ? 'Stored away' : it.review ? 'New · check tags' : issueOf(it) ? 'Check tags' : fitLabel(it) + wornText(it)}</span></button>`;
 const matchRow = (c, items) => `<div class="match glass"><i style="background:${c}"></i>${items.length
   ? `<div class="thumbs">${items.map(i => `<button data-open="${i.id}"><img src="${src(i)}" alt="${esc(i.name)}"></button>`).join('')}</div>`
@@ -462,6 +462,7 @@ function closetView() {
   const best = !c && !toReview && !S.pending.length && S.items.length >= 3 && getGaps()?.find(g => !isNeutral(g.ghost.color));
   return head(`${S.items.length} pieces`, 'Closet') + `
     ${[toReview && `<button class="nudge glass" data-action="review"><div><span class="mono">AI guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>`,
+    S.items.some(i => i.broken) && `<button class="nudge glass" data-action="import"><div><span class="mono">This phone lost ${S.items.filter(i => i.broken).length} photos</span><b>Restore them from a backup</b></div><span class="plus">Pick file →</span></button>`,
     S.items.some(i => !i.pattern) && `<button class="nudge glass" data-action="patreview"><div><span class="mono">Quick check · makes print warnings accurate</span><b>Is it plain or printed? ${S.items.filter(i => !i.pattern).length} pieces</b></div><span class="plus">Start →</span></button>`,
     issues && `<button class="nudge glass" data-action="fixtags"><div><span class="mono">Tags that don't add up</span><b>Check ${issues} piece${issues > 1 ? 's' : ''}</b></div><span class="plus">Fix →</span></button>`,
     false && `<button class="nudge glass" data-action="export"><div><span class="mono">${S.profile?.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up'}</span><b>Save a backup of ${S.items.length} pieces</b></div><span class="plus">Export →</span></button>`,
@@ -662,7 +663,7 @@ function buildView() {
   const pct = v?.score == null ? 0 : Math.max(5, Math.min(99, Math.round(100 * (1 - Math.exp(-Math.max(0, v.score) / 5)))));
   // stacked the way it's worn: hat + accessory, layer + top, bottoms, shoes at the bottom
   const card = (sl, cls = '') => { const cur = o.find(SLOTS[sl]), lab = SLOT_LABEL[sl], opt = ['Layers', 'Hat', 'Accessory'].includes(sl);
-    if (!cur) return `<button class="bc empty ${cls}" data-swap="${sl}" ${items.some(SLOTS[sl]) ? '' : 'disabled'}><b>+</b><span>Add ${lab.toLowerCase()}</span>${opt ? '<small>optional</small>' : ''}</button>`;
+    if (!cur) return opt ? '' : `<button class="bc empty ${cls}" data-swap="${sl}" ${items.some(SLOTS[sl]) ? '' : 'disabled'}><b>+</b><span>Add ${lab.toLowerCase()}</span></button>`; // optional slots wait as small "+ hat" pills, so empty boxes never crowd the clothes
     const cs = carouselFor(sl, cur);
     return `<div class="bc ${cls} ${S.dropped === sl ? 'drop' : ''}"><span class="lab">${lab}${S.locks.has(sl) ? ' · locked' : ''}</span>
       <button class="pic" data-swap="${sl}" aria-label="Change ${lab.toLowerCase()}: ${esc(cur.name)}"><img src="${src(cur)}" alt=""></button>
@@ -675,16 +676,14 @@ function buildView() {
   return `<header><div><div class="eyebrow">${o.length ? `${o.length} piece${o.length > 1 ? 's' : ''}` : 'Make your outfit'}</div><h1>Build</h1></div>
       <div class="right">${ok ? `<button class="ring ${v?.score == null ? 'bad' : ''}" style="--p:${pct}" data-action="why" aria-label="Match ${pct} of 100. Why it works"><b>${v?.score == null ? '✕' : pct}</b><span>match</span></button>` : ''}</div></header>
     <div class="build"><div class="tbar">${capBtn()}<span class="sp"></span>${o.length ? `<button class="tag o" data-action="clearbuild">Start over</button>` : ''}</div>${capBar()}
-      ${!o.length ? `<p class="sub">Pick the pieces you're wearing, or start from a look you saved or wore.</p>
-        ${starters.length ? `<div class="looks starters">${starters.map(r => mini(r, isFav(r.key))).join('')}</div>` : ''}
-        ${S.draft?.length ? `<button class="tag o resume" data-action="resumebuild">Resume your last look · ${S.draft.length} pieces</button>` : ''}` : ''}
-      ${o.length >= 2 ? `<div class="bprev">${flat(o)}</div>` : ''}
-      <div class="bstack">${card('Hat', 'small')}${card('Accessory', 'small')}${card('Layers')}${card('Tops')}${card('Bottoms', 'wide')}${card('Shoes', 'wide short')}</div>
+      <div class="bstack ${o.some(SLOTS.Layers) ? 'layered' : ''}">${card('Hat', 'small')}${card('Accessory', 'small')}${card('Layers')}${card('Tops', o.some(SLOTS.Layers) ? '' : 'wide')}${card('Bottoms', 'wide')}${card('Shoes', 'wide short')}</div>
+      <div class="addopt">${['Layers', 'Hat', 'Accessory'].filter(sl => !o.some(SLOTS[sl]) && items.some(SLOTS[sl])).map(sl => `<button class="tag o" data-swap="${sl}">+ ${SLOT_LABEL[sl].toLowerCase()}</button>`).join('')}</div>
       ${ok ? `<p class="verdict ${v.score == null ? 'bad' : ''}">${v.score == null ? `Doesn't work · ${esc(v.note ?? '')}` : `Works as ${MODES[v.mode].label} · ${esc(v.note)}`}</p>` : o.length ? '<p class="verdict">Add a top, bottoms and shoes. Best matches show first in each list.</p>' : ''}
       ${tags || tip ? `<div class="tags whytags">${tags}${tip ? `<span class="tag bad">${esc(tip)}</span>` : ''}</div>` : ''}
       ${o.length ? `<div class="tools">${S.past.length ? `<button class="tag o" data-action="undobuild">Undo</button>` : ''}${o.length && !ok ? `<button class="tag" data-action="fillbuild">Fill the rest</button>` : ''}${o.length ? `<button class="tag" data-action="possible">See outfit possibilities</button>` : ''}${ok ? `<button class="tag o" data-action="shufflebuild">${ic('shuffle')} Shuffle</button><button class="tag o" data-action="recolor">Recolor</button><button class="tag o" data-action="sharelook">${ic('share')} Share</button>` : ''}</div>` : `<div class="tools"><button class="tag o" data-go="inspo">Start from a pic</button></div>`}
       ${actionsHtml(o)}
-      ${o.length ? recentHtml() : ''}
+      ${o.length ? recentHtml() : `${starters.length ? `<div class="looks-h"><span>Or start from a look</span><span>saved or worn</span></div><div class="looks starters">${starters.map(r => mini(r, isFav(r.key))).join('')}</div>` : ''}
+        ${S.draft?.length ? `<button class="tag o resume" data-action="resumebuild">Resume your last look · ${S.draft.length} pieces</button>` : ''}`}
     </div>`;
 }
 // Swipe a slot: what you're wearing first, then every other option for it, best match first.
@@ -1321,6 +1320,12 @@ async function importBackup(file) {
     // Merge, phone wins: anything already here (same id, same day, same key) stays as it is. A backup only adds what's missing.
     const haveId = new Set(S.items.map(i => i.id));
     const items = b.items.filter(i => str(i?.id) && CATS.includes(i.cat) && hex(i.color) && pic(i.img) && !haveId.has(i.id));
+    // Repair: a piece that's here but whose photo this phone lost gets the photo back from the backup (everything else stays as it is here)
+    let fixed = 0;
+    for (const i of b.items) { const here = str(i?.id) && haveId.has(i.id) && byId(i.id); if (!here || !pic(i.img)) continue;
+      let ok = true; try { if (!(here.img instanceof Blob) || !here.img.size) throw 0; (await createImageBitmap(here.img)).close?.(); } catch { ok = false; }
+      if (ok) continue;
+      here.img = await blob(i.img); if (pic(i.photo)) here.photo = await blob(i.photo); delete here.broken; delete here.thumb; await putQuiet('items', here); fixed++; }
     for (const i of items) { const { photo, ...rest } = i; await put('items', { ...rest, name: String(i.name ?? 'Item'), img: await blob(i.img), ...(pic(photo) ? { photo: await blob(photo) } : {}) }); }
     const have = { outfits: new Set(S.saved.map(r => r.key)), log: new Set(S.log.map(r => r.day)), wish: new Set(S.wish.map(r => r.id)) };
     for (const [s, k] of [['outfits', 'key'], ['log', 'day'], ['wish', 'id']]) for (const r of arr(b[s])) if (str(r?.[k]) && !have[s].has(r[k])) {
@@ -1338,7 +1343,7 @@ async function importBackup(file) {
     if (b.profile?.k === 'me' && !S.profile) await put('profile', { k: 'me', done: true, styles: arr(b.profile.styles).filter(str), goals: arr(b.profile.goals).filter(str),
       measure: Object.fromEntries(Object.entries(b.profile.measure ?? {}).filter(([, v]) => str(v)).map(([k, v]) => [k, v.slice(0, 80)])),
       colors: { good: arr(b.profile.colors?.good).filter(str), avoid: arr(b.profile.colors?.avoid).filter(str) }, fullBackup: !!b.profile.fullBackup });
-    toast(items.length ? `Added ${items.length} new piece${items.length > 1 ? 's' : ''} · nothing here was replaced` : 'Nothing new in that backup'); setTimeout(() => location.reload(), 1400);
+    toast([items.length && `Added ${items.length} new piece${items.length > 1 ? 's' : ''}`, fixed && `restored ${fixed} missing photo${fixed > 1 ? 's' : ''}`].filter(Boolean).join(' · ') || 'Nothing new in that backup'); setTimeout(() => location.reload(), 1600);
   } catch (e) { console.warn(e); toast("That file isn't a closet backup"); }
 }
 const picker = (accept, multiple, fn) => { const i = Object.assign(document.createElement('input'), { type: 'file', accept, multiple }); i.onchange = () => { if (i.files.length) fn([...i.files]); i.value = ''; }; return i; };
@@ -1374,9 +1379,12 @@ function fillBuild() {
 function showMade(it) {
   const box = sheet.querySelector('#made'); if (!box) return;
   S.made = madeWith([...new Set([...pool(), it])], it);
-  box.innerHTML = S.made.length ? `<div class="looks-h"><span>You can make</span><span>best first · tap to open</span></div><div class="looks made">${S.made.map(o => `<div class="look"><button data-buildkey="${o.key}" aria-label="Open in builder">${flat(o.items)}</button><p>${esc(o.note)}</p></div>`).join('')}</div>`
+  box.innerHTML = S.made.length ? `<div class="decide"><div class="looks-h"><span>${S.made.length} ways to wear it</span><span>best first · slide</span></div><div class="deck made">${(used => S.made.map((o, k) => { const [t] = vibeOf(o, used);
+      return `<article class="dcard slide"><div class="dtop"><span class="mono">${pad2(k + 1)} / ${pad2(S.made.length)}</span></div><h2 class="display dtitle">${esc(t)}</h2>
+        <button class="flatwrap" data-buildkey="${o.key}" aria-label="Open in the builder">${flat(o.items)}</button><p class="madewhy">${esc(o.note)}</p>
+        <div class="row"><button class="btn ghost" data-save="${o.key}">${heart} ${isFav(o.key) ? 'Saved' : 'Save'}</button><button class="btn" data-wear="${o.key}">Wear this</button></div></article>`; }).join(''))(new Set())}</div></div>`
     : `<p class="sub">Nothing complete yet. Add more tops, bottoms or shoes, or try Build with it.</p>`;
-  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // Wheel drag: angle from 12 o'clock = hue, distance from center = saturation (same as the CSS conic gradient).
@@ -1713,10 +1721,11 @@ document.addEventListener('click', async e => {
       const rec = { key: ds.save, ids: o.items.map(x => x.id), mode, savedAt: Date.now() }; await put('outfits', rec); S.saved.unshift(rec); toast('Added to favorites');
     }
     syncTaste(); // favorites teach the scorer what you like together
+    if (t.closest('#made')) { t.innerHTML = `${heart} ${isFav(ds.save) ? 'Saved' : 'Save'}`; return; } // keep your place in the looks
     if (sheet.open && openItem) { openSheet(openItem); return; }
     render();
   }
-  else if (ds.wear) { const o = outfitByKey(ds.wear); if (o) { await logDay(dayKey(), o); render(); } }
+  else if (ds.wear) { const o = outfitByKey(ds.wear); if (o) { await logDay(dayKey(), o); if (t.closest('#made')) sheet.close(); render(); } }
 });
 
 // Pieces added before print colors existed: read them once from the cutout, in the background.

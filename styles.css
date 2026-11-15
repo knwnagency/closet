@@ -561,3 +561,13 @@
   .streaktag { min-height: 44px; } .ctbar { margin: 0 0 12px; } .revimg { height: 42dvh; background: var(--tile); border-radius: var(--rad); display: grid; place-items: center; padding: 16px; } .revimg img { max-width: 100%; max-height: 100%; object-fit: contain; filter: var(--shadow); } .revname { font-size: 15px; }
   /* Today: the card leaves room for its buttons on an iPhone */
   .dcard .flatwrap { width: min(100%, calc(44dvh * .8)); margin: 0 auto 10px; } .dcard .tags { flex-wrap: nowrap; overflow: hidden; } .morelike { flex: none; }
+  /* photo lost on this phone */
+  .nophoto { display: grid; place-items: center; align-content: center; gap: 4px; width: 100%; height: 100%; color: var(--muted); font-size: 13px; text-align: center; box-shadow: inset 0 0 0 1px var(--hair); border-radius: 12px; }
+  .nophoto small { font-size: 11px; text-decoration: underline; }
+  /* "see what you can make": a big decision area inside the piece page */
+  .decide { margin: 4px -18px 0; padding: 0 18px; } .decide .deck { margin: 0 -18px; padding: 0 18px; } .decide .dcard.slide { flex-basis: 86%; }
+  .decide .flatwrap { width: 100%; } .madewhy { margin: 0 0 10px; font-size: 13px; color: var(--muted); } .decide .row .btn { height: 48px; }
+  /* Build: big clothes */
+  .bstack { gap: 10px; } .bc .pic { height: 300px; } .bc.wide .pic { height: 330px; } .bc.wide.short .pic { height: 180px; } .bc.small .pic { height: 150px; }
+  .bstack.layered .bc:not(.wide):not(.small) .pic { height: 280px; } .bc.empty { min-height: 220px; } .bc.empty.wide { min-height: 260px; } .bc.empty.wide.short { min-height: 160px; }
+  .addopt { display: flex; gap: 6px; flex-wrap: wrap; max-width: 520px; margin: 10px auto 0; } .addopt:empty { display: none; }
