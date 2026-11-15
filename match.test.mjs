@@ -171,3 +171,28 @@ console.log('match.js ok');
   assert.equal(m.FITS.Tops[2], 'Oversized');
 }
 console.log('colors ok');
+{
+  const m = await import('./match.js');
+  assert.equal(m.colorName('#2a2929'), 'black', 'washed black tee');
+  assert.equal(m.colorName('#2d2d2c'), 'black');
+  assert.equal(m.colorName('#7d7b78'), 'grey');
+  const cap = { id: 'c', cat: 'Accessories', name: 'Vuja De cap', kind: 'baseball cap', color: '#5b3e2a' };
+  assert.equal(m.closestOwned([cap], { cat: 'Accessories', kind: 'beanie', name: 'Grey beanie', color: '#808080' }), null, 'brown cap is not a grey beanie');
+}
+console.log('qa2 ok');
+{
+  const m = await import('./match.js');
+  // green jacket with a brown collar: the collar is an accent, the dark-green shadow is not
+  assert.deepEqual(m.accentsOf([{ hex: '#0f3d2e', share: 0.2 }, { hex: '#4a3a30', share: 0.06 }], '#3e7a6c'), ['#4a3a30']);
+  const it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, ...x });
+  const crop = m.proportion([it('t', 'Tops', '#f4f4f4', { fit: 3 }), it('b', 'Bottoms', '#222', { fit: 2 }), it('s', 'Shoes', '#eee', { fit: 2 })]);
+  assert.ok(crop.score > 0 && !crop.veto, 'cropped top + wide pants works');
+  assert.equal(m.FITS.Tops[3], 'Cropped');
+}
+console.log('fit+accents ok');
+{
+  const m = await import('./match.js');
+  const cap = { id: 'c', cat: 'Accessories', name: 'Vuja De cap', kind: 'baseball cap', color: '#51342a' };
+  assert.equal(m.closestOwned([cap], { cat: 'Accessories', kind: 'beanie', color: '#402d2d' }), null, 'brown cap is not a black beanie');
+}
+console.log('shop ok');

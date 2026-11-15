@@ -14,7 +14,7 @@ export function hexToHsl(hex) {
 // ponytail: hand-tuned "fashion neutral" ranges (navy, denim, khaki, olive count as neutral). Tweak here if items misread.
 export function isNeutral(hex) {
   const { h, s, l } = hexToHsl(hex);
-  return s < 0.18 || l < 0.13 || l > 0.9
+  return s < 0.18 || l < 0.13 || l > 0.9 || (l < 0.25 && s < 0.25) // last one: near-black, named black by colorName
     || (h >= 15 && h <= 50 && s < 0.5 && l < 0.85)      // tan, beige, brown, khaki
     || (h >= 190 && h <= 250 && (l < 0.3 || s < 0.45))  // navy, denim
     || (h >= 50 && h <= 100 && s < 0.35 && l < 0.45);   // olive
@@ -26,7 +26,7 @@ const HUES = [[15, 'red'], [40, 'orange'], [65, 'yellow'], [85, 'lime'], [172, '
 export const SWATCHES = { black: '#1b1a19', grey: '#7d7b78', 'light grey': '#c9c7c3', white: '#f6f5f1', navy: '#1e2a45', denim: '#4d6a8c', 'light blue': '#9cc3e6', blue: '#2f5fb5', teal: '#2a8085', green: '#3f7a52', forest: '#22402c', olive: '#5c5b33', sage: '#8aa877', beige: '#d8c7a6', camel: '#b2874e', brown: '#5b3e2a', rust: '#a8522b', orange: '#e2782c', yellow: '#e9c548', red: '#c0392b', burgundy: '#6b1e2a', pink: '#e9a2b9', purple: '#6c4a90' };
 export function colorName(hex) {
   const { h, s, l } = hexToHsl(hex);
-  if (l < 0.13) return 'black';
+  if (l < 0.13 || (l < 0.25 && s < 0.25)) return 'black'; // a washed black tee is still black, not grey
   if (l > 0.9) return 'white';
   if (s < 0.18) return l > 0.6 ? 'light grey' : 'grey';
   if (h >= 190 && h <= 250 && l < 0.3) return 'navy';
@@ -59,9 +59,9 @@ const pairs = a => a.flatMap((x, i) => a.slice(i + 1).map(y => [x, y]));
 const compOff = hs => Math.min(Infinity, ...pairs(hs).map(([a, b]) => Math.abs(hueDist(a, b) - 180)));
 
 // ---------- proportions ----------
-// fit: 0 slim / 1 regular / 2 baggy, named per category. Missing = regular.
-export const FITS = { Tops: ['Fitted', 'Regular', 'Oversized'], Layers: ['Fitted', 'Regular', 'Oversized'], Bottoms: ['Slim', 'Straight', 'Baggy'], Shoes: ['Sleek', 'Regular', 'Chunky'], default: ['Slim', 'Regular', 'Baggy'] };
-const fit = p => p?.fit ?? 1;
+// fit: 0 slim / 1 regular / 2 baggy, named per category. Missing = regular. 3 = cropped (tops and layers): regular width, short length.
+export const FITS = { Tops: ['Fitted', 'Regular', 'Oversized', 'Cropped'], Layers: ['Fitted', 'Regular', 'Oversized', 'Cropped'], Bottoms: ['Slim', 'Straight', 'Baggy'], Shoes: ['Sleek', 'Regular', 'Chunky'], default: ['Slim', 'Regular', 'Baggy'] };
+const fit = p => p?.fit === 3 ? 1 : p?.fit ?? 1, cropped = p => p?.fit === 3;
 
 // Silhouette rules: volume should balance top vs bottom, and shoes should carry the weight of the pants.
 export function proportion(ps) {
@@ -77,6 +77,7 @@ export function proportion(ps) {
   if (down === 0 && feet === 0) add(0.8, 'Slim line carried down to sleek shoes');
   if (up === 2 && down === 0) add(0.8, 'Volume up top, clean and slim below');
   if (up === 0 && down === 2) add(0.8, 'Fitted top balances wide-leg pants');
+  if (cropped(top) && !layer && down >= 1) add(0.8, down === 2 ? 'Cropped top shows off wide-leg pants' : 'Cropped top keeps the legs looking long');
   if (up === 2 && down === 2) add(feet === 2 ? 0.3 : -1, feet === 2 ? 'Full oversized fit, grounded by chunky shoes' : 'All-baggy needs a chunky shoe to ground it');
   notes.sort((a, b) => Math.abs(b[0]) - Math.abs(a[0]));
   return { score: notes.reduce((t, [s]) => t + s, 0), veto: notes.some(([s]) => s <= -2), note: notes[0]?.[1] ?? 'Balanced, regular proportions', up, down };
@@ -84,13 +85,13 @@ export function proportion(ps) {
 
 // ---------- color wheel ----------
 export const HARMONIES = {
-  complementary: { label: 'Complementary', offsets: [0, 180] },
-  formula: { label: '2 + 1 + 1', offsets: [0, 180] },
-  analogous: { label: 'Analogous', offsets: [-30, 0, 30] },
+  complementary: { label: 'Opposites', offsets: [0, 180] },
+  formula: { label: 'Color pop', offsets: [0, 180] },
+  analogous: { label: 'Tonal', offsets: [-30, 0, 30] },
   split: { label: 'Split', offsets: [0, 150, 210] },
-  triadic: { label: 'Triadic', offsets: [0, 120, 240] },
-  square: { label: 'Square', offsets: [0, 90, 180, 270] },
-  mono: { label: 'Monochrome', offsets: [0, 0, 0] },
+  triadic: { label: 'Bold trio', offsets: [0, 120, 240] },
+  square: { label: 'Four-way', offsets: [0, 90, 180, 270] },
+  mono: { label: 'One color', offsets: [0, 0, 0] },
 };
 export function harmony(h, s, l, key) {
   return HARMONIES[key].offsets.map((o, i) => {
@@ -124,7 +125,7 @@ export const MODES = {
     },
   },
   formula: {
-    label: '2 + 1 + 1', blurb: 'Two neutral bases, one color, plus its complement.',
+    label: 'Color pop', blurb: 'Two neutral basics, one color, plus its opposite.',
     score(ps) {
       const hs = hues(ps), off = compOff(hs);
       if (hs.length !== 2 || off > 35 || ps.length - 2 < 2) return null;
@@ -132,7 +133,7 @@ export const MODES = {
     },
   },
   complementary: {
-    label: 'Complementary', blurb: 'Opposites on the color wheel.',
+    label: 'Opposites', blurb: 'Two colors from opposite sides of the color wheel.',
     score(ps) {
       const hs = hues(ps), off = compOff(hs);
       if (hs.length < 2 || off > 30) return null;
@@ -140,7 +141,7 @@ export const MODES = {
     },
   },
   analogous: {
-    label: 'Analogous', blurb: 'Neighbors on the wheel — smooth and tonal.',
+    label: 'Tonal', blurb: 'Colors that sit next to each other. Smooth and easy.',
     score(ps) {
       const hs = hues(ps), spread = Math.max(0, ...pairs(hs).map(([a, b]) => hueDist(a, b)));
       if (hs.length < 2 || spread > 50) return null;
@@ -148,7 +149,7 @@ export const MODES = {
     },
   },
   triadic: {
-    label: 'Triadic', blurb: 'Three colors evenly spaced. Bold.',
+    label: 'Bold trio', blurb: 'Three colors spread evenly around the wheel. Loud.',
     score(ps) {
       const hs = hues(ps);
       if (hs.length < 3) return null;
@@ -215,9 +216,11 @@ export function echoes(ps) {
 const sameHue = (a, b) => { const x = hexToHsl(a), y = hexToHsl(b); return colorDist(a, b) < 80 && x.s >= 0.25 && y.s >= 0.25 && hueDist(x.h, y.h) <= 25; };
 
 // Base color + up to 3 accents from a piece's colors ([{hex, share}], biggest first): far enough from the base and from each other.
+// A darker or lighter version of the main color (the shadowed side of a green jacket) is not a second color.
+export const isShade = (a, b) => { const x = hexToHsl(a), y = hexToHsl(b); return x.s >= 0.2 && y.s >= 0.2 && hueDist(x.h, y.h) <= 25; };
 export function accentsOf(palette, base, min = 0.03) {
   const out = [];
-  for (const c of palette) if (c.share >= min && colorDist(c.hex, base) > 90 && out.every(a => colorDist(a, c.hex) > 70)) out.push(c.hex);
+  for (const c of palette) if (c.share >= min && colorDist(c.hex, base) > 90 && !isShade(c.hex, base) && out.every(a => colorDist(a, c.hex) > 70)) out.push(c.hex);
   return out.slice(0, 3);
 }
 
@@ -238,7 +241,7 @@ export function flatLayout(slots) {
   if (layer) { box.Layers = [4, 4, 43, 46]; box.Tops = [53, 6, 40, 44]; } else box.Tops = [6, 5, 44, 47];
   box.Bottoms = layer ? [8, 56, 36, 65] : [10, 56, 36, 65];
   const side = Object.keys(SIDE).filter(s => slots.includes(s)), col = layer ? [50, 54, 46, 68] : [55, 5, 41, 116];
-  const f = Math.min(1, (col[3] - 4 * (side.length - 1)) / side.reduce((t, s) => t + SIDE[s][1], 0)); // shrink only if they can't fit
+  const f = Math.min(layer ? 1 : 1.25, (col[3] - 4 * (side.length - 1)) / side.reduce((t, s) => t + SIDE[s][1], 0)); // shrink only if they can't fit; with no layer the side column is wide, so cap/chain/shoes grow into it
   const gap = (col[3] - side.reduce((t, s) => t + SIDE[s][1] * f, 0)) / (side.length + 1);
   let y = col[1] + gap;
   for (const s of side) { const [w, h] = SIDE[s].map(v => v * f); box[s] = [col[0] + (col[2] - w) / 2, y, w, h]; y += h + gap; }
@@ -361,7 +364,9 @@ export function gaps(items) {
 // Same slot, nearest color (a matching fit counts like a slightly closer color). null = you don't own anything close.
 export function closestOwned(items, ghost, max = 70) {
   const slot = slotOf(ghost); if (!slot) return null;
-  return items.filter(SLOTS[slot]).map(p => [p, colorDist(p.color, ghost.color) - (ghost.fit != null && p.fit === ghost.fit ? 10 : 0)])
+  // Same color family only: a brown cap is not "your grey beanie" just because both are dull.
+  const fam = c => colorName(c) === colorName(ghost.color) || sameHue(c, ghost.color) || (isNeutral(c) && isNeutral(ghost.color) && colorDist(c, ghost.color) < 25);
+  return items.filter(SLOTS[slot]).filter(p => fam(p.color)).map(p => [p, colorDist(p.color, ghost.color) - (ghost.fit != null && p.fit === ghost.fit ? 10 : 0)])
     .filter(([, d]) => d < max).sort((a, b) => a[1] - b[1])[0]?.[0] ?? null;
 }
 

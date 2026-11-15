@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#ebe7e0">
+<meta name="apple-mobile-web-app-title" content="Closet">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Closet</title>
 <style>
   /* Fashion house: warm stone neutrals, Helvetica, uppercase tracking, square corners, no shadows. The clothes are the only color. */
@@ -22,20 +24,21 @@
   button, input, select { font: inherit; color: inherit; }
   button { cursor: pointer; border: 0; background: none; padding: 0; border-radius: 0; transition: opacity .2s; }
   button:active { opacity: .6; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; } input:focus-visible, select:focus-visible { outline: 0; border-bottom-color: var(--ink) !important; box-shadow: 0 1px 0 var(--ink); }
   main { max-width: 820px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 28px) 18px 120px; }
   header { display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-bottom: 22px; }
   header .right { display: flex; gap: 14px; align-items: center; }
   h1 { font-size: 30px; letter-spacing: -.01em; margin: 4px 0 0; font-weight: 700; line-height: 1; text-transform: uppercase; }
   h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; margin: 38px 0 14px; display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--hair); }
   .sub { color: var(--muted); font-size: 13px; margin: -4px 0 16px; max-width: 46ch; }
-  .eyebrow, .mono { font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+  .eyebrow, .mono { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
   .glass { background: var(--s1); border-radius: var(--r); }
   .spot { background: var(--tile); border-radius: var(--r); }
 
   .chips { display: flex; gap: 20px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 22px; padding: 0 18px; border-bottom: 1px solid var(--hair); }
-  .chip { flex: none; padding: 0 0 10px; margin-bottom: -1px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); border-bottom: 1px solid transparent; }
+  .chip { flex: none; min-height: 44px; display: inline-flex; align-items: flex-end; padding: 0 0 10px; margin-bottom: -1px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); border-bottom: 1px solid transparent; }
   .chip.on { color: var(--ink); border-color: var(--ink); }
-  .chip small { font-size: 10px; font-weight: 400; margin-left: 4px; }
+  .chip small { font-size: 11px; font-weight: 400; margin-left: 4px; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 26px 10px; }
   .item { text-align: left; align-self: start; }
@@ -56,21 +59,22 @@
   .btn.ghost, .btn.danger { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
   .btn.go { background: var(--ink); color: var(--bg); }
   .btn.done { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--hair); }
-  .btn.sm { height: 40px; padding: 0 18px; }
+  .btn.sm { height: 44px; padding: 0 18px; }
   .btn.wide { width: 100%; margin-top: 22px; }
   .btn.danger { color: #9b3b2e; box-shadow: inset 0 0 0 1px rgb(155 59 46 / .4); }
 
   .seg { display: inline-flex; gap: 16px; }
   .seg button { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); padding-bottom: 3px; border-bottom: 1px solid transparent; }
   .seg button.on { color: var(--ink); border-color: var(--ink); }
-  .subnav { display: flex; margin: -6px 0 22px; }
+  .seg.subnav { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; margin: -6px 0 18px; box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); }
+  .seg.subnav button { height: 44px; padding: 0 4px; border: 0; } .seg.subnav button.on { background: var(--ink); color: var(--bg); }
   .backup { display: flex; justify-content: center; gap: 24px; margin-top: 48px; } .empty .backup { margin-top: 22px; }
   .blurb .row2 { display: flex; gap: 6px; flex: none; }
   .blurb { color: var(--muted); margin: -8px 0 18px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .anchor { display: inline-flex; align-items: center; gap: 10px; padding: 4px 12px 4px 4px; background: var(--s1); margin-bottom: 16px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
   .anchor img { width: 34px; height: 34px; object-fit: contain; background: var(--tile); padding: 3px; }
 
-  .streak { display: inline-flex; align-items: baseline; gap: 6px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); padding: 7px 9px; box-shadow: inset 0 0 0 1px var(--hair); }
+  .streak { display: inline-flex; align-items: baseline; gap: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); padding: 7px 9px; box-shadow: inset 0 0 0 1px var(--hair); }
   .streak b { font-size: 13px; letter-spacing: 0; color: var(--ink); }
   .streak.lit { background: var(--ink); color: var(--bg); box-shadow: none; } .streak.lit b { color: var(--bg); }
 
@@ -80,20 +84,20 @@
   .meta { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
   .swatches { display: flex; gap: 3px; }
   .swatches i { width: 12px; height: 12px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .1); }
-  .meta p { flex: 1; margin: 0 0 0 4px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta p { flex: 1; margin: 0 0 0 4px; font-size: 11px; line-height: 1.35; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .why { display: flex; gap: 6px; align-items: center; font-size: 12px; margin-top: 6px; color: var(--muted); }
   .why svg { width: 14px; height: 14px; flex: none; }
-  .icon { width: 36px; height: 36px; display: grid; place-items: center; flex: none; }
+  .icon { width: 44px; height: 44px; display: grid; place-items: center; flex: none; }
   .icon svg { width: 19px; height: 19px; }
   .icon.on svg { fill: var(--ink); }
   .actions { display: flex; gap: 8px; margin-top: 12px; }
   .actions .btn { flex: 1; }
 
   /* list + suggestions */
-  .nudge { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px; margin-bottom: 24px; text-align: left; }
+  .nudge { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 10px 12px; margin-bottom: 16px; text-align: left; }
   .nudge .gh { width: 54px; height: 54px; flex: none; background: var(--tile); padding: 6px; }
   .nudge div { flex: 1; min-width: 0; } .nudge b { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
-  .plus { flex: none; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
+  .plus { flex: none; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
   .gaps { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
   .gap { padding: 14px; }
   .gap-top { display: flex; align-items: center; gap: 12px; }
@@ -103,21 +107,19 @@
   .scan { display: grid; place-items: center; gap: 16px; padding: 90px 20px; }
   .scan i { width: 40px; height: 1px; background: var(--ink); animation: load 1s ease-in-out infinite alternate; transform-origin: left; }
   @keyframes load { from { transform: scaleX(.1) } to { transform: scaleX(1) } }
-  .wishform { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-bottom: 8px; }
+  .wishform { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; margin-bottom: 8px; } .wishform > * { min-width: 0; width: 100%; }
   .wishform input[name=name] { grid-column: 1 / -1; }
-  .wishform input[name=price] { grid-column: 2 / -1; }
+  .wishform input[name=link] { grid-column: 1 / 3; } .wishform input[name=price] { grid-column: 3; width: 88px; }
   .wishform input:not([type=color]), .wishform select { height: 46px; border: 0; border-bottom: 1px solid var(--ink); background: none; padding: 0 2px; font-size: 16px; outline: 0; border-radius: 0; appearance: none; } /* <16px makes iOS zoom on focus */
   .wishform select { padding-right: 18px; border-bottom-color: var(--hair);
     background: linear-gradient(45deg, transparent 50%, var(--ink) 50%) right 4px center / 5px 5px no-repeat, linear-gradient(-45deg, transparent 50%, var(--ink) 50%) right 0 center / 5px 5px no-repeat; }
-  .wishform input[type=color] { width: 46px; height: 46px; border: 0; padding: 8px; background: none; }
-  .wishform input[type=color]::-webkit-color-swatch-wrapper { padding: 0; } .wishform input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
   .wish { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--hair); }
   .wish .gh { width: 64px; height: 80px; flex: none; background: var(--tile); padding: 10px; }
   .wish div { flex: 1; min-width: 0; } .wish b { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
   .wish.got { opacity: .45; } .wish.got b { text-decoration: line-through; }
-  .check { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ink); display: grid; place-items: center; flex: none; }
-  .check svg { width: 14px; height: 14px; opacity: 0; } .got .check { background: var(--ink); color: var(--bg); } .got .check svg { opacity: 1; }
-  .x { color: var(--muted); font-size: 18px; width: 28px; flex: none; }
+  .check { width: 44px; height: 44px; display: grid; place-items: center; flex: none; } /* 44px to tap, 26px to see */
+  .check svg { width: 26px; height: 26px; padding: 6px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ink); stroke: transparent; } .got .check svg { background: var(--ink); stroke: var(--bg); }
+  .x { color: var(--muted); font-size: 20px; width: 44px; height: 44px; flex: none; }
 
   /* progress */
   .hud { display: grid; grid-template-columns: 1fr auto; align-items: end; padding: 22px 20px; gap: 10px; }
@@ -134,7 +136,7 @@
   .medal { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--hair); color: var(--muted); }
   .medal svg { width: 20px; height: 20px; stroke-width: 1.3; }
   .badge.done { background: var(--ink); color: var(--bg); } .badge.done .medal { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3); color: var(--bg); }
-  .badge b { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
+  .badge b { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
   .badge:not(.done) b { color: var(--muted); }
   .badge small { font-size: 11px; color: var(--muted); line-height: 1.3; }
   .badge.done small, .badge.done .mono { color: rgb(255 255 255 / .55); }
@@ -147,11 +149,10 @@
   .wheel svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
   .wheel .h { position: absolute; width: 24px; height: 24px; margin: -12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgb(0 0 0 / .2); pointer-events: none; }
   .wheel .h.base { width: 34px; height: 34px; margin: -17px; }
-  input[type=range] { width: 100%; accent-color: var(--ink); }
-  .light { display: flex; align-items: center; gap: 12px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+  input[type=range] { width: 100%; height: 44px; accent-color: var(--ink); }
+  .light { display: flex; align-items: center; gap: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
   .pal { display: flex; gap: 4px; margin: 20px 0 0; }
-  .pal div { flex: 1; height: 120px; display: flex; flex-direction: column; justify-content: end; padding: 10px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
-  .pal small { font-weight: 400; opacity: .75; }
+  .pal div { flex: 1; height: 120px; display: flex; flex-direction: column; justify-content: end; padding: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
   .match { display: flex; align-items: center; gap: 10px; padding: 10px; margin-bottom: 4px; }
   .match > i { width: 30px; height: 30px; border-radius: 50%; flex: none; }
   .match .thumbs { display: flex; gap: 4px; overflow-x: auto; flex: 1; scrollbar-width: none; }
@@ -160,7 +161,7 @@
 
   nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: stretch; background: rgb(235 231 224 / .92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--hair); padding-bottom: env(safe-area-inset-bottom); }
   nav .tabs { flex: 1; display: flex; max-width: 820px; margin: 0 auto; }
-  nav .tabs button { flex: 1; min-width: 0; height: 58px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); position: relative; }
+  nav .tabs button { flex: 1; min-width: 0; height: 58px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); position: relative; }
   nav .tabs button.on { color: var(--ink); }
   nav .tabs button.on::after { content: ''; position: absolute; left: 50%; bottom: 14px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--ink); }
   nav .add { width: 52px; flex: none; display: grid; place-items: center; background: var(--ink); color: var(--bg); }
@@ -175,26 +176,28 @@
   .sheet .hero img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
   .sheet .close { position: absolute; top: 12px; right: 12px; }
   .sheet form { padding: 20px 18px calc(env(safe-area-inset-bottom) + 22px); display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .sheet .stat { text-align: center; }
+  .incoll > .vibes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } .vibes .pill { width: 100%; }
+  .dayrow { justify-content: flex-start; gap: 10px; } .dayrow > span:first-child { flex: 1; text-align: left; } .dthumb { width: 30px; flex: none; }
+  .pieceacts { display: grid; gap: 8px; } .acchint { flex: 1; text-align: right; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .group { border-top: 1px solid var(--hair); }
   .cell { display: flex; align-items: center; gap: 12px; min-height: 52px; border-bottom: 1px solid var(--hair); }
-  .cell > span:first-child { flex: none; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; }
+  .cell > span:first-child { flex: none; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; }
   .cell input:not([type]), .cell select { flex: 1; min-width: 0; border: 0; background: none; text-align: right; text-align-last: right; color: var(--ink); appearance: none; font-size: 16px; height: 52px; outline: 0; border-radius: 0; }
   .cell select { padding-right: 16px; background: linear-gradient(45deg, transparent 50%, var(--muted) 50%) right 4px center / 5px 5px no-repeat, linear-gradient(-45deg, transparent 50%, var(--muted) 50%) right 0 center / 5px 5px no-repeat; }
   .cell .cname { flex: 1; text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
-  .swatches { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 10px 0 14px; border-bottom: 1px solid var(--hair); }
-  .swatches button { flex: none; width: 30px; height: 30px; border-radius: 50%; position: relative; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
-  .swatches button span { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); font-size: 8.5px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; color: var(--muted); display: none; }
-  .swatches button.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--ink); } .swatches button.on span { display: block; }
-  .swatches:has(.on) { padding-bottom: 26px; }
-  .cell input[type=color] { width: 26px; height: 26px; border: 0; padding: 0; border-radius: 50%; background: none; flex: none; }
-  .cell input[type=color]::-webkit-color-swatch-wrapper { padding: 0; } .cell input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
+  .cpick { display: flex; overflow-x: auto; scrollbar-width: none; margin: 0 -6px; padding: 4px 0 8px; border-bottom: 1px solid var(--hair); }
+  .cpick button, .cpick label { flex: none; width: 44px; height: 44px; display: grid; place-items: center; position: relative; }
+  .cpick i { width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
+  .cpick .on i { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--ink); }
+  .cpick label i { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); } /* rainbow = pick any color */
+  .cpick input[type=color] { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; }
+  .cell .cdot { width: 26px; height: 26px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
   .switch { appearance: none; margin: 0 0 0 auto; width: 44px; height: 24px; border-radius: 99px; box-shadow: inset 0 0 0 1px var(--ink); position: relative; flex: none; cursor: pointer; transition: background .2s; }
   .switch::after { content: ''; position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); transition: transform .25s cubic-bezier(.3, .7, .4, 1), background .2s; }
   .switch:checked { background: var(--ink); } .switch:checked::after { transform: translateX(20px); background: var(--bg); }
 
-  #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 14px); transform: translate(-50%, -180%); background: var(--ink); color: var(--bg); padding: 13px 20px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; transition: transform .35s cubic-bezier(.2, .9, .3, 1); z-index: 9; max-width: 92vw; white-space: nowrap; }
+  #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 14px); transform: translate(-50%, -180%); background: var(--ink); color: var(--bg); padding: 13px 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; transition: transform .35s cubic-bezier(.2, .9, .3, 1); z-index: 9; max-width: 92vw; white-space: nowrap; }
   #toast.show { transform: translate(-50%, 0); }
 
   /* flat-lay outfit: pieces laid out at real-world scale, never overlapping (flatLayout in match.js) */
@@ -210,36 +213,40 @@
   /* builder: one card per slot */
   .bgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 520px; margin: 0 auto; }
   .bcard { display: flex; flex-direction: column; background: var(--s1); border-radius: var(--r); padding: 10px 10px 4px; min-width: 0; }
-  .bcard .lab { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
-  .bcard .pic { display: block; width: 100%; height: 150px; padding: 8px; } .bcard .pic img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+  .bcard .lab { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+  .bcard .pic { display: block; width: 100%; height: 124px; padding: 6px; } .bcard .pic img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
   .bcard .nm { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bcard .ops { display: flex; justify-content: space-between; margin-top: auto; } .bcard .ops button { height: 40px; font-size: 12px; } .bcard .ops button:last-child { color: var(--muted); }
-  .bcard.add { justify-content: center; align-items: center; gap: 2px; min-height: 238px; background: none; box-shadow: inset 0 0 0 1px var(--hair); font-size: 13px; }
+  .bcard .ops { display: flex; justify-content: space-between; margin: auto -6px 0; } .bcard .ops button { height: 44px; padding: 0 8px; font-size: 12px; } .bcard .ops button:last-child { color: var(--muted); }
+  .bcard.add { justify-content: center; align-items: center; gap: 2px; min-height: 210px; background: none; box-shadow: inset 0 0 0 1px var(--hair); font-size: 13px; }
   .bcard.add b { font-size: 26px; font-weight: 300; line-height: 1; } .bcard.add small { font-size: 11px; color: var(--muted); }
-  .bgrid.small .bcard.add { aspect-ratio: auto; min-height: 150px; } .bgrid.small .bcard .pic { height: 90px; }
-  .pickh { padding: 0 18px; margin: 4px 0 8px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+  .bgrid.small .bcard .pic { height: 84px; }
+  .bcard.more { gap: 6px; justify-content: center; background: none; box-shadow: inset 0 0 0 1px var(--hair); padding: 10px; } .bcard.more .pill { width: 100%; color: var(--ink); }
+  .addrow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; max-width: 520px; margin-inline: auto; } .addrow .pill { color: var(--ink); }
+  .pickh { padding: 0 18px; margin: 4px 0 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
   .actions .icon.on svg { fill: var(--bg); }
   .looks { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 2px; }
   .looks .look { flex: 0 0 92px; position: relative; } .looks .look > button:first-child { display: block; width: 100%; }
-  .looks .look .icon { position: absolute; right: 0; bottom: 0; width: 30px; height: 30px; } .looks .look .icon svg { width: 15px; height: 15px; }
-  .looks-h { display: flex; justify-content: space-between; margin: 26px 0 10px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; } .looks-h span:last-child { color: var(--muted); font-weight: 500; }
-  .accs { display: flex; gap: 6px; margin-left: auto; } .accs button { width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
+  .looks .look .icon { position: absolute; right: 0; bottom: 0; width: 40px; height: 40px; } .looks .look .icon svg { width: 15px; height: 15px; }
+  .looks-h { display: flex; justify-content: space-between; margin: 26px 0 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; } .looks-h span:last-child { color: var(--muted); font-weight: 500; }
+  .accs { display: flex; margin-left: auto; } .accs button { width: 40px; height: 44px; display: grid; place-items: center; }
+  .accs i { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); display: grid; place-items: center; font-style: normal; font-size: 13px; color: #fff; text-shadow: 0 0 2px rgb(0 0 0 / .6); }
   /* week planner */
   .weekbar { display: flex; justify-content: space-between; align-items: center; margin: 0 0 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
   .days { display: grid; gap: 6px; }
-  .day { display: grid; grid-template-columns: 44px 84px 1fr; gap: 12px; align-items: center; padding: 8px 10px 8px 12px; background: var(--s1); border-radius: var(--r); }
-  .day.today { box-shadow: inset 0 0 0 1.5px var(--ink); }
-  .day .dl b { display: block; font-size: 10.5px; letter-spacing: .14em; } .day .dl span { font-size: 22px; font-weight: 700; }
-  .day .slotbtn { display: block; width: 84px; } .day .plus { width: 84px; aspect-ratio: 4 / 5; display: grid; place-items: center; box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+  .day { display: grid; grid-template-columns: 44px 110px 1fr; gap: 12px; align-items: center; padding: 8px 10px 8px 12px; background: var(--s1); border-radius: var(--r); }
+  .day.today { box-shadow: inset 0 0 0 1.5px var(--ink); } .day.past { opacity: .5; }
+  .day.open { grid-template-columns: 44px 1fr; padding-block: 4px; } .day.open .plus { width: 100%; aspect-ratio: auto; height: 44px; justify-content: start; padding: 0 14px; display: flex; align-items: center; }
+  .day .dl b { display: block; font-size: 11px; letter-spacing: .14em; } .day .dl span { font-size: 22px; font-weight: 700; }
+  .day .slotbtn { display: block; width: 110px; } .day .plus { width: 110px; aspect-ratio: 4 / 5; display: grid; place-items: center; box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
   .day .acts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: center; } .day .acts .mono { width: 100%; text-align: right; }
   .picklooks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .picklooks button { display: block; }
-  .chk { display: flex; gap: 10px; align-items: center; font-size: 13px; }
+  .chk { display: flex; gap: 12px; align-items: center; min-height: 44px; font-size: 13px; } .chk input { width: 22px; height: 22px; margin: 0; accent-color: var(--ink); }
   /* shop the look + packing */
-  .lookrow { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hair); }
+  .lookrow { display: grid; grid-template-columns: 44px 1fr 44px; gap: 4px 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hair); }
   .lookrow .gh { width: 44px; height: 44px; } .lookrow img { width: 44px; height: 44px; object-fit: contain; background: var(--tile); border-radius: var(--r); }
-  .lookrow b { display: block; font-size: 13px; } .lookrow .acts { display: flex; gap: 6px; align-items: center; }
-  .lookrow .x { width: 28px; height: 28px; color: var(--muted); font-size: 18px; }
-  .packdays { display: flex; align-items: center; gap: 14px; justify-content: center; } .packdays b { font-size: 34px; min-width: 2ch; text-align: center; }
+  .lookrow b { display: block; font-size: 13px; } .lookrow .acts { grid-column: 2 / -1; display: flex; gap: 6px; align-items: center; } .lookrow .acts:empty { display: none; }
+
+  .packdays { display: flex; align-items: center; gap: 14px; justify-content: center; } .packdays .btn { width: 52px; padding: 0; font-size: 22px; font-weight: 400; } .packdays b { font-size: 34px; min-width: 2ch; text-align: center; }
   .packfits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .packfits span { display: block; margin-top: 4px; } .packfits button, .picklooks button { display: block; width: 100%; }
   .packlist button { display: grid; grid-template-columns: 22px 44px 1fr; gap: 12px; align-items: center; width: 100%; padding: 6px 0; text-align: left; font-size: 13px; }
   .packlist i { width: 20px; height: 20px; box-shadow: inset 0 0 0 1.5px var(--ink); border-radius: 3px; display: grid; place-items: center; font-style: normal; font-size: 12px; }
@@ -247,25 +254,22 @@
   .packlist img { width: 44px; height: 44px; object-fit: contain; background: var(--tile); border-radius: var(--r); }
   /* builder */
   .build .flat { max-width: 440px; margin: 0 auto; }
-  .verdict { display: flex; gap: 8px; align-items: center; justify-content: center; text-align: center; font-size: 12px; margin: 14px 0 0; color: var(--ink); }
+  .verdict { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: -10px auto 14px; max-width: 520px; color: var(--ink); }
   .verdict svg { width: 14px; height: 14px; flex: none; } .verdict.bad { color: #9b3b2e; }
-  .build .actions { max-width: 520px; margin: 14px auto 0; } .build .actions [data-action=planthis] { flex: 0 0 auto; padding: 0 16px; }
+  .build .actions { max-width: 520px; margin: 14px auto 0; position: sticky; bottom: calc(env(safe-area-inset-bottom) + 59px); z-index: 4; background: var(--bg); padding: 8px 0; box-shadow: 0 -1px 0 var(--hair); } /* always reachable, sits above the menu */ .build .actions [data-action=planthis] { flex: 0 0 auto; padding: 0 16px; }
   .hint { text-align: center; margin: 18px auto 4px; font-size: 12px; }
-  .slot h4 { display: flex; justify-content: space-between; gap: 10px; margin: 22px 0 10px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; }
-  .slot h4 span:last-child { color: var(--muted); font-weight: 500; letter-spacing: .08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .strip { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 2px; }
   .strip button { flex: none; width: 76px; height: 96px; background: var(--tile); padding: 7px; position: relative; border-radius: var(--r); }
   .strip button.on { box-shadow: inset 0 0 0 2px var(--ink); }
-  .strip button.no { opacity: .35; }
   .strip img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
-  .strip .none { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
-  .strip em { position: absolute; right: 4px; bottom: 3px; font-style: normal; font-size: 10px; font-weight: 700; }
+  .strip .none { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+  .strip em { position: absolute; right: 4px; bottom: 3px; font-style: normal; font-size: 11px; font-weight: 700; }
 
   /* collections */
   .colls { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 16px; padding: 0 18px; }
-  .pill { flex: none; height: 36px; padding: 0 14px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); white-space: nowrap; }
+  .pill { flex: none; height: 44px; padding: 0 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); white-space: nowrap; }
   .pill.on { background: var(--ink); color: var(--bg); box-shadow: none; }
-  .pill small { font-size: 10px; font-weight: 400; margin-left: 6px; opacity: .7; }
+  .pill small { font-size: 11px; font-weight: 400; margin-left: 6px; opacity: .7; }
   .pill.add { color: var(--ink); }
   .collbar { display: flex; gap: 6px; margin: 0 0 18px; } .collbar .btn { flex: 1; padding: 0 10px; }
   .btn.armed { background: #9b3b2e; color: #fff; box-shadow: none; }
@@ -276,11 +280,12 @@
   .touch .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
   .incoll { display: grid; gap: 10px; } .incoll > div { display: flex; flex-wrap: wrap; gap: 6px; }
   .pickhead { display: flex; justify-content: space-between; align-items: center; padding: 20px 18px 14px; position: sticky; top: 0; background: var(--bg); z-index: 2; }
+  .pad .pickhead { padding: 0; }
   .pickhead h2 { margin: 2px 0 0; font-size: 22px; text-transform: uppercase; }
   .pickgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 18px 30px; }
   .pickgrid button { background: var(--tile); aspect-ratio: 3 / 4; padding: 10px 8px 22px; position: relative; border-radius: var(--r); }
   .pickgrid img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
-  .pickgrid span { position: absolute; left: 6px; right: 6px; bottom: 5px; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pickgrid span { position: absolute; left: 6px; right: 6px; bottom: 5px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pickgrid button.on { box-shadow: inset 0 0 0 2px var(--ink); }
   .pickgrid button.on::after { content: '✓'; position: absolute; top: 5px; right: 6px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: var(--bg); font-size: 11px; display: grid; place-items: center; }
   .newcoll { display: grid; gap: 14px; padding: 0 0 calc(env(safe-area-inset-bottom) + 22px); }
@@ -291,10 +296,10 @@
   .board { columns: 2; column-gap: 10px; }
   .board button { display: block; width: 100%; margin-bottom: 10px; break-inside: avoid; }
   .board img { width: 100%; display: block; border-radius: var(--r); }
-  .pals { display: flex; height: 6px; margin-top: 4px; } .pals i { flex: 1; }
+  .pals { display: flex; align-items: center; gap: 4px; margin-top: 6px; text-align: left; } .pals i { width: 12px; height: 12px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12); } .pals span { margin-left: 4px; }
   .inspohero { height: auto; max-height: 56dvh; padding: 0; } .inspohero img { max-height: 56dvh; }
   .pad { padding: 18px 18px calc(env(safe-area-inset-bottom) + 24px); display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; } /* minmax: wide thumb rows must scroll, not stretch the sheet */
-  .palrow { display: flex; gap: 4px; } .palrow button { flex: 1; height: 64px; display: flex; align-items: end; padding: 6px; font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+  .palrow { display: flex; gap: 4px; } .palrow button { flex: 1; height: 64px; display: flex; align-items: end; padding: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
   .palrow button.off { opacity: .2; }
 
   /* me */
@@ -302,29 +307,19 @@
   .tiles > * { padding: 16px; background: var(--s1); text-align: left; border-radius: var(--r); }
   .tiles small { display: block; margin-top: 4px; font-size: 11px; }
   .tiles b { display: block; font-size: 34px; font-weight: 700; letter-spacing: -.02em; margin-top: 6px; }
-  .bars { display: grid; gap: 8px; } .bars div { display: grid; grid-template-columns: 96px 1fr 28px; align-items: center; gap: 10px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
+  .bars { display: grid; gap: 8px; } .bars div { display: grid; grid-template-columns: 96px 1fr 28px; align-items: center; gap: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
   .bars i { height: 8px; background: var(--s1); } .bars i b { display: block; height: 100%; background: var(--ink); } .bars em { font-style: normal; text-align: right; }
   .colorbar { display: flex; height: 44px; border-radius: var(--r); overflow: hidden; box-shadow: inset 0 0 0 1px var(--hair); }
   .legend { margin-top: 10px; line-height: 1.7; }
   #measure .cell input { text-align: right; }
-
-  /* onboarding */
-  body.onboarding nav { display: none; }
-  body.onboarding main { padding-bottom: 30px; }
-  .ob { min-height: calc(100dvh - 70px); display: flex; flex-direction: column; justify-content: space-between; gap: 30px; }
-  .ob { position: relative; } .skipob { position: absolute; right: 0; top: 0; height: 36px; color: var(--muted); }
-  .ob h1 { font-size: 40px; line-height: .98; margin-top: 10px; }
-  .lead { margin-top: 16px; font-size: 14px; }
-  .opts { display: grid; gap: 6px; margin-top: 22px; }
-  .opt { height: 56px; padding: 0 18px; display: flex; justify-content: space-between; align-items: center; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); }
-  .opt.on { background: var(--ink); color: var(--bg); box-shadow: none; }
-  .ob .group { margin-top: 18px; }
+  details.sizes summary { list-style: none; cursor: pointer; } details.sizes summary::-webkit-details-marker { display: none; } details.sizes summary h3 span:last-child::after { content: ' +'; } details.sizes[open] summary h3 span:last-child::after { content: ' −'; }
 
   /* item sheet tools + wishlist extras */
+  .btn.full { width: 100%; } .tip { text-align: center; margin-top: 10px; } .hud .mono { display: block; margin-top: 14px; }
   .sheet .tools button.hl { background: var(--ink); color: var(--bg); }
   .sheet .tools { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 10px 18px; border-bottom: 1px solid var(--hair); }
-  .sheet .tools button { flex: none; height: 34px; padding: 0 12px; background: var(--s1); box-shadow: inset 0 0 0 1px var(--hair); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; border-radius: var(--r); }
-  .shop { display: inline-block; margin-top: 4px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--ink); }
+  .sheet .tools button { flex: none; height: 44px; padding: 0 12px; background: var(--s1); box-shadow: inset 0 0 0 1px var(--hair); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; border-radius: var(--r); }
+  .shop { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--ink); }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -346,7 +341,7 @@
 
 <script type="module">
 import { dayKey, prevDay, streaks, badges } from './progress.js';
-import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES } from './match.js';
+import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha } from './cutout.js';
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
@@ -367,16 +362,16 @@ const del = (name, k) => store(name, 'readwrite', s => s.delete(k));
 // ---------- state ----------
 const S = {
   view: 'closet', cat: 'All', coll: null, mode: 'classic', tab: 'ideas', anchor: null, ideas: null, palette: null, inspoColors: null,
-  build: null, inspoTab: 'board', listTab: null, pending: [], ob: { step: 0, styles: [], goals: [] },
+  build: null, inspoTab: 'board', listTab: null, pending: [],
   wheel: { h: 25, s: 0.8, l: 0.5, harmony: 'complementary' }, dragging: false,
   items: await all('items'), saved: await all('outfits'), log: await all('log'), wish: await all('wish'),
   colls: await all('colls'), inspo: await all('inspo'), ...await (async () => { const ps = await all('profile');
     return { profile: ps.find(p => p.k === 'me') ?? null, history: ps.find(p => p.k === 'history')?.list ?? [],
       plan: ps.find(p => p.k === 'plan') ?? { k: 'plan', days: {}, weekly: {} } }; })(), // plan: { days: {date: look}, weekly: {0-6: look} } // history: looks you swiped past, newest first
 };
-const defaultMode = p => p?.styles?.includes('streetwear') ? 'street' : 'classic';
-if (S.profile?.done) S.mode = defaultMode(S.profile); else S.view = 'onboard';
+S.mode = MODES[S.profile?.mode] ? S.profile.mode : 'classic'; // the style you picked last time
 // Ask the browser to keep the closet. Safari clears sites unused for 7 days unless they're on the Home Screen, so Me shows the answer.
+for (const it of S.items) if (it.accents?.some(a => isShade(a, it.color))) { it.accents = it.accents.filter(a => !isShade(a, it.color)); put('items', it); }
 let kept = false; navigator.storage?.persist?.().then(v => { kept = v; }).catch(() => {});
 
 const urls = new Map();
@@ -393,6 +388,8 @@ const uid = () => crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random
 const ago = t => { const d = Math.floor((Date.now() - t) / 864e5); return d < 1 ? 'today' : d < 30 ? `${d}d ago` : `${Math.floor(d / 30)}mo ago`; };
 const wornText = it => it.wears ? `Worn ${it.wears}× · ${ago(it.lastWorn)}` : 'Never worn';
 const fitLabel = it => it.cat === 'Accessories' ? '' : (FITS[it.cat] ?? FITS.default)[it.fit ?? 1] + ' · ';
+const lum = hex => { const n = parseInt(hex.slice(1), 16); return [16, 8, 0].map(b => (n >> b & 255) / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((t, v, i) => t + v * [.2126, .7152, .0722][i], 0); };
+const inkOn = hex => (lum(hex) + .05) / .057 > 1.05 / (lum(hex) + .05) ? '#141414' : '#fff';
 const money = v => '$' + Math.round(v).toLocaleString();
 const toast = msg => { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2400); };
 const svg = d => `<svg viewBox="0 0 24 24"><path d="${d}"/></svg>`;
@@ -421,8 +418,6 @@ const ICON = {
   heart: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
   prism: 'M12 3 3 20h18zM12 3v17M7.5 11.5 16.5 11.5',
 };
-const STYLES = { streetwear: 'Streetwear', minimal: 'Minimal', classic: 'Classic', athletic: 'Athletic', dressy: 'Dressy', vintage: 'Vintage' };
-const GOALS = { daily: 'Pick my fit every day', use: 'Get more out of what I own', gaps: "Find what's missing", plan: 'Plan trips & nights out', inspo: 'Turn inspo into outfits', track: 'Track what I wear' };
 const PRESET_COLLS = ['Everyday', 'Vacation', 'Club', 'Dressy', 'Work', 'Gym', 'Date night'];
 const SLOT_LABEL = { Tops: 'Top', Layers: 'Layer', Bottoms: 'Bottoms', Shoes: 'Shoes', Hat: 'Hat', Accessory: 'Accessory' };
 const MEASURE = [['height', 'Height', `5'10"`], ['weight', 'Weight', '170 lb'], ['chest', 'Chest', '40 in'], ['waist', 'Waist', '32 in'], ['hips', 'Hips', '38 in'],
@@ -430,8 +425,7 @@ const MEASURE = [['height', 'Height', `5'10"`], ['weight', 'Weight', '170 lb'], 
   ['hat', 'Hat size', '7 3/8'], ['notes', 'Fit notes', 'Size up in tees']];
 
 const progressCtx = () => ({ items: S.items, log: S.log, saved: S.saved });
-const showStreak = () => !S.profile || S.profile.goals?.includes('track') || streaks(S.log).cur > 0; // no big zero for people who didn't ask for streaks
-const streakChip = () => { if (!showStreak()) return ''; const st = streaks(S.log); return `<button class="streak ${st.today ? 'lit' : ''}" data-go="progress" aria-label="${st.cur} day streak">Streak <b>${st.cur}</b></button>`; };
+const streakChip = () => { if (!streaks(S.log).cur) return ''; /* no big zero */ const st = streaks(S.log); return `<button class="streak ${st.today ? 'lit' : ''}" data-go="progress" aria-label="${st.cur} day streak">Streak <b>${st.cur}</b></button>`; };
 const head = (eyebrow, title, right = '') => `<header><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1></div><div class="right">${right}${streakChip()}</div></header>`;
 const subnav = (key, tabs) => `<div class="seg subnav">${tabs.map(([k, label]) => `<button class="${S[key] === k ? 'on' : ''}" data-sub="${key}:${k}">${label}</button>`).join('')}</div>`;
 // Gaps are slow-ish to compute, so cache until something about the closet changes.
@@ -469,13 +463,14 @@ async function tag(dataUrl) {
   const top = async (labels, t) => (await c(dataUrl, labels, { hypothesis_template: t }))[0].label;
   const kind = await top(Object.keys(KINDS), 'a product photo of {}');
   const cat = KINDS[kind];
-  const v = await top(Object.values(VIBES), 'a photo of {}');
+  const vs = await c(dataUrl, Object.values(VIBES), { hypothesis_template: 'a photo of {}' }), vk = l => Object.keys(VIBES).find(k => VIBES[k] === l);
+  const vibe = vs[1].score > vs[0].score * 0.6 ? [vk(vs[0].label), vk(vs[1].label)] : vk(vs[0].label); // close call: both, you untick the wrong one
   const pat = await top(['plain solid-color clothing', 'clothing with a graphic print, logo, or pattern'], 'a photo of {}');
   const fp = (FIT_PROMPTS[cat] ?? FIT_PROMPTS.default).map(p => `${p} ${kind}`);
   const fit = cat === 'Accessories' ? 1 : fp.indexOf(await top(fp, 'a photo of {}'));
   return {
     kind, cat, fit, name: kind[0].toUpperCase() + kind.slice(1),
-    vibe: Object.keys(VIBES).find(k => VIBES[k] === v), patterned: pat.startsWith('clothing with'),
+    vibe, patterned: pat.startsWith('clothing with'),
   };
 }
 
@@ -534,9 +529,9 @@ async function cutout(file, status = () => {}, known = null) {
   const photo = await shrink(file), url = await toDataUrl(photo);
   onDownload = pct => status(`Downloading AI ${Math.round(pct)}%`);
   let tags = known, cut = photo;
-  if (!tags) { status('Tagging…'); try { tags = await tag(url); } catch (e) { console.warn(e); toast('Auto-tag failed — set it in review'); } }
+  if (!tags) { status('Tagging…'); try { tags = await tag(url); } catch (e) { console.warn(e); toast('Auto-tag failed. Set the tags yourself'); } }
   try { status('Removing background…'); cut = await segment(url); }
-  catch (e) { console.warn(e); toast('Background removal failed — kept original'); }
+  catch (e) { console.warn(e); toast('Background removal failed. Kept the photo'); }
   return { ...((await prep(cut, false, tags)) ?? (await prep(photo, true))), photo, tags };
 }
 
@@ -556,7 +551,7 @@ async function addOne(j) {
     const item = { id: j.id, img, photo, color, accents, ...(tags ?? { cat: 'Tops', name: 'New item', kind: '', vibe: 'casual', patterned: false, fit: 1 }), review: true, wears: 0, lastWorn: null, createdAt: Date.now() };
     await put('items', item); S.items.push(item); S.ideas = null;
     if (S.coll) { const c = collById(S.coll); c.ids.push(item.id); await put('colls', c); toast(`Added to ${c.name}`); } // adding while inside a collection files it there too
-  } catch (e) { console.warn(e); toast(`Couldn't read ${j.file.name} — try a JPG`); } // one bad file never stops the batch
+  } catch (e) { console.warn(e); toast(`Couldn't read ${j.file.name}. Try a JPG`); } // one bad file never stops the batch
   finally { URL.revokeObjectURL(j.url); S.pending = S.pending.filter(p => p !== j); render(); }
 }
 
@@ -618,28 +613,12 @@ function outfitCard(o) {
   const isSaved = S.saved.some(s => s.key === o.key);
   return `<article class="outfit"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in builder">${flat(o.items)}</button>
     <div class="meta"><div class="swatches">${[...new Set(o.items.map(i => i.color))].map(c => `<i style="background:${c}"></i>`).join('')}</div><p>${esc(o.note ?? bestMode(o.items)?.note ?? '')}</p>
-      <button class="icon ${isSaved ? 'on' : ''}" data-save="${o.key}" aria-label="Save">${heart}</button></div></article>`;
-}
-
-function onboardView() {
-  const o = S.ob, opt = (g, k, label) => `<button class="opt ${o[g].includes(k) ? 'on' : ''}" data-obpick="${g}:${k}">${label}<span>${o[g].includes(k) ? '✓' : ''}</span></button>`;
-  const steps = [
-    () => `<div><div class="eyebrow">Welcome</div><h1>Your closet,<br>styled.</h1><p class="sub lead">Snap what you own and get outfits that actually work — color, proportion, the right shoes, the hat that finishes it. Three quick questions first.</p></div>
-      <div class="row"><button class="btn ghost" data-ob="done">Skip setup</button><button class="btn" data-ob="next">Start</button></div>`,
-    () => `<div><div class="eyebrow">1 / 3</div><h1>What do you wear most?</h1><p class="sub lead">Pick all that fit.</p><div class="opts">${Object.entries(STYLES).map(([k, v]) => opt('styles', k, v)).join('')}</div></div>
-      <button class="btn wide" data-ob="next" ${o.styles.length ? '' : 'disabled'}>Next</button>`,
-    () => `<div><div class="eyebrow">2 / 3</div><h1>How should the app help?</h1><div class="opts">${Object.entries(GOALS).map(([k, v]) => opt('goals', k, v)).join('')}</div></div>
-      <button class="btn wide" data-ob="next" ${o.goals.length ? '' : 'disabled'}>Next</button>`,
-    () => `<div><div class="eyebrow">3 / 3</div><h1>Your sizes</h1><p class="sub lead">Optional. Lives under Me with the rest of your measurements.</p>
-      <form id="obsizes" class="group">${MEASURE.filter(([k]) => ['top', 'bottom', 'shoe'].includes(k)).map(([k, label, ph]) => `<label class="cell"><span>${label}</span><input name="${k}" value="${esc(S.profile?.measure?.[k] ?? '')}" placeholder="${ph}"></label>`).join('')}</form></div>
-      <div class="row"><button class="btn ghost" data-ob="done">Skip</button><button class="btn" data-ob="done">Finish</button></div>`,
-  ];
-  return `<section class="ob">${o.step && o.step < steps.length - 1 ? '<button class="skipob mono" data-ob="done">Skip</button>' : ''}${steps[o.step]()}</section>`;
+      <button class="icon ${isSaved ? 'on' : ''}" data-save="${o.key}" aria-label="Favorite">${heart}</button></div></article>`;
 }
 
 function closetView() {
   if (!S.items.length && !S.pending.length) return head('0 pieces', 'Closet') + `
-    <div class="empty"><h2>Start with a few pieces</h2><p>Lay a piece flat on a plain surface that contrasts with it and snap from above — it gets cut out, tagged and color-matched automatically.<br><br>The first upload sets up the AI on this device (a one-time download, about a minute on Wi-Fi). After that nothing leaves your phone.</p>
+    <div class="empty"><h2>Start with a few pieces</h2><p>Lay a piece flat on a plain surface that contrasts with it and snap from above. It gets cut out, tagged and color-matched automatically.<br><br>The first upload sets up the AI on this device (a one-time download, about a minute on Wi-Fi). After that nothing leaves your phone.</p>
     <button class="btn" data-action="add">Add clothes</button><div class="seg backup"><button data-action="import">Restore a backup</button></div></div>`;
   const c = S.coll && collById(S.coll), inColl = pool();
   const counts = Object.fromEntries(CATS.map(k => [k, inColl.filter(i => i.cat === k).length]));
@@ -647,13 +626,13 @@ function closetView() {
   const toReview = S.items.filter(i => i.review).length;
   const best = !c && !toReview && !S.pending.length && S.items.length >= 3 && getGaps()?.find(g => !isNeutral(g.ghost.color));
   return head(`${S.items.length} pieces`, 'Closet') + `
-    ${toReview ? `<button class="nudge glass" data-action="review"><div><span class="mono">AI guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>` : ''}
-    ${!c && S.items.length >= 5 && Date.now() - (S.profile?.lastBackup ?? 0) > 7 * 864e5 ? `<button class="nudge glass" data-action="export"><div><span class="mono">${S.profile?.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up'}</span><b>Save a backup of ${S.items.length} pieces</b></div><span class="plus">Export →</span></button>` : ''}
-    ${best ? `<button class="nudge glass" data-go="list" data-listtab="ideas">${ghostEl(best.ghost)}<div><span class="mono">Next best add</span><b>${esc(best.ghost.name)}</b></div><span class="plus">+${best.count} outfits</span></button>` : ''}
+    ${[toReview && `<button class="nudge glass" data-action="review"><div><span class="mono">AI guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>`,
+    !c && S.items.length >= 5 && Date.now() - (S.profile?.lastBackup ?? 0) > 7 * 864e5 && `<button class="nudge glass" data-action="export"><div><span class="mono">${S.profile?.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up'}</span><b>Save a backup of ${S.items.length} pieces</b></div><span class="plus">Export →</span></button>`,
+    best && `<button class="nudge glass" data-go="list" data-listtab="ideas">${ghostEl(best.ghost)}<div><span class="mono">Next best add</span><b>${esc(best.ghost.name)}</b></div><span class="plus">+${best.count} outfits</span></button>`].find(Boolean) || '' /* one banner at a time, so the clothes stay up top */}
     <div class="colls"><button class="pill ${c ? '' : 'on'}" data-coll="">Everything<small>${S.items.length}</small></button>${S.colls.map(k => `<button class="pill ${S.coll === k.id ? 'on' : ''}" data-coll="${k.id}">${esc(k.name)}<small>${k.ids.filter(byId).length}</small></button>`).join('')}<button class="pill add" data-action="newcoll">+ New</button></div>
     ${c ? `<div class="collbar"><button class="btn sm" data-action="collpick">Add pieces</button><button class="btn ghost sm" data-action="collfits">Outfits</button><button class="btn ghost sm" data-action="pack">Pack</button><button class="btn ghost sm" data-action="colldel">Delete</button></div>` : ''}
-    <div class="chips wrap">${['All', ...CATS].map(k => `<button class="chip ${S.cat === k ? 'on' : ''}" data-cat="${k}">${k}<small>${k === 'All' ? inColl.length : counts[k]}</small></button>`).join('')}</div>
-    ${c && !inColl.length ? `<div class="empty"><h2>${esc(c.name)} is empty</h2><p>Pull pieces in from your closet — then get outfits made only from this collection.</p><button class="btn" data-action="collpick">Add pieces</button></div>` : ''}
+    <div class="chips">${['All', ...CATS].map(k => `<button class="chip ${S.cat === k ? 'on' : ''}" data-cat="${k}">${k}<small>${k === 'All' ? inColl.length : counts[k]}</small></button>`).join('')}</div>
+    ${c && !inColl.length ? `<div class="empty"><h2>${esc(c.name)} is empty</h2><p>Pull pieces in from your closet, then get outfits made only from this collection.</p><button class="btn" data-action="collpick">Add pieces</button></div>` : ''}
     <div class="grid">
       ${S.pending.map(p => `<div class="item pending" data-pending="${p.id}"><div class="ph"><img src="${p.url}" alt=""></div><b>Processing</b><span>${p.status}</span></div>`).join('')}
       ${list.map(itemCard).join('')}
@@ -662,13 +641,13 @@ function closetView() {
 
 function outfitsView() {
   const items = pool(), c = S.coll && collById(S.coll);
-  const top = head(S.saved.length ? `${S.saved.length} favorite${S.saved.length === 1 ? '' : 's'}` : 'Your fits', 'Outfits') + subnav('tab', [['ideas', 'Ideas'], ['week', 'Week'], ['saved', 'Favorites'], ['history', 'History']])
+  const top = head(`${S.saved.length} favorite${S.saved.length === 1 ? '' : 's'}`, 'Outfits') + subnav('tab', [['ideas', 'Ideas'], ['week', 'Week'], ['saved', 'Favorites'], ['history', 'History']])
     + (c ? `<button class="anchor" data-action="uncoll">From ${esc(c.name)} ✕</button>` : '');
   if (S.tab === 'week') return top + weekView();
   if (S.tab === 'history') {
     const list = S.history.map(h => ({ key: h.key, items: h.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items));
     return top + (list.length ? `<p class="sub blurb">Every look you stopped on in the builder. Heart one to keep it, tap to go back to it.</p><div class="feed">${list.map(outfitCard).join('')}</div>`
-      : `<div class="empty"><h2>No history yet</h2><p>Open the builder and swipe through pieces — every look you stop on lands here.</p><button class="btn" data-action="build">Open builder</button></div>`);
+      : `<div class="empty"><h2>No history yet</h2><p>Every look you put together in the builder lands here.</p><button class="btn" data-action="build">Open builder</button></div>`);
   }
   if (S.tab === 'saved') {
     const list = S.saved.map(s => ({ key: s.key, items: s.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items)); // a piece was deleted or re-tagged
@@ -686,7 +665,7 @@ function outfitsView() {
     ${S.ideas.length ? `<div class="feed">${S.ideas.map(outfitCard).join('')}</div>`
       : `<div class="empty"><h2>No ${MODES[S.mode].label} matches</h2><p>${S.ideas.blocked
         ? `Most combos break a proportion rule: <b>${S.ideas.blocked.toLowerCase()}</b>. If a fit tag is wrong, tap the piece in your closet and fix it.`
-        : S.mode === 'classic' ? 'Add more neutral basics.' : 'Your closet needs more colors that fit this rule — try another style.'}</p></div>`}`;
+        : S.mode === 'classic' ? 'Add more neutral basics.' : 'Your closet needs more colors that fit this rule. Try another style.'}</p></div>`}`;
 }
 
 // Builder: one card per slot (like Cladwell). Tap a card or Swap to pick from a list, best matches first.
@@ -703,27 +682,31 @@ const recentHtml = () => { const list = S.history.filter(h => h.key !== keyOf(S.
 
 // What you can pick from: the collection, plus whatever the outfit is already wearing (it may come from outside it).
 const buildItems = () => [...new Set([...pool(), ...S.build])];
+const PICK_TITLE = { Tops: 'Pick a top', Layers: 'Pick a layer', Bottoms: 'Pick bottoms', Shoes: 'Pick shoes', Hat: 'Pick a hat', Accessory: 'Pick an accessory' };
 function buildView() {
-  const items = buildItems(), o = S.build;
+  const items = buildItems(), o = S.build, has = s => items.some(SLOTS[s]), worn = s => o.some(SLOTS[s]);
   const card = s => { const cur = o.find(SLOTS[s]), lab = SLOT_LABEL[s];
     return cur ? `<div class="bcard"><span class="lab">${lab}</span><button class="pic" data-swap="${s}" aria-label="Swap ${lab.toLowerCase()}"><img src="${src(cur)}" alt=""></button><span class="nm">${esc(cur.name)}</span>
         <div class="ops"><button data-swap="${s}">⇄ Swap</button><button data-unwear="${s}">Remove</button></div></div>`
-      : `<button class="bcard add" data-swap="${s}"><b>+</b>Add ${lab.toLowerCase()}${OPTIONAL.includes(s) ? '<small>Optional</small>' : ''}</button>`; };
-  const has = s => items.some(SLOTS[s]);
+      : `<button class="bcard add" data-swap="${s}"><b>+</b>Add ${lab.toLowerCase()}</button>`; };
+  // Optional slots you're not wearing are small "+" buttons, not big empty boxes. With no layer they fill the 4th cell.
+  const main = ['Layers', 'Tops', 'Bottoms', 'Shoes'].filter(s => s !== 'Layers' || worn(s)), empty = OPTIONAL.filter(s => has(s) && !worn(s));
+  const adds = empty.map(s => `<button class="pill" data-swap="${s}">+ ${SLOT_LABEL[s]}</button>`).join(''), inGrid = main.length % 2 && empty.length;
   return `<header><div><div class="eyebrow">Builder${S.coll ? ` · ${esc(collById(S.coll)?.name ?? '')}` : ''}</div><h1>Outfit</h1></div><div class="right"><button class="icon" data-go="outfits" aria-label="Close">${xIcon}</button></div></header>
-    <div class="build">
-      <div class="bgrid">${ROWS.filter(has).map(card).join('')}</div>
-      ${EXTRAS.some(has) ? `<div class="looks-h"><span>Hat &amp; accessories</span></div><div class="bgrid small">${EXTRAS.filter(has).map(card).join('')}</div>` : ''}
-      ${verdictHtml(o)}${actionsHtml(o)}
+    <div class="build">${verdictHtml(o)}
+      <div class="bgrid">${main.map(card).join('')}${inGrid ? `<div class="bcard more"><span class="lab">Add</span>${adds}</div>` : ''}</div>
+      ${EXTRAS.some(worn) ? `<div class="looks-h"><span>Hat &amp; accessories</span></div><div class="bgrid small">${EXTRAS.filter(worn).map(card).join('')}</div>` : ''}
+      ${!inGrid && adds ? `<div class="addrow">${adds}</div>` : ''}
       ${recentHtml()}
+      ${actionsHtml(o)}
     </div>`;
 }
 // Pick a piece for one slot. Pieces that go with the rest of the outfit come first; the others sit under their own heading, never greyed out.
 function openSwap(slot) {
-  const opts = rankSwaps(buildItems(), S.build, slot), cur = S.build.find(SLOTS[slot])?.id, lab = SLOT_LABEL[slot].toLowerCase();
+  const opts = rankSwaps(buildItems(), S.build, slot), cur = S.build.find(SLOTS[slot])?.id;
   const tile = r => `<button class="${r.item.id === cur ? 'on' : ''}" data-wearpick="${slot}:${r.item.id}"><img src="${src(r.item)}" alt=""><span>${esc(r.item.name)}</span></button>`;
   const good = opts.filter(r => r.score != null), rest = opts.filter(r => r.score == null);
-  showSheet(`<div class="pickhead"><div><div class="eyebrow">Outfit</div><h2>Pick a ${lab}</h2></div><button class="btn sm" data-action="close">Done</button></div>
+  showSheet(`<div class="pickhead"><div><div class="eyebrow">Outfit</div><h2>${PICK_TITLE[slot]}</h2></div>${closeBtn}</div>
     ${good.length ? `<p class="pickh">Goes with this outfit</p><div class="pickgrid">${good.map(tile).join('')}</div>` : ''}
     ${rest.length ? `<p class="pickh">${good.length ? 'Also yours · clashes a bit' : 'Nothing here matches perfectly'}</p><div class="pickgrid">${rest.map(tile).join('')}</div>` : ''}`);
 }
@@ -749,13 +732,14 @@ function weekView() {
   const fmt = k => new Date(k + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   const row = k => {
     const p = plannedFor(k), items = p?.ids.map(byId).filter(Boolean) ?? [], ok = complete(items), worn = S.log.find(l => l.day === k);
-    return `<div class="day ${k === today ? 'today' : ''}"><div class="dl"><b>${DOW[dowOf(k)]}</b><span>${+k.slice(8)}</span></div>
-      ${ok ? `<button class="slotbtn" data-buildkey="${p.key}" aria-label="Open look">${flat(items)}</button>` : `<button class="plus" data-plan="${k}">+ Plan</button>`}
-      <div class="acts">${p && !ok ? '<span class="mono">A piece in this look was deleted — plan it again</span>' : ''}${ok ? `<span class="mono">${p.weekly ? `Every ${DOW[dowOf(k)]}` : worn?.key === p.key ? 'Worn ✓' : ''}</span>
+    const past = k < today;
+    return `<div class="day ${k === today ? 'today' : ''} ${past ? 'past' : ''} ${ok || p ? '' : 'open'}"><div class="dl"><b>${DOW[dowOf(k)]}</b><span>${+k.slice(8)}</span></div>
+      ${ok ? `<button class="slotbtn" data-buildkey="${p.key}" aria-label="Open look">${flat(items)}</button>` : past ? '<span class="mono">Nothing planned</span>' : `<button class="plus" data-plan="${k}">+ Plan</button>`}
+      <div class="acts">${p && !ok ? '<span class="mono">A piece in this look was deleted. Plan it again</span>' : ''}${ok ? `<span class="mono">${p.weekly ? `Every ${DOW[dowOf(k)]}` : worn?.key === p.key ? 'Worn ✓' : ''}</span>
         ${k === today && worn?.key !== p.key ? `<button class="btn sm go" data-wear="${p.key}">Wear it</button>` : ''}
-        <button class="btn ghost sm" data-plan="${k}">Change</button><button class="btn ghost sm" data-unplan="${k}">✕</button>` : ''}</div></div>`;
+        ${past ? '' : `<button class="btn ghost sm" data-plan="${k}">Change</button><button class="btn ghost sm" data-unplan="${k}" aria-label="Clear ${DOW[dowOf(k)]} ${+k.slice(8)}">✕</button>`}` : ''}</div></div>`;
   };
-  return `<div class="weekbar"><button class="icon" data-week="-1" aria-label="Previous week">‹</button><span>${fmt(days[0])} – ${fmt(days[6])}</span><button class="icon" data-week="1" aria-label="Next week">›</button></div>
+  return `<div class="weekbar"><button class="icon" data-week="-1" aria-label="Previous week">${svg('M15 5l-7 7 7 7')}</button><span>${fmt(days[0])} to ${fmt(days[6])}</span><button class="icon" data-week="1" aria-label="Next week">${svg('M9 5l7 7-7 7')}</button></div>
     <div class="days">${days.map(row).join('')}</div>`;
 }
 // Pick a look for a day: favorites, then recent builder looks, then today's ideas.
@@ -763,7 +747,7 @@ function openPlanPicker(k) {
   const ideas = (S.ideas?.length ? S.ideas : generate(pool(), S.mode)).slice(0, 6).map(o => ({ key: o.key, ids: o.items.map(p => p.id) }));
   const seen = new Set(), list = [...S.saved, ...S.history, ...ideas].filter(r => !seen.has(r.key) && seen.add(r.key) && complete(r.ids.map(byId).filter(Boolean)));
   const cur = S.plan.weekly[dowOf(k)];
-  showSheet(`<div class="pad"><div class="pickhead" style="padding:0"><div><div class="eyebrow">${DOW[dowOf(k)]} ${new Date(k + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div><h2>Plan a look</h2></div>${closeBtn}</div>
+  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${DOW[dowOf(k)]} ${new Date(k + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div><h2>Plan a look</h2></div>${closeBtn}</div>
     <label class="chk"><input type="checkbox" id="planrepeat" ${cur ? 'checked' : ''}> Repeat every ${DOW[dowOf(k)]} (gym day, work day…)</label>
     <div class="picklooks">${list.map(r => `<button data-planpick="${k}|${r.key}" aria-label="Pick this look">${flat(r.ids.map(byId).filter(Boolean))}</button>`).join('')}</div>
     <button class="btn ghost wide" data-planbuild="${k}">Build a new one</button></div>`);
@@ -776,9 +760,10 @@ async function setPlan(k, rec, repeat) {
 }
 function openDayPicker() { // from the builder: which day is this look for?
   const today = dayKey(), days = [...Array(7)].map((_, i) => dayAdd(today, i));
-  showSheet(`<div class="pad"><div class="pickhead" style="padding:0"><div><div class="eyebrow">Builder</div><h2>Plan this look</h2></div>${closeBtn}</div>
+  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">Builder</div><h2>Plan this look</h2></div>${closeBtn}</div>
     <label class="chk"><input type="checkbox" id="planrepeat"> Repeat every week on that day</label>
-    ${days.map(k => `<button class="btn ghost wide" data-planday="${k}">${i18nDay(k, today)}${plannedFor(k) ? ' · replaces planned look' : ''}</button>`).join('')}</div>`);
+    ${days.map(k => { const p = plannedFor(k), ps = p?.ids.map(byId).filter(Boolean) ?? [];
+      return `<button class="btn ghost wide dayrow" data-planday="${k}"><span>${i18nDay(k, today)}</span>${complete(ps) ? `<span class="mono">Replaces</span><span class="dthumb">${flat(ps)}</span>` : ''}</button>`; }).join('')}</div>`);
 }
 const i18nDay = (k, today) => k === today ? 'Today' : k === dayAdd(today, 1) ? 'Tomorrow' : new Date(k + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 
@@ -787,13 +772,13 @@ function openPack() {
   const c = collById(S.coll), t = c.trip, days = S.packDays ?? t?.days ?? 3;
   const fits = t?.fits.map(ids => ids.map(byId).filter(Boolean)).filter(complete) ?? [], ids = [...new Set(fits.flat().map(p => p.id))], packed = new Set(c.packed ?? []);
   const pieces = ids.map(byId).sort((a, b) => CATS.indexOf(a.cat) - CATS.indexOf(b.cat));
-  showSheet(`<div class="pad"><div class="pickhead" style="padding:0"><div><div class="eyebrow">${esc(c.name)}</div><h2>Pack</h2></div>${closeBtn}</div>
+  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${esc(c.name)}</div><h2>Pack</h2></div>${closeBtn}</div>
     <span class="mono">How many days?</span>
-    <div class="packdays"><button class="btn ghost sm" data-packdays="-1">−</button><b>${days}</b><button class="btn ghost sm" data-packdays="1">+</button></div>
-    <button class="btn wide" data-action="packgo">${fits.length ? 'Remake the list' : 'Make my packing list'}</button>
+    <div class="packdays"><button class="btn ghost sm" data-packdays="-1" aria-label="Fewer days">−</button><b>${days}</b><button class="btn ghost sm" data-packdays="1" aria-label="More days">+</button></div>
+    ${!fits.length || days !== t.days ? `<button class="btn wide" data-action="packgo">${fits.length ? `Remake for ${days} days` : 'Make my packing list'}</button>` : ''}
     ${fits.length ? `<span class="mono">${t.days} days · ${pieces.length} pieces · ${packed.size}/${pieces.length} packed</span>
       <div class="packfits">${fits.map((f, i) => `<div><button data-buildkey="${keyOf(f)}" aria-label="Open day ${i + 1}">${flat(f)}</button><span class="mono">Day ${i + 1}${(j => j < i ? ` · same as ${j + 1}` : '')(fits.findIndex(g => keyOf(g) === keyOf(f)))}</span></div>`).join('')}</div>
-      <button class="btn ghost wide" data-action="packplan">Put these in my week from tomorrow</button>
+      <button class="btn ghost wide" data-action="packplan">Add to my week</button>
       <div class="packlist">${pieces.map(p => `<button class="${packed.has(p.id) ? 'on' : ''}" data-packcheck="${p.id}"><i>${packed.has(p.id) ? '✓' : ''}</i><img src="${src(p)}" alt=""><span>${esc(p.name)}</span></button>`).join('')}</div>` : ''}
   </div>`);
 }
@@ -815,9 +800,9 @@ function myList() {
       <button class="check" data-wishgot="${w.id}" aria-label="Got it">${svg('M5 12l5 5 9-10')}</button><button class="x" data-wishdel="${w.id}" aria-label="Remove">×</button></div>`; };
   const want = S.wish.filter(w => !w.got).sort((a, b) => b.at - a.at), got = S.wish.filter(w => w.got);
   return `<form class="wishform" id="wishform">
-      <input type="text" name="name" placeholder="What does the collection need?" required autocomplete="off">
+      <input type="text" name="name" placeholder="What are you looking for?" required autocomplete="off">
       <select name="cat">${CATS.map(c => `<option>${c}</option>`).join('')}</select>
-      <input type="color" name="color" value="#1d1a17" aria-label="Color">
+      <select name="color" aria-label="Color">${Object.entries(SWATCHES).map(([n, h]) => `<option value="${h}">${n[0].toUpperCase() + n.slice(1)}</option>`).join('')}</select>
       <button class="btn sm">Add</button>
       <input type="url" name="link" placeholder="Link (optional)" autocomplete="off">
       <input type="text" name="price" inputmode="decimal" placeholder="Price" autocomplete="off">
@@ -835,7 +820,7 @@ function suggestions() {
     <div class="gap-top">${ghostEl(g.ghost)}<div><b>${esc(g.ghost.name)}</b><span class="mono">${g.modes.map(m => MODES[m].label).join(' / ')}</span></div>
       <span class="plus">+${g.count} outfits</span></div>
     <div class="minis">${g.examples.map(o => flat(o.items)).join('')}</div>
-    <button class="btn ${onList(g.ghost.id) ? 'done' : 'ghost'} sm" style="width:100%" data-wishgap="${g.ghost.id}">${onList(g.ghost.id) ? 'On your list' : 'Add to list'}</button></article>`;
+    <button class="btn full ${onList(g.ghost.id) ? 'done' : 'ghost'} sm" data-wishgap="${g.ghost.id}">${onList(g.ghost.id) ? 'On your list' : 'Add to list'}</button></article>`;
   const pops = onePerCat(list.filter(g => !isNeutral(g.ghost.color))), basics = onePerCat(list.filter(g => isNeutral(g.ghost.color)));
   return `<p class="sub">Wearable colors in the cuts you already wear, tested against everything you own. The number is how many new outfits it adds.</p>
     ${basics.length ? `<h3><span>Foundation</span></h3><div class="gaps">${basics.map(card).join('')}</div>` : ''}
@@ -843,15 +828,15 @@ function suggestions() {
 }
 
 function inspoView() {
-  const top = head('Moodboard', 'Inspo', `<button class="btn sm" data-action="addinspo">Add</button>`) + subnav('inspoTab', [['board', 'Moodboard'], ['wheel', 'Color wheel']]);
+  const top = head(`${S.inspo.length} look${S.inspo.length === 1 ? '' : 's'}`, 'Inspo') + subnav('inspoTab', [['board', 'Moodboard'], ['wheel', 'Color wheel']]);
   if (S.inspoTab === 'wheel') return top + `
     <div class="chips">${Object.entries(HARMONIES).map(([k, v]) => `<button class="chip ${S.wheel.harmony === k ? 'on' : ''}" data-harmony="${k}">${v.label}</button>`).join('')}</div>
     <div class="wheel" id="wheel"><svg id="lines"></svg><div id="handles"></div></div>
     <label class="light">Dark<input id="light" type="range" min="0.15" max="0.85" step="0.01" value="${S.wheel.l}">Light</label>
     <div id="wheelOut"></div>`;
-  if (!S.inspo.length) return top + `<div class="empty"><h2>Pin your inspo here</h2><p>Save looks from Pinterest or Instagram to your phone — or screenshot them — and add them here. Each one gets its colors pulled out, then rebuilt from what you own.</p><button class="btn" data-action="addinspo">Add inspo</button></div>`;
-  return top + `<p class="sub">Tap a look to rebuild it from your closet.</p><div class="board">${S.inspo.slice().sort((a, b) => b.at - a.at).map(i => `<button data-inspo="${i.id}"><img src="${src(i)}" alt="">
-    <span class="pals">${i.palette.filter(h => !i.off.includes(h)).map(h => `<i style="background:${h}"></i>`).join('')}</span></button>`).join('')}</div>`;
+  if (!S.inspo.length) return top + `<div class="empty"><h2>Pin your inspo here</h2><p>Save looks from Pinterest or Instagram to your phone, or screenshot them, and add them here. Each one gets its colors pulled out, then rebuilt from what you own.</p><button class="btn" data-action="addinspo">Add inspo</button></div>`;
+  return top + `<p class="sub">Tap a look to rebuild it from your closet.</p><div class="board">${S.inspo.slice().sort((a, b) => b.at - a.at).map(i => { const on = i.palette.filter(h => !i.off.includes(h)); return `<button data-inspo="${i.id}" aria-label="Inspo look in ${on.map(colorName).join(', ')}. Tap to rebuild"><img src="${src(i)}" alt="">
+    <span class="pals">${on.map(h => `<i style="background:${h}"></i>`).join('')}<span class="mono">${[...new Set(on.map(colorName))].slice(0, 3).join(' · ')}</span></span></button>`; }).join('')}</div>`;
 }
 
 function meView() {
@@ -862,12 +847,12 @@ function meView() {
   const byCat = CATS.map(c => [c, items.filter(i => i.cat === c).length]), maxC = Math.max(1, ...byCat.map(x => x[1]));
   const colors = Object.entries(items.reduce((t, i) => { const n = colorName(i.color); (t[n] ??= { n: 0, hex: i.color }).n++; return t; }, {})).sort((a, b) => b[1].n - a[1].n);
   const strip = list => `<div class="strip">${list.map(i => `<button data-open="${i.id}"><img src="${src(i)}" alt="${esc(i.name)}">${i.wears ? `<em>${i.wears}×</em>` : ''}</button>`).join('')}</div>`;
-  return `<header><div><div class="eyebrow">${p.styles?.map(s => STYLES[s]).join(' · ') || 'You'}</div><h1>Me</h1></div><div class="right">${streakChip()}</div></header>
-    <div class="tiles"><div><span class="mono">Pieces</span><b>${items.length}</b></div><div><span class="mono">Saved fits</span><b>${S.saved.length}</b></div>
-      <div><span class="mono">Fits logged</span><b>${S.log.length}</b></div><button data-go="progress"><span class="mono">Day streak →</span><b>${st.cur}</b></button></div>
+  return `<header><div><div class="eyebrow">${items.length} pieces</div><h1>Me</h1></div><div class="right">${streakChip()}</div></header>
+    <div class="tiles"><div><span class="mono">Pieces</span><b>${items.length}</b></div><div><span class="mono">Favorites</span><b>${S.saved.length}</b></div>
+      <div><span class="mono">Outfits worn</span><b>${S.log.length}</b></div><button data-go="progress"><span class="mono">Streak &amp; badges ›</span><b>${st.cur}</b></button></div>
     <h3><span>Closet value</span><span>${priced.length} of ${items.length} priced</span></h3>
-    ${priced.length ? `<div class="tiles"><div><span class="mono">Total</span><b>${money(value)}</b></div><div><span class="mono">Cost per wear</span><b>${pricedWears ? money(value / pricedWears) : '—'}</b>${pricedWears ? '' : '<small class="sub">Log a wear to see it</small>'}</div></div>`
-      : `<p class="sub">Tap a piece and add what you paid — you'll see what your closet is worth and your cost per wear.</p>`}
+    ${priced.length ? `<div class="tiles"><div><span class="mono">Total</span><b>${money(value)}</b></div><div><span class="mono">Cost per wear</span><b>${pricedWears ? money(value / pricedWears) : '$0'}</b>${pricedWears ? '' : '<small class="sub">Log a wear to see it</small>'}</div></div>`
+      : `<p class="sub">Tap a piece and add what you paid to see what your closet is worth and your cost per wear.</p>`}
     <h3><span>By category</span></h3>
     <div class="bars">${byCat.map(([c, n]) => `<div><span>${c}</span><i><b style="width:${n / maxC * 100}%"></b></i><em>${n}</em></div>`).join('')}</div>
     <h3><span>Your colors</span></h3>
@@ -877,13 +862,10 @@ function meView() {
     ${most.length ? strip(most) : `<p class="sub">Hit “Wear today” on an outfit and your go-to pieces show up here.</p>`}
     <h3><span>Never worn</span><span>${never.length}${items.length ? ` · ${Math.round(never.length / items.length * 100)}%` : ''}</span></h3>
     ${never.length ? strip(never.slice(0, 20)) : ''}
-    <h3><span>Measurements</span></h3>
-    <form id="measure" class="group">${MEASURE.map(([k, label, ph]) => `<label class="cell"><span>${label}</span><input name="${k}" value="${esc(m[k] ?? '')}" placeholder="${ph}"></label>`).join('')}</form>
-    <h3><span>Setup</span></h3>
-    <p class="sub">${p.goals?.map(g => GOALS[g]).join(' · ') || 'Not set up yet'}</p>
-    <div class="row"><button class="btn ghost sm" data-action="redo">Redo setup</button><button class="btn ghost sm" data-go="progress">Badges</button></div>
+    <details class="sizes"><summary><h3><span>Sizes &amp; measurements</span><span>${MEASURE.filter(([k]) => m[k]).length} of ${MEASURE.length}</span></h3></summary>
+    <form id="measure" class="group">${MEASURE.map(([k, label, ph]) => `<label class="cell"><span>${label}</span><input name="${k}" value="${esc(m[k] ?? '')}" placeholder="${ph}"></label>`).join('')}</form></details>
     <h3><span>Backup</span><span>${p.lastBackup ? `last ${ago(p.lastBackup)}` : 'never'}</span></h3>
-    <p class="sub">${kept ? 'This browser has agreed to keep your closet.' : 'Your closet lives only in this browser and it can be cleared — Safari wipes sites you skip for 7 days. Add the app to your Home Screen and export a backup now and then.'}</p>
+    <p class="sub">${kept ? 'This browser has agreed to keep your closet.' : 'Your closet lives only in this browser and can be cleared. Safari wipes sites you skip for 7 days, so add the app to your Home Screen and export a backup now and then.'}</p>
     <div class="row"><button class="btn ghost sm" data-action="export">Export backup</button><button class="btn ghost sm" data-action="import">Import backup</button></div>`;
 }
 
@@ -892,13 +874,13 @@ function progressView() {
   const week = Array.from({ length: 7 }, (_, i) => { let k = today; for (let j = 0; j < 6 - i; j++) k = prevDay(k); return k; });
   const wd = k => 'SMTWTFS'[new Date(k + 'T12:00').getDay()];
   return `<header><div><div class="eyebrow">Progress</div><h1>Streak</h1></div><div class="right"><button class="icon" data-go="me" aria-label="Back">${xIcon}</button></div></header>
-    <section class="hud glass"><div><div class="big">${st.cur}</div><div class="mono" style="margin-top:14px">Day streak${st.today ? '' : st.cur ? ' · log today to keep it' : ''}</div></div>
-      <div class="stats"><div><span class="mono">Best</span><b>${st.best}</b></div><div><span class="mono">Fits logged</span><b>${S.log.length}</b></div></div></section>
+    <section class="hud glass"><div><div class="big">${st.cur}</div><div class="mono">Day streak${st.today ? '' : st.cur ? ' · log today to keep it' : ''}</div></div>
+      <div class="stats"><div><span class="mono">Best</span><b>${st.best}</b></div><div><span class="mono">Outfits worn</span><b>${S.log.length}</b></div></div></section>
     <div class="week">${week.map(k => `<div class="${st.days.has(k) ? 'on' : ''} ${k === today ? 'now' : ''}"><span class="mono">${wd(k)}</span><i></i></div>`).join('')}</div>
     ${st.today ? '' : `<button class="btn go wide" data-go="outfits">Pick today's fit</button>`}
     <h3><span>Badges</span><span>${bs.filter(b => b.done).length}/${bs.length}</span></h3>
     <div class="badges">${bs.map(b => `<div class="badge glass ${b.done ? 'done' : ''}"><div class="medal">${svg(ICON[b.icon])}</div><b>${b.name}</b><small>${b.desc}</small>
-      ${b.done ? '<span class="mono">Unlocked</span>' : `<div class="bar"><i style="width:${b.v / b.goal * 100}%"></i></div><span class="mono">${b.v}${b.unit ?? ''} / ${b.goal}${b.unit ?? ''}</span>`}</div>`).join('')}</div>`;
+      ${b.done ? '<span class="mono">Unlocked</span>' : `<div class="bar"><i style="width:${b.v / b.goal * 100}%"></i></div><span class="mono">${b.unit === '%' ? `${b.v}% worn` : `${b.v} of ${b.goal}`}</span>`}</div>`).join('')}</div>`;
 }
 
 function paintWheel() {
@@ -909,17 +891,17 @@ function paintWheel() {
   const neutrals = S.items.filter(i => isNeutral(i.color));
   const uniq = [...new Map(cols.map(c => [Math.round(c.h), c])).values()]; // mono = one hue, three shades
   document.getElementById('wheelOut').innerHTML = `
-    <div class="pal">${cols.map(c => `<div style="background:${c.hex};color:${c.l > 0.6 ? '#141414' : '#fff'}">${colorName(c.hex)}<small>${c.hex.toUpperCase()}</small></div>`).join('')}
-      ${hk === 'formula' ? '<div style="background:#111;color:#fff">neutral<small>base</small></div><div style="background:#efece6;color:#141414">neutral<small>base</small></div>' : ''}</div>
+    <div class="pal">${cols.map(c => `<div style="background:${c.hex};color:${inkOn(c.hex)}">${colorName(c.hex)}</div>`).join('')}
+      ${hk === 'formula' ? '<div style="background:#111;color:#fff">neutral</div><div style="background:#efece6;color:#141414">neutral</div>' : ''}</div>
     ${S.items.length ? `<h3>From your closet</h3>
       ${uniq.map(c => matchRow(c.hex, nearHue(S.items, c.h))).join('')}
       ${hk === 'formula' || hk === 'mono' ? matchRow('linear-gradient(135deg,#1a1a1a 50%,#efece6 50%)', neutrals) : ''}
       <button class="btn wide" data-action="paletteFits">Show outfits in these colors</button>
-      <p class="eyebrow" style="text-align:center;margin-top:10px">Tip: open any piece and tap “Match its color” to start the wheel from it.</p>` : ''}`;
+      <p class="eyebrow tip">Tip: open any piece and tap “Match color” to start the wheel from it.</p>` : ''}`;
   const sl = document.getElementById('light'); if (sl) sl.value = l;
 }
 
-const VIEWS = { onboard: onboardView, closet: closetView, outfits: outfitsView, build: buildView, inspo: inspoView, list: listView, me: meView, progress: progressView };
+const VIEWS = { closet: closetView, outfits: outfitsView, build: buildView, inspo: inspoView, list: listView, me: meView, progress: progressView };
 const NAV_OF = { build: 'outfits', progress: 'me' };
 function render() {
   const app = document.getElementById('app'), scrollers = () => document.querySelectorAll('.strip, .colls, .chips');
@@ -928,7 +910,8 @@ function render() {
   scrollers().forEach((e, i) => { e.scrollLeft = keep[i] ?? 0; });
   render.view = S.view;
   if (S.view === 'inspo' && S.inspoTab === 'wheel') paintWheel();
-  document.body.classList.toggle('onboarding', S.view === 'onboard');
+  const add = document.querySelector('nav .add'), ins = S.view === 'inspo';
+  add.dataset.action = ins ? 'addinspo' : 'add'; add.setAttribute('aria-label', ins ? 'Add inspo' : 'Add clothes');
   document.querySelectorAll('nav [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === (NAV_OF[S.view] ?? S.view)));
 }
 
@@ -947,38 +930,47 @@ const looksWith = it => {
 let openItem = null;
 const vibes = it => [].concat(it.vibe ?? []);
 const showColor = it => { sheet.querySelector('#cname').textContent = colorName(it.color) + (isNeutral(it.color) ? ' · neutral' : '');
+  sheet.querySelector('#cdot').style.background = it.color;
   sheet.querySelectorAll('[data-setcolor]').forEach(b => b.classList.toggle('on', b.getAttribute('aria-label') === colorName(it.color))); };
+// Vibe: one tap picks the main vibe (replaces it). "Also works as" adds extras, so changing it never takes two taps.
+const vibeHtml = it => { const [main, ...also] = vibes(it), cap = v => v[0].toUpperCase() + v.slice(1);
+  return `<span class="mono">Vibe</span><div class="vibes">${Object.keys(VIBES).map(v => `<button type="button" class="pill ${v === main ? 'on' : ''}" data-vibemain="${it.id}|${v}">${cap(v)}</button>`).join('')}</div>
+    <span class="mono">Also works as · optional</span><div>${Object.keys(VIBES).filter(v => v !== main).map(v => `<button type="button" class="pill ${also.includes(v) ? 'on' : ''}" data-vibe="${it.id}|${v}">${also.includes(v) ? '✓ ' : '+ '}${cap(v)}</button>`).join('')}</div>`; };
+const accHtml = it => { const acc = (it.accents ?? []).filter(a => !isShade(a, it.color));
+  return acc.length ? `<div class="cell"><span>Accent colors</span><span class="mono acchint">tap × to remove</span><span class="accs">${acc.map(h => `<button type="button" data-accdel="${it.id}|${h}" aria-label="Remove ${colorName(h)}"><i style="background:${h}">×</i></button>`).join('')}</span></div>` : ''; };
 function openSheet(id) {
   const it = byId(id), left = S.items.filter(i => i.review).length;
   showSheet(`<div class="hero spot"><img src="${src(it)}" alt="">${closeBtn}</div>
     <div class="tools"><button type="button" data-rotate="${it.id}" class="${it.review && ['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? 'hl' : ''}">↻ Rotate</button><button type="button" data-recut="${it.id}">Remove background</button><button type="button" data-touchup="${it.id}">Touch up</button><button type="button" data-replace="${it.id}">Replace photo</button></div>
   <form>
-    <div class="stat mono">${it.review ? `AI guessed these — fix anything wrong${['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? ' · is it upright? tap ↻ Rotate' : ''}` : wornText(it)}</div>
-    <div class="row" ${it.review ? 'hidden' : ''}><button type="button" class="btn" data-style="${it.id}">Style it</button><button type="button" class="btn ghost" data-wheel="${it.id}">Match color</button></div>
+    <div class="stat mono">${it.review ? `AI guessed these. Fix anything wrong${['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? ' · is it upright? tap ↻ Rotate' : ''}` : wornText(it)}</div>
+    <div class="pieceacts" ${it.review ? 'hidden' : ''}><button type="button" class="btn full" data-buildwith="${it.id}">Build an outfit with it</button>
+      <div class="row"><button type="button" class="btn ghost" data-style="${it.id}">Outfit ideas</button><button type="button" class="btn ghost" data-wheel="${it.id}">Match color</button></div></div>
+    ${looksWith(it)}
     <div class="group">
       <label class="cell"><span>Name</span><input name="name" value="${esc(it.name)}"></label>
       <label class="cell"><span>Category</span><select name="cat">${CATS.map(c => `<option ${c === it.cat ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
       <label class="cell" ${it.cat === 'Accessories' ? 'hidden' : ''}><span>Fit</span><select name="fit">${fitOptions(it)}</select></label>
     </div>
-    <div class="incoll"><span class="mono">Vibe · pick all that fit</span><div>${Object.keys(VIBES).map(v => `<button type="button" class="pill ${vibes(it).includes(v) ? 'on' : ''}" data-vibe="${it.id}|${v}">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')}</div></div>
+    <div class="incoll" id="vibebox">${vibeHtml(it)}</div>
     <div class="group">
-      <label class="cell"><span>Main color</span><span class="cname" id="cname">${colorName(it.color)}${isNeutral(it.color) ? ' · neutral' : ''}</span><input type="color" name="color" value="${it.color}" aria-label="Custom color"></label>
-      <div class="swatches">${Object.entries(SWATCHES).map(([n, h]) => `<button type="button" class="${colorName(it.color) === n ? 'on' : ''}" data-setcolor="${it.id}|${h}" style="background:${h}" aria-label="${n}"><span>${n}</span></button>`).join('')}</div>
-      ${it.accents?.length ? `<div class="cell"><span>Print colors</span><span class="accs">${it.accents.map(h => `<button type="button" data-accdel="${it.id}|${h}" style="background:${h}" aria-label="Remove ${colorName(h)}" title="${colorName(h)} · tap to remove"></button>`).join('')}</span></div>` : ''}
+      <div class="cell"><span>Main color</span><span class="cname" id="cname">${colorName(it.color)}${isNeutral(it.color) ? ' · neutral' : ''}</span><i class="cdot" id="cdot" style="background:${it.color}"></i></div>
+      <div class="cpick" id="cpick">${Object.entries(SWATCHES).map(([n, h]) => `<button type="button" class="${colorName(it.color) === n ? 'on' : ''}" data-setcolor="${it.id}|${h}" aria-label="${n}"><i style="background:${h}"></i></button>`).join('')}<label aria-label="Pick any color"><i></i><input type="color" name="color" value="${it.color}"></label></div>
+      <div id="accbox">${accHtml(it)}</div>
       <label class="cell"><span>Graphic / pattern</span><input type="checkbox" class="switch" name="patterned" ${it.patterned ? 'checked' : ''}></label>
-      <label class="cell"><span>Price paid</span><input name="price" inputmode="decimal" placeholder="—" value="${it.price ?? ''}"></label>
+      <label class="cell"><span>Price paid</span><input name="price" inputmode="decimal" placeholder="Add price" value="${it.price ?? ''}"></label>
     </div>
     ${S.colls.length ? `<div class="incoll"><span class="mono">Collections</span><div>${S.colls.map(c => `<button type="button" class="pill ${c.ids.includes(it.id) ? 'on' : ''}" data-collitem="${it.id}" data-collid="${c.id}">${esc(c.name)}</button>`).join('')}</div></div>` : ''}
-    ${looksWith(it)}
     ${it.review ? `<button type="button" class="btn" data-confirm="${it.id}">Looks right${left > 1 ? ` · ${left - 1} more` : ''}</button>` : ''}
     <button type="button" class="btn danger" data-del="${it.id}">Delete item</button>
   </form>`);
   openItem = id; // after showSheet, which clears it
+  const cp = sheet.querySelector('#cpick'), on = cp.querySelector('.on'); if (on) cp.scrollLeft = on.offsetLeft - (cp.clientWidth - on.offsetWidth) / 2; // chosen color in view
   sheet.querySelector('form').oninput = async e => {
     const f = e.currentTarget.elements, price = parseFloat(f.price.value.replace(/[^0-9.]/g, ''));
     Object.assign(it, { name: f.name.value, cat: f.cat.value, fit: +f.fit.value, color: f.color.value, patterned: f.patterned.checked, price: price > 0 ? price : null });
     if (e.target.name === 'cat') { f.fit.innerHTML = fitOptions(it); f.fit.closest('label').hidden = it.cat === 'Accessories'; }
-    if (e.target.name === 'color' && it.accents) it.accents = it.accents.filter(a => colorDist(a, it.color) > 90);
+    if (e.target.name === 'color' && it.accents) { it.accents = it.accents.filter(a => colorDist(a, it.color) > 90 && !isShade(a, it.color)); sheet.querySelector('#accbox').innerHTML = accHtml(it); }
     showColor(it);
     S.ideas = null; await put('items', it);
   };
@@ -1001,10 +993,11 @@ function openNewColl() {
 const shopUrl = name => `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(name)}`;
 const lookRows = ins => {
   const rows = ins.pieces.map((g, i) => { const own = closestOwned(S.items, g), listed = S.wish.some(w => w.from === `${ins.id}:${i}`);
-    return `<div class="lookrow">${own ? `<img src="${src(own)}" alt="">` : ghostEl(g)}<div><b>${esc(g.name)}</b><span class="mono">${own ? `You have it · ${esc(own.name)}` : 'Missing'}</span></div>
-      <div class="acts">${own ? '' : `${listed ? '<span class="mono">On list ✓</span>' : `<button class="btn ghost sm" data-lookwish="${ins.id}|${i}">+ List</button>`}<a class="shop" href="${shopUrl(g.name)}" target="_blank" rel="noopener">Shop ↗</a>`}
-      <button class="x" data-lookdrop="${ins.id}|${i}" aria-label="Not in this look">×</button></div></div>`; }).join('');
-  return (rows || '<p class="sub">No pieces read — try a full-body photo.</p>') + (ins.pieces.length ? `<button class="btn wide" data-lookbuild="${ins.id}">Wear it with what I own</button>` : '');
+    const name = g.kind ? `${colorName(g.color)} ${g.kind}`.replace(/^./, c => c.toUpperCase()) : g.name; // named with today's color rules, not the ones it was read with
+    return `<div class="lookrow">${own ? `<img src="${src(own)}" alt="">` : ghostEl(g)}<div><b>${esc(name)}</b><span class="mono">${own ? `You have it · ${esc(own.name)}` : listed ? 'Missing · on your list' : 'Missing'}</span></div>
+      <button class="x" data-lookdrop="${ins.id}|${i}" aria-label="Remove ${esc(name)} from this look">×</button>
+      <div class="acts">${own ? '' : `${listed ? '' : `<button class="btn ghost sm" data-lookwish="${ins.id}|${i}">+ List</button>`}<a class="btn ghost sm" href="${shopUrl(name)}" target="_blank" rel="noopener">Shop ↗</a>`}</div></div>`; }).join('');
+  return (rows || '<p class="sub">No pieces read. Try a full-body photo.</p>') + (ins.pieces.length ? `<button class="btn wide" data-lookbuild="${ins.id}">Wear it with what I own</button>` : '');
 };
 // Cut the person out, then read each body zone (hat / top / bottoms / shoes) with CLIP and take its main non-skin color.
 // ponytail: fixed zones of the person's height, so it assumes a standing full-body shot; wrong reads get an ×.
@@ -1045,11 +1038,11 @@ function openInspo(id) {
   const ins = S.inspo.find(x => x.id === id), on = ins.palette.filter(h => !ins.off.includes(h));
   showSheet(`<div class="hero spot inspohero"><img src="${src(ins)}" alt="">${closeBtn}</div>
     <div class="pad">
-      <span class="mono">Colors in this look — tap one to leave it out (skin, background)</span>
-      <div class="palrow">${ins.palette.map(h => `<button class="${ins.off.includes(h) ? 'off' : ''}" data-insoff="${id}|${h}" style="background:${h};color:${hexToHsl(h).l > 0.6 ? '#141414' : '#fff'}">${colorName(h)}</button>`).join('')}</div>
-      <button class="btn wide" data-inspofits="${id}" ${on.length ? '' : 'disabled'}>Build it from my closet</button>
+      <span class="mono">Colors in this look. Tap one to leave it out (skin, background)</span>
+      <div class="palrow">${ins.palette.map(h => `<button class="${ins.off.includes(h) ? 'off' : ''}" data-insoff="${id}|${h}" style="background:${h};color:${inkOn(h)}">${colorName(h)}</button>`).join('')}</div>
+      <button class="btn ghost wide" data-inspofits="${id}" ${on.length ? '' : 'disabled'}>Outfits in these colors</button>
       <h3><span>Shop the look</span></h3>
-      ${ins.pieces ? (ins.cropped ? `<p class="sub">The photo cuts off part of the body, so double-check these — × anything that's wrong.</p>` : '') + lookRows(ins) : `<p class="sub">Reads the hat, top, bottoms and shoes, finds your closest piece for each and lists what you're missing. Works best on one person, head to toe. Takes about 20 seconds.</p><button class="btn ghost wide" data-readlook="${id}">Find the pieces</button>`}
+      ${ins.pieces ? (ins.cropped ? `<p class="sub">The photo cuts off part of the body, so double-check these and remove anything that's wrong.</p>` : '') + lookRows(ins) : `<p class="sub">Reads the hat, top, bottoms and shoes, finds your closest piece for each and lists what you're missing. Works best on one person, head to toe. Takes about 20 seconds.</p><button class="btn ghost wide" data-readlook="${id}">Find the pieces</button>`}
       <button class="btn danger wide" data-inspodel="${id}">Remove from board</button>
     </div>`);
 }
@@ -1057,7 +1050,7 @@ function openInspo(id) {
 // ---------- touch up: erase what the cutout kept by mistake (a ruler edge, a tag, a bag) ----------
 let touch = null;
 async function touchUp(it) {
-  showSheet(`<div class="touch"><div class="pickhead" style="padding:0"><div><div class="eyebrow">${esc(it.name)}</div><h2>Touch up</h2></div>${closeBtn}</div>
+  showSheet(`<div class="touch"><div class="pickhead"><div><div class="eyebrow">${esc(it.name)}</div><h2>Touch up</h2></div>${closeBtn}</div>
     <canvas id="tc"></canvas><p class="sub">Drag over anything that isn't the piece to erase it.</p>
     <div class="row3"><button class="btn ghost" data-touch="undo">Undo</button><button class="btn ghost" data-touch="reset">Reset</button><button class="btn" data-touch="save">Save</button></div></div>`);
   const c = document.getElementById('tc'), x = c.getContext('2d'), bmp = await createImageBitmap(it.img);
@@ -1131,7 +1124,7 @@ const replaceInput = picker('image/*', false, async ([f]) => {
   const it = byId(replacing); if (!it) return;
   toast('Cutting out the new photo…');
   try { const { img, color, accents, photo } = await cutout(f, undefined, it); Object.assign(it, { img, color, accents, photo, turns: 0 }); /* new photo, new orientation */ resetSrc(it); await put('items', it); S.ideas = null; openSheet(it.id); toast('Photo replaced'); }
-  catch (e) { console.warn(e); toast(`Couldn't read ${f.name} — try a JPG`); }
+  catch (e) { console.warn(e); toast(`Couldn't read ${f.name}. Try a JPG`); }
 });
 const fileInput = document.getElementById('file');
 fileInput.onchange = () => { addFiles(fileInput.files); fileInput.value = ''; };
@@ -1142,18 +1135,17 @@ function outfitByKey(k) {
   if (S.build && keyOf(S.build) === k) return { key: k, items: S.build };
   const s = S.saved.find(x => x.key === k) ?? S.history.find(x => x.key === k) ?? [...Object.values(S.plan.days), ...Object.values(S.plan.weekly)].find(x => x.key === k); return s && { key: k, items: s.ids.map(byId).filter(Boolean) };
 }
+function buildWith(it) { // the best outfit around this piece, else the current builder look with it swapped in
+  const items = [...new Set([...pool(), it])];
+  let o = [S.mode, ...Object.keys(MODES).filter(k => !MODES[k].hidden)].map(m => generate(items, m, { anchor: it })[0]).find(Boolean)?.items;
+  if (!o) { o = [it]; for (const s of ['Tops', 'Bottoms', 'Shoes']) if (!o.some(SLOTS[s])) { const r = rankSwaps(items, o, s); const best = r.find(x => x.score != null) ?? r[0]; if (best) o.push(best.item); } } // no style rule fits: still start from the best guess and let you swap
+  if (!complete(o)) return toast('Add a top, bottoms and shoes first');
+  sheet.close(); startBuild(o);
+}
 function startBuild(items) {
   const base = items ?? generate(pool(), S.mode)[0]?.items ?? ['Tops', 'Bottoms', 'Shoes'].map(c => pool().find(i => i.cat === c)).filter(Boolean);
   if (!complete(base)) return toast('Needs at least a top, bottoms and shoes');
   S.build = base.slice(); S.view = 'build'; remember(S.build); render(); scrollTo(0, 0);
-}
-async function finishOnboarding() {
-  const f = document.getElementById('obsizes')?.elements, measure = { ...(S.profile?.measure ?? {}) };
-  if (f) for (const k of ['top', 'bottom', 'shoe']) if (f[k].value.trim()) measure[k] = f[k].value.trim();
-  S.profile = { k: 'me', done: true, styles: S.ob.styles, goals: S.ob.goals, measure };
-  await put('profile', S.profile);
-  if (!S.colls.length) for (const name of ['Everyday', 'Vacation', 'Club', 'Dressy']) { const c = { id: uid(), name, ids: [], at: Date.now() }; await put('colls', c); S.colls.push(c); }
-  S.mode = defaultMode(S.profile); S.ideas = null; S.view = S.items.length ? 'outfits' : 'closet'; render(); scrollTo(0, 0);
 }
 
 // Wheel drag: angle from 12 o'clock = hue, distance from center = saturation (same as the CSS conic gradient).
@@ -1191,9 +1183,6 @@ document.addEventListener('click', async e => {
   const ds = t.dataset;
   if (ds.go) { S.view = ds.go; if (ds.listtab) S.listTab = ds.listtab; render(); scrollTo(0, 0); }
   else if (ds.sub) { const [k, v] = ds.sub.split(':'); S[k] = v; render(); }
-  else if (ds.ob) { if (ds.ob === 'next') { S.ob.step++; render(); scrollTo(0, 0); } else finishOnboarding(); }
-  else if (ds.obpick) { const [g, k] = ds.obpick.split(':'), a = S.ob[g]; a.includes(k) ? a.splice(a.indexOf(k), 1) : a.push(k); render(); }
-  else if (ds.action === 'redo') { S.ob = { step: 1, styles: [...(S.profile?.styles ?? [])], goals: [...(S.profile?.goals ?? [])] }; S.view = 'onboard'; render(); scrollTo(0, 0); }
   else if (ds.listtab) { S.listTab = ds.listtab; render(); }
   else if (ds.wishgap) {
     if (onList(ds.wishgap)) return;
@@ -1201,7 +1190,7 @@ document.addEventListener('click', async e => {
     const w = { id: g.id, name: g.name, cat: g.cat, color: g.color, fit: g.fit, got: false, at: Date.now() };
     await put('wish', w); S.wish.push(w); toast('Added to list'); render();
   }
-  else if (ds.wishgot) { const w = S.wish.find(x => x.id === ds.wishgot); w.got = !w.got; await put('wish', w); if (w.got) toast('Copped — add a photo with +'); render(); }
+  else if (ds.wishgot) { const w = S.wish.find(x => x.id === ds.wishgot); w.got = !w.got; await put('wish', w); if (w.got) toast('Copped! Add a photo with +'); render(); }
   else if (ds.wishdel) { await del('wish', ds.wishdel); S.wish = S.wish.filter(x => x.id !== ds.wishdel); render(); }
   else if (ds.action === 'add') fileInput.click();
   else if (ds.action === 'addinspo') inspoInput.click();
@@ -1235,13 +1224,14 @@ document.addEventListener('click', async e => {
   }
   else if (ds.harmony) { S.wheel.harmony = ds.harmony; render(); }
   else if (ds.cat) { S.cat = ds.cat; render(); }
-  else if (ds.mode) { S.mode = ds.mode; S.ideas = null; render(); }
+  else if (ds.mode) { S.mode = ds.mode; S.ideas = null; render(); S.profile = { k: 'me', ...S.profile, mode: ds.mode }; put('profile', S.profile); }
   else if (ds.open) openSheet(ds.open);
-  else if (ds.setcolor) { const [id, h] = ds.setcolor.split('|'), it = byId(id); it.color = h; if (it.accents) it.accents = it.accents.filter(a => colorDist(a, h) > 90);
-    sheet.querySelector('[name=color]').value = h; showColor(it); S.ideas = null; await put('items', it); }
-  else if (ds.vibe) { const [id, v] = ds.vibe.split('|'), it = byId(id), cur = vibes(it), next = cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v];
-    if (!next.length) return toast('Keep at least one vibe');
-    it.vibe = next.length === 1 ? next[0] : next; t.classList.toggle('on', next.includes(v)); S.ideas = null; await put('items', it); }
+  else if (ds.setcolor) { const [id, h] = ds.setcolor.split('|'), it = byId(id); it.color = h; if (it.accents) it.accents = it.accents.filter(a => colorDist(a, h) > 90 && !isShade(a, h));
+    sheet.querySelector('[name=color]').value = h; showColor(it); sheet.querySelector('#accbox').innerHTML = accHtml(it); S.ideas = null; await put('items', it); }
+  else if (ds.vibemain || ds.vibe) { const [id, v] = (ds.vibemain || ds.vibe).split('|'), it = byId(id), [main, ...also] = vibes(it);
+    const next = ds.vibemain ? [v, ...also.filter(x => x !== v)] : [main, ...(also.includes(v) ? also.filter(x => x !== v) : [...also, v])];
+    it.vibe = next.length === 1 ? next[0] : next; sheet.querySelector('#vibebox').innerHTML = vibeHtml(it); S.ideas = null; await put('items', it); }
+  else if (ds.buildwith) buildWith(byId(ds.buildwith));
   else if (ds.swap) openSwap(ds.swap);
   else if (ds.unwear) { S.build = S.build.filter(p => !SLOTS[ds.unwear](p)); render(); }
   else if (ds.wearpick) { const [slot, id] = ds.wearpick.split(':'); S.build = [...S.build.filter(p => !SLOTS[slot](p)), byId(id)]; sheet.close(); remember(S.build); render(); }
@@ -1305,7 +1295,7 @@ document.addEventListener('click', async e => {
   else if (ds.packcheck) { const c = collById(S.coll), s2 = new Set(c.packed ?? []); s2.has(ds.packcheck) ? s2.delete(ds.packcheck) : s2.add(ds.packcheck); c.packed = [...s2]; await put('colls', c); openPack(); }
   else if (ds.action === 'packplan') {
     const c = collById(S.coll), tm = dayAdd(dayKey(), 1), taken = c.trip.fits.filter((_, i) => plannedFor(dayAdd(tm, i))).length;
-    if (taken && !t.classList.contains('armed')) { t.classList.add('armed'); t.textContent = `Replaces ${taken} planned day${taken > 1 ? 's' : ''} — tap again`; return; }
+    if (taken && !t.classList.contains('armed')) { t.classList.add('armed'); t.textContent = `Replaces ${taken} planned day${taken > 1 ? 's' : ''}. Tap again`; return; }
     for (const [i, ids] of c.trip.fits.entries()) S.plan.days[dayAdd(tm, i)] = { key: ids.slice().sort().join(), ids };
     await savePlan(); sheet.close(); S.view = 'outfits'; S.tab = 'week'; S.weekOff = 0; render(); scrollTo(0, 0); toast(`${c.trip.fits.length} days planned`);
   }

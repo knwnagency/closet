@@ -29,7 +29,7 @@ export const BADGES = [
   { id: 'pieces50', name: 'Archive', desc: '50 pieces in your closet', icon: 'box', goal: 50, val: c => c.items.length },
   // ponytail: badges are derived, not stored — Full Rotation can relock when new pieces arrive. Persist unlocks if that annoys.
   { id: 'rotation', name: 'Full Rotation', desc: 'Wear every piece once', icon: 'loop', goal: 100, unit: '%', val: c => c.items.length < 5 ? 0 : Math.round(100 * c.items.filter(i => i.wears).length / c.items.length) },
-  { id: 'saved5', name: 'Moodboard', desc: 'Save 5 outfits', icon: 'heart', goal: 5, val: c => c.saved.length },
+  { id: 'saved5', name: 'Collector', desc: 'Favorite 5 outfits', icon: 'heart', goal: 5, val: c => c.saved.length },
   { id: 'spectrum', name: 'Full Spectrum', desc: 'Own 6 different colors', icon: 'prism', goal: 6, val: c => new Set(c.items.filter(i => !isNeutral(i.color)).map(i => colorName(i.color))).size },
 ];
 
