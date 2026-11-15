@@ -1,0 +1,1391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="theme-color" content="#ebe7e0">
+<title>Closet</title>
+<style>
+  /* Fashion house: warm stone neutrals, Helvetica, uppercase tracking, square corners, no shadows. The clothes are the only color. */
+  :root {
+    --bg: #ebe7e0; --s1: #f4f1ec; --tile: #e0dbd2; --ink: #1d1a17; --muted: #655e55; /* 5.2:1 on bg, 4.6:1 on tiles — WCAG AA */ --hair: rgb(29 26 23 / .12);
+    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif; --r: 2px;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  body { margin: 0; min-height: 100dvh; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; padding: 0; border-radius: 0; transition: opacity .2s; }
+  button:active { opacity: .6; }
+  main { max-width: 820px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 28px) 18px 120px; }
+  header { display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-bottom: 22px; }
+  header .right { display: flex; gap: 14px; align-items: center; }
+  h1 { font-size: 30px; letter-spacing: -.01em; margin: 4px 0 0; font-weight: 700; line-height: 1; text-transform: uppercase; }
+  h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; margin: 38px 0 14px; display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--hair); }
+  .sub { color: var(--muted); font-size: 13px; margin: -4px 0 16px; max-width: 46ch; }
+  .eyebrow, .mono { font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+  .glass { background: var(--s1); border-radius: var(--r); }
+  .spot { background: var(--tile); border-radius: var(--r); }
+
+  .chips { display: flex; gap: 20px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 22px; padding: 0 18px; border-bottom: 1px solid var(--hair); }
+  .chip { flex: none; padding: 0 0 10px; margin-bottom: -1px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); border-bottom: 1px solid transparent; }
+  .chip.on { color: var(--ink); border-color: var(--ink); }
+  .chip small { font-size: 10px; font-weight: 400; margin-left: 4px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 26px 10px; }
+  .item { text-align: left; align-self: start; }
+  .item .ph { aspect-ratio: 3 / 4; display: grid; place-items: center; padding: 16%; position: relative; }
+  .item .ph i { position: absolute; right: 10px; top: 10px; width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .1); }
+  .item img { width: 100%; height: 100%; min-height: 0; object-fit: contain; } /* min-height: tall photos must not stretch the 3:4 tile */
+  .item b { display: block; margin-top: 10px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
+  .item span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .pending .ph { overflow: hidden; }
+  .pending img { opacity: .35; filter: grayscale(1); }
+  .pending .ph::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 35%, rgb(255 255 255 / .45) 50%, transparent 65%); animation: sh 1.6s infinite; }
+  @keyframes sh { from { transform: translateX(-100%) } to { transform: translateX(100%) } }
+
+  .empty { text-align: center; padding: 70px 20px; color: var(--muted); }
+  .empty h2 { color: var(--ink); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; margin: 0 0 10px; }
+  .empty p { max-width: 36ch; margin: 0 auto 20px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 26px; border-radius: var(--r); background: var(--ink); color: var(--bg); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .16em; }
+  .btn.ghost, .btn.danger { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .btn.go { background: var(--ink); color: var(--bg); }
+  .btn.done { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--hair); }
+  .btn.sm { height: 40px; padding: 0 18px; }
+  .btn.wide { width: 100%; margin-top: 22px; }
+  .btn.danger { color: #9b3b2e; box-shadow: inset 0 0 0 1px rgb(155 59 46 / .4); }
+
+  .seg { display: inline-flex; gap: 16px; }
+  .seg button { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); padding-bottom: 3px; border-bottom: 1px solid transparent; }
+  .seg button.on { color: var(--ink); border-color: var(--ink); }
+  .subnav { display: flex; margin: -6px 0 22px; }
+  .backup { display: flex; justify-content: center; gap: 24px; margin-top: 48px; } .empty .backup { margin-top: 22px; }
+  .blurb .row2 { display: flex; gap: 6px; flex: none; }
+  .blurb { color: var(--muted); margin: -8px 0 18px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .anchor { display: inline-flex; align-items: center; gap: 10px; padding: 4px 12px 4px 4px; background: var(--s1); margin-bottom: 16px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  .anchor img { width: 34px; height: 34px; object-fit: contain; background: var(--tile); padding: 3px; }
+
+  .streak { display: inline-flex; align-items: baseline; gap: 6px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); padding: 7px 9px; box-shadow: inset 0 0 0 1px var(--hair); }
+  .streak b { font-size: 13px; letter-spacing: 0; color: var(--ink); }
+  .streak.lit { background: var(--ink); color: var(--bg); box-shadow: none; } .streak.lit b { color: var(--bg); }
+
+  /* ghost = a piece you don't own yet: a flat in its color */
+  .gh { display: grid; place-items: center; }
+  .gh svg { width: 100%; height: 100%; fill: var(--c); stroke: rgb(0 0 0 / .18); stroke-width: .3; }
+  .meta { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .swatches { display: flex; gap: 3px; }
+  .swatches i { width: 12px; height: 12px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .1); }
+  .meta p { flex: 1; margin: 0 0 0 4px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .why { display: flex; gap: 6px; align-items: center; font-size: 12px; margin-top: 6px; color: var(--muted); }
+  .why svg { width: 14px; height: 14px; flex: none; }
+  .icon { width: 36px; height: 36px; display: grid; place-items: center; flex: none; }
+  .icon svg { width: 19px; height: 19px; }
+  .icon.on svg { fill: var(--ink); }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .actions .btn { flex: 1; }
+
+  /* list + suggestions */
+  .nudge { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px; margin-bottom: 24px; text-align: left; }
+  .nudge .gh { width: 54px; height: 54px; flex: none; background: var(--tile); padding: 6px; }
+  .nudge div { flex: 1; min-width: 0; } .nudge b { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
+  .plus { flex: none; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
+  .gaps { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .gap { padding: 14px; }
+  .gap-top { display: flex; align-items: center; gap: 12px; }
+  .gap-top .gh { width: 52px; height: 52px; flex: none; background: var(--tile); padding: 6px; }
+  .gap-top div { flex: 1; min-width: 0; } .gap-top b { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 3px; }
+  .minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 14px 0 12px; }
+  .scan { display: grid; place-items: center; gap: 16px; padding: 90px 20px; }
+  .scan i { width: 40px; height: 1px; background: var(--ink); animation: load 1s ease-in-out infinite alternate; transform-origin: left; }
+  @keyframes load { from { transform: scaleX(.1) } to { transform: scaleX(1) } }
+  .wishform { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-bottom: 8px; }
+  .wishform input[name=name] { grid-column: 1 / -1; }
+  .wishform input[name=price] { grid-column: 2 / -1; }
+  .wishform input:not([type=color]), .wishform select { height: 46px; border: 0; border-bottom: 1px solid var(--ink); background: none; padding: 0 2px; font-size: 16px; outline: 0; border-radius: 0; appearance: none; } /* <16px makes iOS zoom on focus */
+  .wishform select { padding-right: 18px; border-bottom-color: var(--hair);
+    background: linear-gradient(45deg, transparent 50%, var(--ink) 50%) right 4px center / 5px 5px no-repeat, linear-gradient(-45deg, transparent 50%, var(--ink) 50%) right 0 center / 5px 5px no-repeat; }
+  .wishform input[type=color] { width: 46px; height: 46px; border: 0; padding: 8px; background: none; }
+  .wishform input[type=color]::-webkit-color-swatch-wrapper { padding: 0; } .wishform input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
+  .wish { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+  .wish .gh { width: 64px; height: 80px; flex: none; background: var(--tile); padding: 10px; }
+  .wish div { flex: 1; min-width: 0; } .wish b { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
+  .wish.got { opacity: .45; } .wish.got b { text-decoration: line-through; }
+  .check { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ink); display: grid; place-items: center; flex: none; }
+  .check svg { width: 14px; height: 14px; opacity: 0; } .got .check { background: var(--ink); color: var(--bg); } .got .check svg { opacity: 1; }
+  .x { color: var(--muted); font-size: 18px; width: 28px; flex: none; }
+
+  /* progress */
+  .hud { display: grid; grid-template-columns: 1fr auto; align-items: end; padding: 22px 20px; gap: 10px; }
+  .hud .big { font-size: 112px; line-height: .82; font-weight: 700; letter-spacing: -.05em; }
+  .hud .stats { display: grid; gap: 14px; text-align: right; }
+  .hud .stats b { display: block; font-size: 22px; font-weight: 700; margin-top: 2px; }
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 4px; }
+  .week div { display: grid; justify-items: center; gap: 8px; padding: 12px 0; background: var(--s1); }
+  .week i { width: 14px; height: 14px; box-shadow: inset 0 0 0 1px var(--hair); }
+  .week .on i { background: var(--ink); box-shadow: none; }
+  .week .now span { color: var(--ink); }
+  .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 4px; }
+  .badge { display: grid; align-content: start; justify-items: center; text-align: center; gap: 8px; padding: 18px 8px 16px; }
+  .medal { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--hair); color: var(--muted); }
+  .medal svg { width: 20px; height: 20px; stroke-width: 1.3; }
+  .badge.done { background: var(--ink); color: var(--bg); } .badge.done .medal { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3); color: var(--bg); }
+  .badge b { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
+  .badge:not(.done) b { color: var(--muted); }
+  .badge small { font-size: 11px; color: var(--muted); line-height: 1.3; }
+  .badge.done small, .badge.done .mono { color: rgb(255 255 255 / .55); }
+  .bar { width: 60%; height: 1px; background: var(--hair); }
+  .bar i { display: block; height: 100%; background: var(--ink); }
+
+  /* color wheel */
+  .wheel { position: relative; width: min(300px, 80vw); aspect-ratio: 1; margin: 6px auto 20px; border-radius: 50%; touch-action: none; cursor: crosshair;
+    background: radial-gradient(closest-side, #fff, rgb(255 255 255 / 0)), conic-gradient(hsl(0 100% 50%), hsl(60 100% 50%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 50%), hsl(300 100% 50%), hsl(360 100% 50%)); }
+  .wheel svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .wheel .h { position: absolute; width: 24px; height: 24px; margin: -12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgb(0 0 0 / .2); pointer-events: none; }
+  .wheel .h.base { width: 34px; height: 34px; margin: -17px; }
+  input[type=range] { width: 100%; accent-color: var(--ink); }
+  .light { display: flex; align-items: center; gap: 12px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+  .pal { display: flex; gap: 4px; margin: 20px 0 0; }
+  .pal div { flex: 1; height: 120px; display: flex; flex-direction: column; justify-content: end; padding: 10px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
+  .pal small { font-weight: 400; opacity: .75; }
+  .match { display: flex; align-items: center; gap: 10px; padding: 10px; margin-bottom: 4px; }
+  .match > i { width: 30px; height: 30px; border-radius: 50%; flex: none; }
+  .match .thumbs { display: flex; gap: 4px; overflow-x: auto; flex: 1; scrollbar-width: none; }
+  .match .thumbs button img { width: 52px; height: 64px; object-fit: contain; background: var(--tile); padding: 4px; display: block; }
+  .match em { color: var(--muted); font-size: 12px; font-style: normal; }
+
+  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: stretch; background: rgb(235 231 224 / .92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--hair); padding-bottom: env(safe-area-inset-bottom); }
+  nav .tabs { flex: 1; display: flex; max-width: 820px; margin: 0 auto; }
+  nav .tabs button { flex: 1; min-width: 0; height: 58px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); position: relative; }
+  nav .tabs button.on { color: var(--ink); }
+  nav .tabs button.on::after { content: ''; position: absolute; left: 50%; bottom: 14px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--ink); }
+  nav .add { width: 52px; flex: none; display: grid; place-items: center; background: var(--ink); color: var(--bg); }
+  svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* sheet */
+  dialog.sheet { margin: auto auto 0; width: 100%; max-width: 560px; max-height: 92dvh; border: 0; padding: 0; border-radius: 0; background: var(--bg); color: var(--ink); }
+  dialog.sheet[open] { animation: up .45s cubic-bezier(.2, .9, .25, 1); }
+  @keyframes up { from { transform: translateY(100%) } }
+  dialog::backdrop { background: rgb(29 26 23 / .35); }
+  .sheet .hero { height: 280px; display: grid; place-items: center; padding: 40px; position: relative; border-radius: 0; }
+  .sheet .hero img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+  .sheet .close { position: absolute; top: 12px; right: 12px; }
+  .sheet form { padding: 20px 18px calc(env(safe-area-inset-bottom) + 22px); display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .sheet .stat { text-align: center; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .group { border-top: 1px solid var(--hair); }
+  .cell { display: flex; align-items: center; gap: 12px; min-height: 52px; border-bottom: 1px solid var(--hair); }
+  .cell > span:first-child { flex: none; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; }
+  .cell input:not([type]), .cell select { flex: 1; min-width: 0; border: 0; background: none; text-align: right; text-align-last: right; color: var(--ink); appearance: none; font-size: 16px; height: 52px; outline: 0; border-radius: 0; }
+  .cell select { padding-right: 16px; background: linear-gradient(45deg, transparent 50%, var(--muted) 50%) right 4px center / 5px 5px no-repeat, linear-gradient(-45deg, transparent 50%, var(--muted) 50%) right 0 center / 5px 5px no-repeat; }
+  .cell .cname { flex: 1; text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+  .cell input[type=color] { width: 26px; height: 26px; border: 0; padding: 0; border-radius: 50%; background: none; flex: none; }
+  .cell input[type=color]::-webkit-color-swatch-wrapper { padding: 0; } .cell input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
+  .switch { appearance: none; margin: 0 0 0 auto; width: 44px; height: 24px; border-radius: 99px; box-shadow: inset 0 0 0 1px var(--ink); position: relative; flex: none; cursor: pointer; transition: background .2s; }
+  .switch::after { content: ''; position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); transition: transform .25s cubic-bezier(.3, .7, .4, 1), background .2s; }
+  .switch:checked { background: var(--ink); } .switch:checked::after { transform: translateX(20px); background: var(--bg); }
+
+  #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 14px); transform: translate(-50%, -180%); background: var(--ink); color: var(--bg); padding: 13px 20px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; transition: transform .35s cubic-bezier(.2, .9, .3, 1); z-index: 9; max-width: 92vw; white-space: nowrap; }
+  #toast.show { transform: translate(-50%, 0); }
+
+  /* flat-lay outfit: pieces laid out at real-world scale, never overlapping (flatLayout in match.js) */
+  .flat { position: relative; aspect-ratio: 4 / 5; background: var(--tile); overflow: hidden; border-radius: var(--r); }
+  .flat > img, .flat > .gh { position: absolute; object-fit: contain; min-height: 0; }
+  .feed > .outfit:first-child { grid-column: 1 / -1; } .feed > .outfit:first-child .flat { max-width: 520px; margin: 0 auto; } /* lead idea big enough to see the cap and chain */
+  .flatbtn { display: block; width: 100%; }
+  .feed { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 22px 10px; }
+  .outfit .meta { margin-top: 8px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 3px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12); }
+  button:disabled { opacity: .3; pointer-events: none; }
+
+  /* builder: dress the silhouette — one swipe row per slot */
+  .dress { max-width: 440px; margin: 0 auto; background: var(--tile); border-radius: var(--r); padding: 8px 0; overflow: hidden; }
+  .sw { position: relative; height: var(--h); }
+  .sw::before { content: ''; position: absolute; inset: 2px 0; background: currentColor; opacity: .045; -webkit-mask: var(--sil) center / contain no-repeat; mask: var(--sil) center / contain no-repeat; }
+  .sw .lab { position: absolute; left: 12px; top: 4px; z-index: 2; pointer-events: none; font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); max-width: 40%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track { position: relative; z-index: 1; display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 0 22%; overscroll-behavior-x: contain; }
+  .track::-webkit-scrollbar { display: none; }
+  .track > button { flex: 0 0 56%; height: 100%; padding: 4px 8px; scroll-snap-align: center; opacity: .25; transform: scale(.78); transition: opacity .2s, transform .25s cubic-bezier(.2, .9, .3, 1); }
+  .track > button.no { opacity: .1; } .track > button.cur { opacity: 1; transform: none; }
+  .track img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+  .track .none span { display: grid; place-items: center; height: min(100%, 64px); margin-top: calc((var(--h) - min(var(--h), 64px)) / 2 - 4px); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); }
+  .actions .icon.on svg { fill: var(--bg); }
+  .looks { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 2px; }
+  .looks .look { flex: 0 0 92px; position: relative; } .looks .look > button:first-child { display: block; width: 100%; }
+  .looks .look .icon { position: absolute; right: 0; bottom: 0; width: 30px; height: 30px; } .looks .look .icon svg { width: 15px; height: 15px; }
+  .looks-h { display: flex; justify-content: space-between; margin: 26px 0 10px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; } .looks-h span:last-child { color: var(--muted); font-weight: 500; }
+  .accs { display: flex; gap: 6px; margin-left: auto; } .accs button { width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
+  /* week planner */
+  .weekbar { display: flex; justify-content: space-between; align-items: center; margin: 0 0 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
+  .days { display: grid; gap: 6px; }
+  .day { display: grid; grid-template-columns: 44px 84px 1fr; gap: 12px; align-items: center; padding: 8px 10px 8px 12px; background: var(--s1); border-radius: var(--r); }
+  .day.today { box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .day .dl b { display: block; font-size: 10.5px; letter-spacing: .14em; } .day .dl span { font-size: 22px; font-weight: 700; }
+  .day .slotbtn { display: block; width: 84px; } .day .plus { width: 84px; aspect-ratio: 4 / 5; display: grid; place-items: center; box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+  .day .acts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: center; } .day .acts .mono { width: 100%; text-align: right; }
+  .picklooks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .picklooks button { display: block; }
+  .chk { display: flex; gap: 10px; align-items: center; font-size: 13px; }
+  /* shop the look + packing */
+  .lookrow { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hair); }
+  .lookrow .gh { width: 44px; height: 44px; } .lookrow img { width: 44px; height: 44px; object-fit: contain; background: var(--tile); border-radius: var(--r); }
+  .lookrow b { display: block; font-size: 13px; } .lookrow .acts { display: flex; gap: 6px; align-items: center; }
+  .lookrow .x { width: 28px; height: 28px; color: var(--muted); font-size: 18px; }
+  .packdays { display: flex; align-items: center; gap: 14px; justify-content: center; } .packdays b { font-size: 34px; min-width: 2ch; text-align: center; }
+  .packfits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .packfits span { display: block; margin-top: 4px; } .packfits button, .picklooks button { display: block; width: 100%; }
+  .packlist button { display: grid; grid-template-columns: 22px 44px 1fr; gap: 12px; align-items: center; width: 100%; padding: 6px 0; text-align: left; font-size: 13px; }
+  .packlist i { width: 20px; height: 20px; box-shadow: inset 0 0 0 1.5px var(--ink); border-radius: 3px; display: grid; place-items: center; font-style: normal; font-size: 12px; }
+  .packlist button.on i { background: var(--ink); color: var(--bg); } .packlist button.on span { text-decoration: line-through; color: var(--muted); }
+  .packlist img { width: 44px; height: 44px; object-fit: contain; background: var(--tile); border-radius: var(--r); }
+  /* builder */
+  .build .flat { max-width: 440px; margin: 0 auto; }
+  .verdict { display: flex; gap: 8px; align-items: center; justify-content: center; text-align: center; font-size: 12px; margin: 14px 0 0; color: var(--ink); }
+  .verdict svg { width: 14px; height: 14px; flex: none; } .verdict.bad { color: #9b3b2e; }
+  .build .actions { max-width: 440px; margin: 14px auto 0; position: sticky; bottom: calc(env(safe-area-inset-bottom) + 66px); z-index: 4; background: var(--bg); padding: 8px 0; box-shadow: 0 -1px 0 var(--hair); } .build .actions [data-action=planthis] { flex: 0 0 auto; padding: 0 16px; }
+  .hint { text-align: center; margin: 18px auto 4px; font-size: 12px; }
+  .slot h4 { display: flex; justify-content: space-between; gap: 10px; margin: 22px 0 10px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; }
+  .slot h4 span:last-child { color: var(--muted); font-weight: 500; letter-spacing: .08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .strip { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 2px; }
+  .strip button { flex: none; width: 76px; height: 96px; background: var(--tile); padding: 7px; position: relative; border-radius: var(--r); }
+  .strip button.on { box-shadow: inset 0 0 0 2px var(--ink); }
+  .strip button.no { opacity: .35; }
+  .strip img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+  .strip .none { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+  .strip em { position: absolute; right: 4px; bottom: 3px; font-style: normal; font-size: 10px; font-weight: 700; }
+
+  /* collections */
+  .colls { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 16px; padding: 0 18px; }
+  .pill { flex: none; height: 36px; padding: 0 14px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); white-space: nowrap; }
+  .pill.on { background: var(--ink); color: var(--bg); box-shadow: none; }
+  .pill small { font-size: 10px; font-weight: 400; margin-left: 6px; opacity: .7; }
+  .pill.add { color: var(--ink); }
+  .collbar { display: flex; gap: 6px; margin: 0 0 18px; } .collbar .btn { flex: 1; padding: 0 10px; }
+  .btn.armed { background: #9b3b2e; color: #fff; box-shadow: none; }
+  .chips.wrap { flex-wrap: wrap; row-gap: 12px; overflow: visible; }
+  .chips:not(.wrap) { mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent); } /* says "scroll for more" instead of clipping a word */
+  .touch { padding: 18px 18px calc(env(safe-area-inset-bottom) + 22px); display: grid; gap: 14px; }
+  .touch canvas { width: 100%; max-height: 62dvh; object-fit: contain; touch-action: none; background: repeating-conic-gradient(var(--s1) 0 25%, var(--bg) 0 50%) 0 0 / 16px 16px; border-radius: var(--r); }
+  .touch .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .incoll { display: grid; gap: 10px; } .incoll > div { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pickhead { display: flex; justify-content: space-between; align-items: center; padding: 20px 18px 14px; position: sticky; top: 0; background: var(--bg); z-index: 2; }
+  .pickhead h2 { margin: 2px 0 0; font-size: 22px; text-transform: uppercase; }
+  .pickgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 18px 30px; }
+  .pickgrid button { background: var(--tile); aspect-ratio: 3 / 4; padding: 10px 8px 22px; position: relative; border-radius: var(--r); }
+  .pickgrid img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+  .pickgrid span { position: absolute; left: 6px; right: 6px; bottom: 5px; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pickgrid button.on { box-shadow: inset 0 0 0 2px var(--ink); }
+  .pickgrid button.on::after { content: '✓'; position: absolute; top: 5px; right: 6px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: var(--bg); font-size: 11px; display: grid; place-items: center; }
+  .newcoll { display: grid; gap: 14px; padding: 0 0 calc(env(safe-area-inset-bottom) + 22px); }
+  .newcoll > input { margin: 0 18px; height: 50px; border: 0; border-bottom: 1px solid var(--ink); background: none; font-size: 18px; outline: 0; border-radius: 0; }
+  .newcoll .sugg { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 18px; } .newcoll .btn { margin: 8px 18px 0; width: auto; }
+
+  /* inspo */
+  .board { columns: 2; column-gap: 10px; }
+  .board button { display: block; width: 100%; margin-bottom: 10px; break-inside: avoid; }
+  .board img { width: 100%; display: block; border-radius: var(--r); }
+  .pals { display: flex; height: 6px; margin-top: 4px; } .pals i { flex: 1; }
+  .inspohero { height: auto; max-height: 56dvh; padding: 0; } .inspohero img { max-height: 56dvh; }
+  .pad { padding: 18px 18px calc(env(safe-area-inset-bottom) + 24px); display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; } /* minmax: wide thumb rows must scroll, not stretch the sheet */
+  .palrow { display: flex; gap: 4px; } .palrow button { flex: 1; height: 64px; display: flex; align-items: end; padding: 6px; font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+  .palrow button.off { opacity: .2; }
+
+  /* me */
+  .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+  .tiles > * { padding: 16px; background: var(--s1); text-align: left; border-radius: var(--r); }
+  .tiles small { display: block; margin-top: 4px; font-size: 11px; }
+  .tiles b { display: block; font-size: 34px; font-weight: 700; letter-spacing: -.02em; margin-top: 6px; }
+  .bars { display: grid; gap: 8px; } .bars div { display: grid; grid-template-columns: 96px 1fr 28px; align-items: center; gap: 10px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
+  .bars i { height: 8px; background: var(--s1); } .bars i b { display: block; height: 100%; background: var(--ink); } .bars em { font-style: normal; text-align: right; }
+  .colorbar { display: flex; height: 44px; border-radius: var(--r); overflow: hidden; box-shadow: inset 0 0 0 1px var(--hair); }
+  .legend { margin-top: 10px; line-height: 1.7; }
+  #measure .cell input { text-align: right; }
+
+  /* onboarding */
+  body.onboarding nav { display: none; }
+  body.onboarding main { padding-bottom: 30px; }
+  .ob { min-height: calc(100dvh - 70px); display: flex; flex-direction: column; justify-content: space-between; gap: 30px; }
+  .ob { position: relative; } .skipob { position: absolute; right: 0; top: 0; height: 36px; color: var(--muted); }
+  .ob h1 { font-size: 40px; line-height: .98; margin-top: 10px; }
+  .lead { margin-top: 16px; font-size: 14px; }
+  .opts { display: grid; gap: 6px; margin-top: 22px; }
+  .opt { height: 56px; padding: 0 18px; display: flex; justify-content: space-between; align-items: center; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); }
+  .opt.on { background: var(--ink); color: var(--bg); box-shadow: none; }
+  .ob .group { margin-top: 18px; }
+
+  /* item sheet tools + wishlist extras */
+  .sheet .tools button.hl { background: var(--ink); color: var(--bg); }
+  .sheet .tools { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px; }
+  .sheet .tools button { height: 34px; padding: 0 12px; background: rgb(244 241 236 / .92); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; border-radius: var(--r); }
+  .shop { display: inline-block; margin-top: 4px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--ink); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<nav>
+  <div class="tabs">
+    <button data-go="closet">Closet</button>
+    <button data-go="outfits">Outfits</button>
+    <button data-go="inspo">Inspo</button>
+    <button data-go="list">List</button>
+    <button data-go="me">Me</button>
+  </div>
+  <button class="add" data-action="add" aria-label="Add clothes"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+</nav>
+<input id="file" type="file" accept="image/*" multiple hidden>
+<dialog class="sheet" id="sheet"></dialog>
+<div id="toast"></div>
+
+<script type="module">
+import { dayKey, prevDay, streaks, badges } from './progress.js';
+import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes } from './match.js';
+import { cleanAlpha } from './cutout.js';
+
+// ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
+const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
+const db = await new Promise((res, rej) => {
+  const r = indexedDB.open('closet', 4); // v2 wear log, v3 wishlist, v4 collections + inspo board + profile
+  r.onupgradeneeded = () => { for (const [n, k] of STORES) if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n, { keyPath: k }); };
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+});
+const store = (name, mode, fn) => new Promise((res, rej) => {
+  const t = db.transaction(name, mode), req = fn(t.objectStore(name));
+  t.oncomplete = () => res(req.result); t.onerror = () => rej(t.error);
+});
+const all = name => store(name, 'readonly', s => s.getAll());
+const put = (name, v) => store(name, 'readwrite', s => s.put(v));
+const del = (name, k) => store(name, 'readwrite', s => s.delete(k));
+
+// ---------- state ----------
+const S = {
+  view: 'closet', cat: 'All', coll: null, mode: 'classic', tab: 'ideas', anchor: null, ideas: null, palette: null, inspoColors: null,
+  build: null, inspoTab: 'board', listTab: null, pending: [], ob: { step: 0, styles: [], goals: [] },
+  wheel: { h: 25, s: 0.8, l: 0.5, harmony: 'complementary' }, dragging: false,
+  items: await all('items'), saved: await all('outfits'), log: await all('log'), wish: await all('wish'),
+  colls: await all('colls'), inspo: await all('inspo'), ...await (async () => { const ps = await all('profile');
+    return { profile: ps.find(p => p.k === 'me') ?? null, history: ps.find(p => p.k === 'history')?.list ?? [],
+      plan: ps.find(p => p.k === 'plan') ?? { k: 'plan', days: {}, weekly: {} } }; })(), // plan: { days: {date: look}, weekly: {0-6: look} } // history: looks you swiped past, newest first
+};
+const defaultMode = p => p?.styles?.includes('streetwear') ? 'street' : 'classic';
+if (S.profile?.done) S.mode = defaultMode(S.profile); else S.view = 'onboard';
+// Ask the browser to keep the closet. Safari clears sites unused for 7 days unless they're on the Home Screen, so Me shows the answer.
+let kept = false; navigator.storage?.persist?.().then(v => { kept = v; }).catch(() => {});
+
+const urls = new Map();
+const src = it => urls.get(it.id) ?? urls.set(it.id, URL.createObjectURL(it.img)).get(it.id); // items and inspo pics
+const resetSrc = it => { URL.revokeObjectURL(urls.get(it.id)); urls.delete(it.id); };
+const byId = id => S.items.find(i => i.id === id);
+const collById = id => S.colls.find(c => c.id === id);
+const pool = () => S.coll ? S.items.filter(i => collById(S.coll)?.ids.includes(i.id)) : S.items; // where outfits come from
+const keyOf = ps => ps.map(p => p.id).sort().join();
+const complete = ps => ['Tops', 'Bottoms', 'Shoes'].every(c => ps.some(p => p.cat === c));
+const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+// randomUUID only exists on https/localhost; the fallback keeps uploads working on a phone over plain http.
+const uid = () => crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2);
+const ago = t => { const d = Math.floor((Date.now() - t) / 864e5); return d < 1 ? 'today' : d < 30 ? `${d}d ago` : `${Math.floor(d / 30)}mo ago`; };
+const wornText = it => it.wears ? `Worn ${it.wears}× · ${ago(it.lastWorn)}` : 'Never worn';
+const fitLabel = it => it.cat === 'Accessories' ? '' : (FITS[it.cat] ?? FITS.default)[it.fit ?? 1] + ' · ';
+const money = v => '$' + Math.round(v).toLocaleString();
+const toast = msg => { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2400); };
+const svg = d => `<svg viewBox="0 0 24 24"><path d="${d}"/></svg>`;
+const heart = svg('M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z');
+const xIcon = svg('M6 6l12 12M18 6 6 18');
+// Ghost silhouettes for pieces you don't own yet (wardrobe gaps, wishlist)
+const SIL = {
+  Tops: 'M8.5 3 3 5.5l1.8 4.3 2.7-1V21h9V8.8l2.7 1L21 5.5 15.5 3c-.4 1.7-1.8 2.8-3.5 2.8S8.9 4.7 8.5 3z',
+  Layers: 'M8 3 3.5 5.5 2 20h3.5l1-9V21h11V11l1 9H22L20.5 5.5 16 3l-4 4z',
+  Bottoms: 'M6 3h12l1.5 18h-5.2L12 10l-2.3 11H4.5z',
+  Shoes: 'M2 17.5V12c1.5 0 3-1.5 3.5-4h4c.5 2 3 3.2 6 3.8l4.2.9c1.5.3 2.3 1.4 2.3 2.8v2z',
+  Accessories: 'M3 15.5a9 8.5 0 0 1 17 0zM3 15.5h19.5c0 1.2-.8 2-2 2H3z',
+};
+const ghostEl = (g, cls = '', style = '') => `<div class="gh ${cls}" style="--c:${g.color};${style}"><svg viewBox="0 0 24 24"><path d="${SIL[g.cat]}"/></svg></div>`;
+const ICON = {
+  spark: 'M12 3v5M12 16v5M3 12h5M16 12h5M6.3 6.3l2.5 2.5M15.2 15.2l2.5 2.5M6.3 17.7l2.5-2.5M15.2 8.8l2.5-2.5',
+  flame: 'M12 21c-3.9 0-6.5-2.6-6.5-6 0-3.5 3-5.5 3.5-9 2 1.2 3.5 3 3.8 5.2C13.6 10 14.5 9 15 7.5c2 1.7 3.5 4.3 3.5 7.5 0 3.4-2.6 6-6.5 6z',
+  cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M10 15h4',
+  shield: 'M12 3l7 3v6c0 4.4-3 7.8-7 9-4-1.2-7-4.6-7-9V6zM9 12l2 2 4-4',
+  shuffle: 'M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3',
+  wheel: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 3v18M3 12h18',
+  shoe: 'M2 17.5V12c1.5 0 3-1.5 3.5-4h4c.5 2 3 3.2 6 3.8l4.2.9c1.5.3 2.3 1.4 2.3 2.8v2zM2 15h20',
+  hanger: 'M12 7a2 2 0 1 1 2-2c0 1-2 1.5-2 3m0 0L3 15a1.3 1.3 0 0 0 .8 2.4h16.4A1.3 1.3 0 0 0 21 15z',
+  box: 'M3 5h18v4H3zM5 9v11h14V9M10 13h4',
+  loop: 'M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5',
+  heart: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
+  prism: 'M12 3 3 20h18zM12 3v17M7.5 11.5 16.5 11.5',
+};
+const STYLES = { streetwear: 'Streetwear', minimal: 'Minimal', classic: 'Classic', athletic: 'Athletic', dressy: 'Dressy', vintage: 'Vintage' };
+const GOALS = { daily: 'Pick my fit every day', use: 'Get more out of what I own', gaps: "Find what's missing", plan: 'Plan trips & nights out', inspo: 'Turn inspo into outfits', track: 'Track what I wear' };
+const PRESET_COLLS = ['Everyday', 'Vacation', 'Club', 'Dressy', 'Work', 'Gym', 'Date night'];
+const SLOT_LABEL = { Tops: 'Top', Layers: 'Layer', Bottoms: 'Bottoms', Shoes: 'Shoes', Hat: 'Hat', Accessory: 'Accessory' };
+const MEASURE = [['height', 'Height', `5'10"`], ['weight', 'Weight', '170 lb'], ['chest', 'Chest', '40 in'], ['waist', 'Waist', '32 in'], ['hips', 'Hips', '38 in'],
+  ['inseam', 'Inseam', '32 in'], ['shoulder', 'Shoulder', '18 in'], ['top', 'Top size', 'L'], ['bottom', 'Bottom size', '32x32'], ['shoe', 'Shoe size', '10.5'],
+  ['hat', 'Hat size', '7 3/8'], ['notes', 'Fit notes', 'Size up in tees']];
+
+const progressCtx = () => ({ items: S.items, log: S.log, saved: S.saved });
+const showStreak = () => !S.profile || S.profile.goals?.includes('track') || streaks(S.log).cur > 0; // no big zero for people who didn't ask for streaks
+const streakChip = () => { if (!showStreak()) return ''; const st = streaks(S.log); return `<button class="streak ${st.today ? 'lit' : ''}" data-go="progress" aria-label="${st.cur} day streak">Streak <b>${st.cur}</b></button>`; };
+const head = (eyebrow, title, right = '') => `<header><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1></div><div class="right">${right}${streakChip()}</div></header>`;
+const subnav = (key, tabs) => `<div class="seg subnav">${tabs.map(([k, label]) => `<button class="${S[key] === k ? 'on' : ''}" data-sub="${key}:${k}">${label}</button>`).join('')}</div>`;
+// Gaps are slow-ish to compute, so cache until something about the closet changes.
+const sig = () => S.items.map(i => [i.id, i.cat, i.color, i.fit, i.vibe, i.patterned, i.name, i.kind].join()).join('|');
+let gapCache = { sig: null, list: null };
+function getGaps() {
+  if (gapCache.sig === sig()) return gapCache.list;
+  if (!gapCache.busy) { gapCache.busy = true; setTimeout(() => { gapCache = { sig: sig(), list: gaps(S.items) }; render(); }, 50); }
+  return null;
+}
+
+// ---------- AI: background removal + tagging (both on-device, models download once then cache) ----------
+// Both run through transformers.js. RMBG-1.4 beat img.ly's ISNet by a mile on real haul photos
+// (dark tee on a dark table, red jersey on grey) — ISNet kept the print and dropped the shirt.
+// ponytail: RMBG-1.4 weights are free for non-commercial use only; swap the model id before selling this.
+let tf, seg, clf, onDownload = () => {}; // a failed load is forgotten so the next photo retries instead of failing forever
+const loadTf = () => tf ??= import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1').catch(e => { tf = null; throw e; });
+const progress_callback = p => { if (p.status === 'progress' && p.total > 1e6) onDownload(p.progress); };
+const loadSeg = () => seg ??= loadTf().then(m => m.pipeline('background-removal', 'briaai/RMBG-1.4', { progress_callback })).catch(e => { seg = null; throw e; });
+const loadClf = () => clf ??= loadTf().then(m => m.pipeline('zero-shot-image-classification', 'Xenova/clip-vit-base-patch32', { progress_callback })).catch(e => { clf = null; throw e; });
+
+const KINDS = {
+  't-shirt': 'Tops', 'button-up shirt': 'Tops', 'polo shirt': 'Tops', 'sweater': 'Tops', 'hoodie': 'Tops', 'tank top': 'Tops', 'jersey': 'Tops',
+  'jacket': 'Layers', 'coat': 'Layers', 'blazer': 'Layers', 'flannel overshirt': 'Layers', 'puffer jacket': 'Layers', 'denim jacket': 'Layers',
+  'jeans': 'Bottoms', 'trousers': 'Bottoms', 'shorts': 'Bottoms', 'sweatpants': 'Bottoms', 'cargo pants': 'Bottoms', 'skirt': 'Bottoms',
+  'sneakers': 'Shoes', 'boots': 'Shoes', 'loafers': 'Shoes', 'sandals': 'Shoes', 'slippers': 'Shoes',
+  'baseball cap': 'Accessories', 'beanie': 'Accessories', 'bag': 'Accessories', 'watch': 'Accessories', 'chain necklace': 'Accessories', 'bracelet': 'Accessories', 'sunglasses': 'Accessories', 'belt': 'Accessories',
+};
+const VIBES = { streetwear: 'streetwear', formal: 'formal dress clothing', casual: 'casual everyday clothing', athletic: 'athletic sportswear' };
+// Fit prompts, index = fit value (0 slim/sleek, 1 regular, 2 baggy/chunky)
+const FIT_PROMPTS = { Shoes: ['sleek low-profile', 'regular', 'chunky thick-soled'], Bottoms: ['slim skinny', 'straight leg', 'baggy wide-leg'], default: ['slim fitted', 'regular fit', 'oversized baggy boxy'] };
+
+async function tag(dataUrl) {
+  const c = await loadClf();
+  const top = async (labels, t) => (await c(dataUrl, labels, { hypothesis_template: t }))[0].label;
+  const kind = await top(Object.keys(KINDS), 'a product photo of {}');
+  const cat = KINDS[kind];
+  const v = await top(Object.values(VIBES), 'a photo of {}');
+  const pat = await top(['plain solid-color clothing', 'clothing with a graphic print, logo, or pattern'], 'a photo of {}');
+  const fp = (FIT_PROMPTS[cat] ?? FIT_PROMPTS.default).map(p => `${p} ${kind}`);
+  const fit = cat === 'Accessories' ? 1 : fp.indexOf(await top(fp, 'a photo of {}'));
+  return {
+    kind, cat, fit, name: kind[0].toUpperCase() + kind.slice(1),
+    vibe: Object.keys(VIBES).find(k => VIBES[k] === v), patterned: pat.startsWith('clothing with'),
+  };
+}
+
+// Downscale, clean the mask, crop to the garment, pick its dominant color.
+// raw = the uncut photo (cutout failed): keep it whole and read the color from the middle, where the piece usually is.
+async function prep(blob, raw = false, tags = null) {
+  const bmp = await createImageBitmap(blob);
+  const k = Math.min(1, 1000 / Math.max(bmp.width, bmp.height));
+  const w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+  const cv = Object.assign(document.createElement('canvas'), { width: w, height: h }), ctx = cv.getContext('2d');
+  ctx.drawImage(bmp, 0, 0, w, h);
+  const im = ctx.getImageData(0, 0, w, h), d = im.data, buckets = new Map(), px = [];
+  if (!raw) {
+    // A tee photo keeps one piece (not the bag or box beside it), shoes keep the pair; chains/bags stay open and multi-part.
+    const open = tags?.cat === 'Accessories' && !isHat(tags), pieces = !tags ? Infinity : tags.cat === 'Shoes' ? 2 : open ? Infinity : 1;
+    // ponytail: too little left = the model ate the piece (white tee on a white sheet) → fall back to the photo. Fixed cutoffs; tune if small accessories fall back.
+    if (cleanAlpha(d, w, h, { pieces, fill: !open }) < (['Tops', 'Layers', 'Bottoms'].includes(tags?.cat) ? 0.1 : 0.04)) return null;
+    ctx.putImageData(im, 0, 0);
+  }
+  const mid = (x, y) => !raw || (x > w / 4 && x < w * 3 / 4 && y > h / 4 && y < h * 3 / 4);
+  let x0 = w, y0 = h, x1 = 0, y1 = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    if (d[i + 3] < 30) continue;
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    if (d[i + 3] < 220 || (x | y) & 3 || !mid(x, y)) continue; // sample every 4th solid pixel
+    px.push([d[i], d[i + 1], d[i + 2]]);
+    const key = (d[i] >> 5) << 6 | (d[i + 1] >> 5) << 3 | d[i + 2] >> 5, b = buckets.get(key) ?? [0, 0, 0, 0];
+    b[0]++; b[1] += d[i]; b[2] += d[i + 1]; b[3] += d[i + 2]; buckets.set(key, b);
+  }
+  if (x1 < x0) return null; // cutout erased everything (white tee on a white sheet)
+  // ponytail: most common color bucket wins — shadows/linings can steal it; user fixes via the color picker.
+  const [n, r, g, b] = [...buckets.values()].sort((a, b) => b[0] - a[0])[0] ?? [1, 128, 128, 128];
+  const color = '#' + [r, g, b].map(v => Math.round(v / n).toString(16).padStart(2, '0')).join('');
+  const pad = 12, cw = x1 - x0 + 1 + pad * 2, ch = y1 - y0 + 1 + pad * 2;
+  const out = Object.assign(document.createElement('canvas'), { width: cw, height: ch });
+  out.getContext('2d').drawImage(cv, x0, y0, cw - pad * 2, ch - pad * 2, pad, pad, cw - pad * 2, ch - pad * 2);
+  const img = await new Promise(r => out.toBlob(r, 'image/webp', 0.9)); // Safari falls back to PNG, fine
+  return { img, color, accents: accentsOf(extractPalette(px, 6, 0.02), color) }; // the colors in a graphic/print besides the base
+}
+
+// Phone photos are 12–48 MP: shrink before the cutout model sees them (memory + speed). Also bakes in EXIF rotation.
+async function shrink(file, max = 1500) {
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const cv = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+  cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height); bmp.close?.();
+  return new Promise(r => cv.toBlob(r, 'image/jpeg', 0.92));
+}
+
+const segment = async url => { const out = await (await loadSeg())(url); return (Array.isArray(out) ? out[0] : out).toBlob('image/png'); };
+
+// photo → { img (cutout), color, photo (kept for Re-cut), tags }. Used by uploads, Replace photo and Re-cut.
+// Tags first, from the original photo (93% right vs ~43% on the cutout), so the cleanup knows a shoe pair from a cap + its bag.
+async function cutout(file, status = () => {}, known = null) {
+  const photo = await shrink(file), url = await toDataUrl(photo);
+  onDownload = pct => status(`Downloading AI ${Math.round(pct)}%`);
+  let tags = known, cut = photo;
+  if (!tags) { status('Tagging…'); try { tags = await tag(url); } catch (e) { console.warn(e); toast('Auto-tag failed — set it in review'); } }
+  try { status('Removing background…'); cut = await segment(url); }
+  catch (e) { console.warn(e); toast('Background removal failed — kept original'); }
+  return { ...((await prep(cut, false, tags)) ?? (await prep(photo, true))), photo, tags };
+}
+
+let running = false;
+async function addFiles(files) {
+  S.pending.push(...[...files].map(f => ({ id: uid(), file: f, url: URL.createObjectURL(f), status: 'Waiting…' })));
+  S.view = 'closet'; render();
+  if (running) return; // one queue: two models at once would eat a phone's memory
+  running = true;
+  try { while (S.pending.length) await addOne(S.pending[0]); } finally { running = false; }
+}
+
+async function addOne(j) {
+  const status = s => { j.status = s; document.querySelector(`[data-pending="${j.id}"] span`)?.replaceChildren(s); };
+  try {
+    const { img, color, accents, photo, tags } = await cutout(j.file, status);
+    const item = { id: j.id, img, photo, color, accents, ...(tags ?? { cat: 'Tops', name: 'New item', kind: '', vibe: 'casual', patterned: false, fit: 1 }), review: true, wears: 0, lastWorn: null, createdAt: Date.now() };
+    await put('items', item); S.items.push(item); S.ideas = null;
+    if (S.coll) { const c = collById(S.coll); c.ids.push(item.id); await put('colls', c); toast(`Added to ${c.name}`); } // adding while inside a collection files it there too
+  } catch (e) { console.warn(e); toast(`Couldn't read ${j.file.name} — try a JPG`); } // one bad file never stops the batch
+  finally { URL.revokeObjectURL(j.url); S.pending = S.pending.filter(p => p !== j); render(); }
+}
+
+// Picture turned q × 90° clockwise. PNG, so turning 4× gives back the same picture.
+async function turnBlob(blob, q) {
+  if (!(q % 4)) return blob;
+  const bmp = await createImageBitmap(blob), c = Object.assign(document.createElement('canvas'), { width: q % 2 ? bmp.height : bmp.width, height: q % 2 ? bmp.width : bmp.height }), x = c.getContext('2d');
+  x.translate(c.width / 2, c.height / 2); x.rotate(q * Math.PI / 2); x.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
+  return new Promise(r => c.toBlob(r, 'image/png'));
+}
+// Taps queue up (two quick taps = two turns) and the turn count is kept, so Re-cut from the original photo comes out the same way up.
+let turning = Promise.resolve();
+const rotate = it => turning = turning.then(async () => { it.img = await turnBlob(it.img, 1); it.turns = ((it.turns ?? 0) + 1) % 4; resetSrc(it); await put('items', it); });
+
+// ---------- inspo: pull the outfit's colors (person only, background masked out) ----------
+async function paletteOf(blob) {
+  const bmp = await createImageBitmap(blob), k = Math.min(1, 160 / Math.max(bmp.width, bmp.height));
+  const c = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) }), x = c.getContext('2d');
+  x.drawImage(bmp, 0, 0, c.width, c.height);
+  const d = x.getImageData(0, 0, c.width, c.height).data, px = [];
+  for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) px.push([d[i], d[i + 1], d[i + 2]]);
+  return extractPalette(px, 6, 0.05).map(c => c.hex);
+}
+// ponytail: hue/sat/light box for skin and hair-free faces; tan or camel clothes land here too — one tap turns them back on.
+const isSkin = hex => { const { h, s, l } = hexToHsl(hex); return h >= 5 && h <= 40 && s >= 0.2 && s <= 0.65 && l >= 0.35 && l <= 0.82; };
+async function addInspo(files) {
+  for (const f of files) {
+    toast('Reading the colors…');
+    try {
+      const photo = await shrink(f, 1200), url = await toDataUrl(photo);
+      let person = null;
+      try { person = await segment(url); } catch (e) { console.warn(e); } // no model → whole pic
+      const palette = await paletteOf(person ?? photo), ins = { id: uid(), img: photo, palette, off: palette.filter(isSkin), at: Date.now() };
+      await put('inspo', ins); S.inspo.push(ins); render();
+    } catch (e) { console.warn(e); toast(`Couldn't read ${f.name}`); }
+  }
+}
+
+// ---------- views ----------
+const itemCard = it => `<button class="item" data-open="${it.id}">
+  <div class="ph spot"><img src="${src(it)}" alt=""><i style="background:${it.color}"></i></div>
+  <b>${esc(it.name)}</b><span>${it.review ? 'New · check tags' : fitLabel(it) + wornText(it)}</span></button>`;
+const matchRow = (c, items) => `<div class="match glass"><i style="background:${c}"></i>${items.length
+  ? `<div class="thumbs">${items.map(i => `<button data-open="${i.id}"><img src="${src(i)}" alt="${esc(i.name)}"></button>`).join('')}</div>`
+  : '<em>Nothing in your closet near this color yet</em>'}</div>`;
+
+// Flat-lay: boxes from flatLayout (real-world scale, no overlap). Tops sit low in their box and pants high, so the outfit reads top to bottom.
+const ALIGN = { Tops: '50% 100%', Layers: '50% 100%', Bottoms: '50% 0' };
+function flat(items) {
+  const by = {}; for (const p of items) { const s = slotOf(p); if (s) by[s] ??= p; }
+  const L = flatLayout(Object.keys(by));
+  return `<div class="flat">${Object.entries(by).map(([s, p]) => {
+    const [x, y, w, h] = L[s], st = `left:${x}%;top:${y}%;width:${w}%;height:${h}%;object-position:${ALIGN[s] ?? '50% 50%'}`;
+    return p.ghost ? ghostEl(p, '', st) : `<img src="${src(p)}" alt="${esc(p.name)}" style="${st}">`;
+  }).join('')}</div>`;
+}
+
+function outfitCard(o) {
+  const isSaved = S.saved.some(s => s.key === o.key);
+  return `<article class="outfit"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in builder">${flat(o.items)}</button>
+    <div class="meta"><div class="swatches">${[...new Set(o.items.map(i => i.color))].map(c => `<i style="background:${c}"></i>`).join('')}</div><p>${esc(o.note ?? bestMode(o.items)?.note ?? '')}</p>
+      <button class="icon ${isSaved ? 'on' : ''}" data-save="${o.key}" aria-label="Save">${heart}</button></div></article>`;
+}
+
+function onboardView() {
+  const o = S.ob, opt = (g, k, label) => `<button class="opt ${o[g].includes(k) ? 'on' : ''}" data-obpick="${g}:${k}">${label}<span>${o[g].includes(k) ? '✓' : ''}</span></button>`;
+  const steps = [
+    () => `<div><div class="eyebrow">Welcome</div><h1>Your closet,<br>styled.</h1><p class="sub lead">Snap what you own and get outfits that actually work — color, proportion, the right shoes, the hat that finishes it. Three quick questions first.</p></div>
+      <div class="row"><button class="btn ghost" data-ob="done">Skip setup</button><button class="btn" data-ob="next">Start</button></div>`,
+    () => `<div><div class="eyebrow">1 / 3</div><h1>What do you wear most?</h1><p class="sub lead">Pick all that fit.</p><div class="opts">${Object.entries(STYLES).map(([k, v]) => opt('styles', k, v)).join('')}</div></div>
+      <button class="btn wide" data-ob="next" ${o.styles.length ? '' : 'disabled'}>Next</button>`,
+    () => `<div><div class="eyebrow">2 / 3</div><h1>How should the app help?</h1><div class="opts">${Object.entries(GOALS).map(([k, v]) => opt('goals', k, v)).join('')}</div></div>
+      <button class="btn wide" data-ob="next" ${o.goals.length ? '' : 'disabled'}>Next</button>`,
+    () => `<div><div class="eyebrow">3 / 3</div><h1>Your sizes</h1><p class="sub lead">Optional. Lives under Me with the rest of your measurements.</p>
+      <form id="obsizes" class="group">${MEASURE.filter(([k]) => ['top', 'bottom', 'shoe'].includes(k)).map(([k, label, ph]) => `<label class="cell"><span>${label}</span><input name="${k}" value="${esc(S.profile?.measure?.[k] ?? '')}" placeholder="${ph}"></label>`).join('')}</form></div>
+      <div class="row"><button class="btn ghost" data-ob="done">Skip</button><button class="btn" data-ob="done">Finish</button></div>`,
+  ];
+  return `<section class="ob">${o.step && o.step < steps.length - 1 ? '<button class="skipob mono" data-ob="done">Skip</button>' : ''}${steps[o.step]()}</section>`;
+}
+
+function closetView() {
+  if (!S.items.length && !S.pending.length) return head('0 pieces', 'Closet') + `
+    <div class="empty"><h2>Start with a few pieces</h2><p>Lay a piece flat on a plain surface that contrasts with it and snap from above — it gets cut out, tagged and color-matched automatically.<br><br>The first upload sets up the AI on this device (a one-time download, about a minute on Wi-Fi). After that nothing leaves your phone.</p>
+    <button class="btn" data-action="add">Add clothes</button><div class="seg backup"><button data-action="import">Restore a backup</button></div></div>`;
+  const c = S.coll && collById(S.coll), inColl = pool();
+  const counts = Object.fromEntries(CATS.map(k => [k, inColl.filter(i => i.cat === k).length]));
+  const list = inColl.filter(i => S.cat === 'All' || i.cat === S.cat).sort((a, b) => b.createdAt - a.createdAt);
+  const toReview = S.items.filter(i => i.review).length;
+  const best = !c && !toReview && !S.pending.length && S.items.length >= 3 && getGaps()?.find(g => !isNeutral(g.ghost.color));
+  return head(`${S.items.length} pieces`, 'Closet') + `
+    ${toReview ? `<button class="nudge glass" data-action="review"><div><span class="mono">AI guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>` : ''}
+    ${!c && S.items.length >= 5 && Date.now() - (S.profile?.lastBackup ?? 0) > 7 * 864e5 ? `<button class="nudge glass" data-action="export"><div><span class="mono">${S.profile?.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up'}</span><b>Save a backup of ${S.items.length} pieces</b></div><span class="plus">Export →</span></button>` : ''}
+    ${best ? `<button class="nudge glass" data-go="list" data-listtab="ideas">${ghostEl(best.ghost)}<div><span class="mono">Next best add</span><b>${esc(best.ghost.name)}</b></div><span class="plus">+${best.count} outfits</span></button>` : ''}
+    <div class="colls"><button class="pill ${c ? '' : 'on'}" data-coll="">Everything<small>${S.items.length}</small></button>${S.colls.map(k => `<button class="pill ${S.coll === k.id ? 'on' : ''}" data-coll="${k.id}">${esc(k.name)}<small>${k.ids.filter(byId).length}</small></button>`).join('')}<button class="pill add" data-action="newcoll">+ New</button></div>
+    ${c ? `<div class="collbar"><button class="btn sm" data-action="collpick">Add pieces</button><button class="btn ghost sm" data-action="collfits">Outfits</button><button class="btn ghost sm" data-action="pack">Pack</button><button class="btn ghost sm" data-action="colldel">Delete</button></div>` : ''}
+    <div class="chips wrap">${['All', ...CATS].map(k => `<button class="chip ${S.cat === k ? 'on' : ''}" data-cat="${k}">${k}<small>${k === 'All' ? inColl.length : counts[k]}</small></button>`).join('')}</div>
+    ${c && !inColl.length ? `<div class="empty"><h2>${esc(c.name)} is empty</h2><p>Pull pieces in from your closet — then get outfits made only from this collection.</p><button class="btn" data-action="collpick">Add pieces</button></div>` : ''}
+    <div class="grid">
+      ${S.pending.map(p => `<div class="item pending" data-pending="${p.id}"><div class="ph"><img src="${p.url}" alt=""></div><b>Processing</b><span>${p.status}</span></div>`).join('')}
+      ${list.map(itemCard).join('')}
+    </div>`;
+}
+
+function outfitsView() {
+  const items = pool(), c = S.coll && collById(S.coll);
+  const top = head(S.saved.length ? `${S.saved.length} favorite${S.saved.length === 1 ? '' : 's'}` : 'Your fits', 'Outfits') + subnav('tab', [['ideas', 'Ideas'], ['week', 'Week'], ['saved', 'Favorites'], ['history', 'History']])
+    + (c ? `<button class="anchor" data-action="uncoll">From ${esc(c.name)} ✕</button>` : '');
+  if (S.tab === 'week') return top + weekView();
+  if (S.tab === 'history') {
+    const list = S.history.map(h => ({ key: h.key, items: h.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items));
+    return top + (list.length ? `<p class="sub blurb">Every look you stopped on in the builder. Heart one to keep it, tap to go back to it.</p><div class="feed">${list.map(outfitCard).join('')}</div>`
+      : `<div class="empty"><h2>No history yet</h2><p>Open the builder and swipe through pieces — every look you stop on lands here.</p><button class="btn" data-action="build">Open builder</button></div>`);
+  }
+  if (S.tab === 'saved') {
+    const list = S.saved.map(s => ({ key: s.key, items: s.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items)); // a piece was deleted or re-tagged
+    return top + (list.length ? `<div class="feed">${list.map(outfitCard).join('')}</div>`
+      : `<div class="empty"><h2>No favorites yet</h2><p>Tap the heart on any idea, or on a look in the builder, to keep it here.</p></div>`);
+  }
+  if (!complete(items)) return top + `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs at least a top, bottoms and shoes.` : 'Add at least one top, one bottom and one pair of shoes to start getting outfits.'}</p>
+    <button class="btn" data-action="${c ? 'collpick' : 'add'}">${c ? 'Add pieces' : 'Add clothes'}</button></div>`;
+  S.ideas ??= generate(items, S.mode, { anchor: S.anchor && byId(S.anchor), palette: S.palette, inspo: S.inspoColors });
+  const dots = cs => cs.map(col => `<i class="dot" style="background:${col}"></i>`).join('');
+  const modes = Object.entries(MODES).filter(([k, m]) => !m.hidden || (k === 'palette' && S.palette) || (k === 'inspo' && S.inspoColors));
+  return top + `<div class="chips">${modes.map(([k, m]) => `<button class="chip ${S.mode === k ? 'on' : ''}" data-mode="${k}">${k === 'palette' ? dots(S.palette.map(h => `hsl(${h} 70% 50%)`)) : k === 'inspo' ? dots(S.inspoColors) : ''}${m.label}</button>`).join('')}</div>
+    <div class="blurb"><span>${MODES[S.mode].blurb}</span><span class="row2"><button class="btn ghost sm" data-action="shuffle">Shuffle</button><button class="btn sm" data-action="build">Build</button></span></div>
+    ${S.anchor && byId(S.anchor) ? `<button class="anchor" data-action="unanchor"><img src="${src(byId(S.anchor))}" alt="">Built around ${esc(byId(S.anchor).name)} ✕</button>` : ''}
+    ${S.ideas.length ? `<div class="feed">${S.ideas.map(outfitCard).join('')}</div>`
+      : `<div class="empty"><h2>No ${MODES[S.mode].label} matches</h2><p>${S.ideas.blocked
+        ? `Most combos break a proportion rule: <b>${S.ideas.blocked.toLowerCase()}</b>. If a fit tag is wrong, tap the piece in your closet and fix it.`
+        : S.mode === 'classic' ? 'Add more neutral basics.' : 'Your closet needs more colors that fit this rule — try another style.'}</p></div>`}`;
+}
+
+// Builder: the outfit on a silhouette, one swipe row per slot. Swiping only patches the page (no re-render), so rows keep their place.
+const ROWS = ['Hat', 'Layers', 'Tops', 'Accessory', 'Bottoms', 'Shoes'], ROW_H = { Hat: 70, Layers: 120, Tops: 150, Accessory: 62, Bottoms: 200, Shoes: 78 };
+const body = d => `url('data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>${d}</svg>`).replace(/'/g, '%27')}')`; // sits inside style="…"
+const TORSO = "<path d='M22 6Q50-2 78 6L94 40 80 46 76 32 75 100H25L24 32 20 46 6 40Z'/>";
+const SILS = { Hat: body("<circle cx='50' cy='58' r='30'/>"), Layers: body(TORSO), Tops: body(TORSO), Accessory: body("<path d='M42 0h16v40H42z'/>"),
+  Bottoms: body("<path d='M25 0H75L73 100H54L50 28 46 100H27Z'/>"), Shoes: body("<ellipse cx='36' cy='55' rx='15' ry='30'/><ellipse cx='64' cy='55' rx='15' ry='30'/>") };
+const isFav = k => S.saved.some(s => s.key === k);
+const verdictHtml = o => { const v = bestMode(o);
+  return `<p class="verdict ${v?.score == null ? 'bad' : ''}" id="verdict">${v?.score == null ? svg('M12 4 2.5 20h19L12 4zM12 10v4M12 17v.5') : svg('M5 12l5 5 9-10')}${v?.score == null ? `Doesn't work · ${esc(v?.note ?? 'needs a top, bottoms and shoes')}` : `Works as ${MODES[v.mode].label} · ${esc(v.note)}`}</p>`; };
+const actionsHtml = o => { const k = keyOf(o), worn = S.log.find(l => l.day === dayKey())?.key === k;
+  return `<div class="actions" id="bactions"><button class="btn ${isFav(k) ? '' : 'ghost'} sm" data-save="${k}">${isFav(k) ? '♥ Favorited' : '♡ Favorite'}</button><button class="btn ghost sm" data-action="planthis">Plan</button><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${k}">${worn ? 'Logged today ✓' : 'Wear today'}</button></div>`; };
+const mini = (r, on) => { const items = r.ids.map(byId).filter(Boolean);
+  return complete(items) ? `<div class="look"><button data-buildkey="${r.key}" aria-label="Open look">${flat(items)}</button><button class="icon ${on ? 'on' : ''}" data-save="${r.key}" aria-label="Favorite">${heart}</button></div>` : ''; };
+const recentHtml = () => { const list = S.history.filter(h => h.key !== keyOf(S.build)).slice(0, 12);
+  return `<div id="recent">${list.length ? `<div class="looks-h"><span>Recent looks</span><span>tap to go back</span></div><div class="looks">${list.map(h => mini(h, isFav(h.key))).join('')}</div>` : ''}</div>`; };
+
+// What the builder can swipe through: the collection, plus whatever the outfit is already wearing (it may come from outside it).
+const buildItems = () => [...new Set([...pool(), ...S.build])];
+function buildView() {
+  const items = buildItems(), o = S.build;
+  const row = s => {
+    const cur = o.find(SLOTS[s]), opts = rankSwaps(items, o, s);
+    return `<div class="sw" style="--h:${ROW_H[s]}px;--sil:${SILS[s]}"><span class="lab">${SLOT_LABEL[s]}${cur ? ` · ${esc(cur.name)}` : ''}</span><div class="track" data-row="${s}">
+      ${['Tops', 'Bottoms', 'Shoes'].includes(s) ? '' : `<button class="none" data-pick="${s}:"><span>No ${SLOT_LABEL[s].toLowerCase()}</span></button>`}
+      ${opts.map(r => `<button class="${r.score == null ? 'no' : ''}" data-pick="${s}:${r.item.id}" aria-label="${esc(r.item.name)}"><img src="${src(r.item)}" alt="" draggable="false"></button>`).join('')}
+    </div></div>`;
+  };
+  return `<header><div><div class="eyebrow">Builder${S.coll ? ` · ${esc(collById(S.coll)?.name ?? '')}` : ''}</div><h1>Outfit</h1></div><div class="right"><button class="icon" data-go="outfits" aria-label="Close">${xIcon}</button></div></header>
+    <div class="build"><div class="dress">${ROWS.filter(s => items.some(SLOTS[s])).map(row).join('')}</div>
+      ${verdictHtml(o)}${actionsHtml(o)}
+      <p class="sub hint">Swipe a row to try the next piece. Best matches come first; faint ones break a style rule.</p>
+      ${recentHtml()}
+    </div>`;
+}
+
+// After render: center each row on the piece being worn, then follow swipes.
+function wireDress() {
+  let fixed = false;
+  document.querySelectorAll('.track').forEach(tr => {
+    const slot = tr.dataset.row, el = tr.querySelector(`[data-pick="${slot}:${S.build.find(SLOTS[slot])?.id ?? ''}"]`) ?? tr.firstElementChild;
+    centerOn(tr, el, 'instant'); el.classList.add('cur');
+    const id = el.dataset.pick.split(':')[1]; // what's centered IS the outfit (a deleted top gets replaced by the one on screen)
+    if (id && !S.build.some(p => p.id === id)) { S.build = S.build.filter(p => !SLOTS[slot](p)); S.build.push(byId(id)); fixed = true; }
+    let t; tr.onscroll = () => { clearTimeout(t); t = setTimeout(() => settle(tr), 90); };
+  });
+  if (fixed) patchBuild();
+}
+const centerOn = (tr, el, behavior = 'smooth') => tr.scrollTo({ left: el.offsetLeft - (tr.clientWidth - el.offsetWidth) / 2, behavior });
+function settle(tr) {
+  const mid = tr.scrollLeft + tr.clientWidth / 2, dist = b => Math.abs(b.offsetLeft + b.offsetWidth / 2 - mid);
+  const el = [...tr.children].reduce((a, b) => dist(b) < dist(a) ? b : a);
+  [...tr.children].forEach(b => b.classList.toggle('cur', b === el));
+  const [slot, id] = el.dataset.pick.split(':');
+  if ((S.build.find(SLOTS[slot])?.id ?? '') === id) return;
+  S.build = S.build.filter(p => !SLOTS[slot](p)); if (id) S.build.push(byId(id));
+  tr.parentElement.querySelector('.lab').textContent = SLOT_LABEL[slot] + (id ? ` · ${byId(id).name}` : '');
+  patchBuild();
+}
+let remembering;
+function patchBuild() {
+  const o = S.build, items = buildItems();
+  document.getElementById('verdict').outerHTML = verdictHtml(o);
+  document.getElementById('bactions').outerHTML = actionsHtml(o);
+  document.querySelectorAll('.track').forEach(tr => { // what breaks a rule depends on the rest of the outfit
+    const ok = new Map(rankSwaps(items, o, tr.dataset.row).map(r => [r.item.id, r.score != null]));
+    tr.querySelectorAll('[data-pick]').forEach(b => { const id = b.dataset.pick.split(':')[1]; b.classList.toggle('no', !!id && !ok.get(id)); });
+  });
+  clearTimeout(remembering); remembering = setTimeout(() => { remember(o); document.getElementById('recent')?.replaceWith(Object.assign(document.createElement('div'), { innerHTML: recentHtml() }).firstElementChild); }, 1200);
+}
+// A look you stopped on for a beat goes in History (newest first, 40 max) so you can go back and favorite it.
+async function remember(o) {
+  if (!complete(o)) return;
+  const key = keyOf(o);
+  S.history = [{ key, ids: o.map(p => p.id), at: Date.now() }, ...S.history.filter(h => h.key !== key)].slice(0, 40);
+  await put('profile', { k: 'history', list: S.history });
+}
+
+// ---------- week planner ----------
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const dayAdd = (k, n) => { const d = new Date(k + 'T12:00'); d.setDate(d.getDate() + n); return dayKey(d); };
+const dowOf = k => new Date(k + 'T12:00').getDay();
+// A day shows its own pick, else the weekly repeat for that weekday. An empty pick ({ids: []}) means "nothing this day".
+const plannedFor = k => { const own = S.plan.days[k]; return own ? (own.ids.length ? { ...own, own: true } : null) : S.plan.weekly[dowOf(k)] ? { ...S.plan.weekly[dowOf(k)], weekly: true } : null; };
+const savePlan = () => put('profile', S.plan);
+const lookRec = ps => ({ key: keyOf(ps), ids: ps.map(p => p.id) });
+function weekView() {
+  const today = dayKey();
+  const start = dayAdd(today, -((dowOf(today) + 6) % 7) + (S.weekOff ?? 0) * 7), days = [...Array(7)].map((_, i) => dayAdd(start, i));
+  const fmt = k => new Date(k + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const row = k => {
+    const p = plannedFor(k), items = p?.ids.map(byId).filter(Boolean) ?? [], ok = complete(items), worn = S.log.find(l => l.day === k);
+    return `<div class="day ${k === today ? 'today' : ''}"><div class="dl"><b>${DOW[dowOf(k)]}</b><span>${+k.slice(8)}</span></div>
+      ${ok ? `<button class="slotbtn" data-buildkey="${p.key}" aria-label="Open look">${flat(items)}</button>` : `<button class="plus" data-plan="${k}">+ Plan</button>`}
+      <div class="acts">${p && !ok ? '<span class="mono">A piece in this look was deleted — plan it again</span>' : ''}${ok ? `<span class="mono">${p.weekly ? `Every ${DOW[dowOf(k)]}` : worn?.key === p.key ? 'Worn ✓' : ''}</span>
+        ${k === today && worn?.key !== p.key ? `<button class="btn sm go" data-wear="${p.key}">Wear it</button>` : ''}
+        <button class="btn ghost sm" data-plan="${k}">Change</button><button class="btn ghost sm" data-unplan="${k}">✕</button>` : ''}</div></div>`;
+  };
+  return `<div class="weekbar"><button class="icon" data-week="-1" aria-label="Previous week">‹</button><span>${fmt(days[0])} – ${fmt(days[6])}</span><button class="icon" data-week="1" aria-label="Next week">›</button></div>
+    <div class="days">${days.map(row).join('')}</div>`;
+}
+// Pick a look for a day: favorites, then recent builder looks, then today's ideas.
+function openPlanPicker(k) {
+  const ideas = (S.ideas?.length ? S.ideas : generate(pool(), S.mode)).slice(0, 6).map(o => ({ key: o.key, ids: o.items.map(p => p.id) }));
+  const seen = new Set(), list = [...S.saved, ...S.history, ...ideas].filter(r => !seen.has(r.key) && seen.add(r.key) && complete(r.ids.map(byId).filter(Boolean)));
+  const cur = S.plan.weekly[dowOf(k)];
+  showSheet(`<div class="pad"><div class="pickhead" style="padding:0"><div><div class="eyebrow">${DOW[dowOf(k)]} ${new Date(k + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div><h2>Plan a look</h2></div>${closeBtn}</div>
+    <label class="chk"><input type="checkbox" id="planrepeat" ${cur ? 'checked' : ''}> Repeat every ${DOW[dowOf(k)]} (gym day, work day…)</label>
+    <div class="picklooks">${list.map(r => `<button data-planpick="${k}|${r.key}" aria-label="Pick this look">${flat(r.ids.map(byId).filter(Boolean))}</button>`).join('')}</div>
+    <button class="btn ghost wide" data-planbuild="${k}">Build a new one</button></div>`);
+  openPlanPicker.list = list;
+}
+async function setPlan(k, rec, repeat) {
+  if (repeat) { S.plan.weekly[dowOf(k)] = rec; delete S.plan.days[k]; }
+  else { S.plan.days[k] = rec; if (S.plan.weekly[dowOf(k)]?.key === rec.key) delete S.plan.days[k]; }
+  await savePlan();
+}
+function openDayPicker() { // from the builder: which day is this look for?
+  const today = dayKey(), days = [...Array(7)].map((_, i) => dayAdd(today, i));
+  showSheet(`<div class="pad"><div class="pickhead" style="padding:0"><div><div class="eyebrow">Builder</div><h2>Plan this look</h2></div>${closeBtn}</div>
+    <label class="chk"><input type="checkbox" id="planrepeat"> Repeat every week on that day</label>
+    ${days.map(k => `<button class="btn ghost wide" data-planday="${k}">${i18nDay(k, today)}${plannedFor(k) ? ' · replaces planned look' : ''}</button>`).join('')}</div>`);
+}
+const i18nDay = (k, today) => k === today ? 'Today' : k === dayAdd(today, 1) ? 'Tomorrow' : new Date(k + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+
+// ---------- trip packing (inside a collection) ----------
+function openPack() {
+  const c = collById(S.coll), t = c.trip, days = S.packDays ?? t?.days ?? 3;
+  const fits = t?.fits.map(ids => ids.map(byId).filter(Boolean)).filter(complete) ?? [], ids = [...new Set(fits.flat().map(p => p.id))], packed = new Set(c.packed ?? []);
+  const pieces = ids.map(byId).sort((a, b) => CATS.indexOf(a.cat) - CATS.indexOf(b.cat));
+  showSheet(`<div class="pad"><div class="pickhead" style="padding:0"><div><div class="eyebrow">${esc(c.name)}</div><h2>Pack</h2></div>${closeBtn}</div>
+    <span class="mono">How many days?</span>
+    <div class="packdays"><button class="btn ghost sm" data-packdays="-1">−</button><b>${days}</b><button class="btn ghost sm" data-packdays="1">+</button></div>
+    <button class="btn wide" data-action="packgo">${fits.length ? 'Remake the list' : 'Make my packing list'}</button>
+    ${fits.length ? `<span class="mono">${t.days} days · ${pieces.length} pieces · ${packed.size}/${pieces.length} packed</span>
+      <div class="packfits">${fits.map((f, i) => `<div><button data-buildkey="${keyOf(f)}" aria-label="Open day ${i + 1}">${flat(f)}</button><span class="mono">Day ${i + 1}${(j => j < i ? ` · same as ${j + 1}` : '')(fits.findIndex(g => keyOf(g) === keyOf(f)))}</span></div>`).join('')}</div>
+      <button class="btn ghost wide" data-action="packplan">Put these in my week from tomorrow</button>
+      <div class="packlist">${pieces.map(p => `<button class="${packed.has(p.id) ? 'on' : ''}" data-packcheck="${p.id}"><i>${packed.has(p.id) ? '✓' : ''}</i><img src="${src(p)}" alt=""><span>${esc(p.name)}</span></button>`).join('')}</div>` : ''}
+  </div>`);
+}
+
+const wishPiece = w => ({ ...w, ghost: true, fit: w.fit ?? 1 });
+const onList = id => S.wish.some(w => w.id === id);
+
+function listView() {
+  S.listTab ??= S.wish.length ? 'mine' : 'ideas';
+  return head(`${S.wish.filter(w => !w.got).length} wanted`, 'Wishlist') + subnav('listTab', [['mine', 'My list'], ['ideas', 'Suggested']])
+    + (S.listTab === 'mine' ? myList() : suggestions());
+}
+
+function myList() {
+  const ready = S.items.length >= 3;
+  const row = w => { const n = ready && !w.got ? tryPiece(S.items, wishPiece(w)).count : 0; // ~1ms each
+    return `<div class="wish ${w.got ? 'got' : ''}">${ghostEl(w)}<div><b>${esc(w.name)}</b><span class="mono">${w.cat} · ${colorName(w.color)}${w.price ? ` · ${money(w.price)}` : ''}${n ? ` · +${n} outfits` : ''}</span>
+      ${w.link ? `<a class="shop" href="${esc(w.link)}" target="_blank" rel="noopener">Shop ↗</a>` : ''}</div>
+      <button class="check" data-wishgot="${w.id}" aria-label="Got it">${svg('M5 12l5 5 9-10')}</button><button class="x" data-wishdel="${w.id}" aria-label="Remove">×</button></div>`; };
+  const want = S.wish.filter(w => !w.got).sort((a, b) => b.at - a.at), got = S.wish.filter(w => w.got);
+  return `<form class="wishform" id="wishform">
+      <input type="text" name="name" placeholder="What does the collection need?" required autocomplete="off">
+      <select name="cat">${CATS.map(c => `<option>${c}</option>`).join('')}</select>
+      <input type="color" name="color" value="#1d1a17" aria-label="Color">
+      <button class="btn sm">Add</button>
+      <input type="url" name="link" placeholder="Link (optional)" autocomplete="off">
+      <input type="text" name="price" inputmode="decimal" placeholder="Price" autocomplete="off">
+    </form>
+    ${want.length ? want.map(row).join('') : `<div class="empty"><h2>Nothing on the list</h2><p>Add what you're hunting for, or pull ideas from Suggested. Each one shows how many outfits it unlocks.</p></div>`}
+    ${got.length ? `<h3><span>Copped</span><span>${got.length}</span></h3>${got.map(row).join('')}` : ''}`;
+}
+
+function suggestions() {
+  if (S.items.length < 3) return `<div class="empty"><h2>Add a few pieces first</h2><p>Once your closet has some tops, bottoms and shoes, this shows the piece that would unlock the most new outfits.</p><button class="btn" data-action="add">Add clothes</button></div>`;
+  const list = getGaps();
+  if (!list) return `<div class="scan"><i></i><span class="mono">Reading your closet</span></div>`;
+  const onePerCat = l => { const seen = new Set(); return l.filter(g => !seen.has(g.ghost.cat) && !seen.has(g.ghost.color) && seen.add(g.ghost.cat).add(g.ghost.color)); }; // one per category, no repeated colors
+  const card = g => `<article class="gap glass">
+    <div class="gap-top">${ghostEl(g.ghost)}<div><b>${esc(g.ghost.name)}</b><span class="mono">${g.modes.map(m => MODES[m].label).join(' / ')}</span></div>
+      <span class="plus">+${g.count} outfits</span></div>
+    <div class="minis">${g.examples.map(o => flat(o.items)).join('')}</div>
+    <button class="btn ${onList(g.ghost.id) ? 'done' : 'ghost'} sm" style="width:100%" data-wishgap="${g.ghost.id}">${onList(g.ghost.id) ? 'On your list' : 'Add to list'}</button></article>`;
+  const pops = onePerCat(list.filter(g => !isNeutral(g.ghost.color))), basics = onePerCat(list.filter(g => isNeutral(g.ghost.color)));
+  return `<p class="sub">Wearable colors in the cuts you already wear, tested against everything you own. The number is how many new outfits it adds.</p>
+    ${basics.length ? `<h3><span>Foundation</span></h3><div class="gaps">${basics.map(card).join('')}</div>` : ''}
+    ${pops.length ? `<h3><span>Statement</span></h3><div class="gaps">${pops.map(card).join('')}</div>` : ''}`;
+}
+
+function inspoView() {
+  const top = head('Moodboard', 'Inspo', `<button class="btn sm" data-action="addinspo">Add</button>`) + subnav('inspoTab', [['board', 'Moodboard'], ['wheel', 'Color wheel']]);
+  if (S.inspoTab === 'wheel') return top + `
+    <div class="chips">${Object.entries(HARMONIES).map(([k, v]) => `<button class="chip ${S.wheel.harmony === k ? 'on' : ''}" data-harmony="${k}">${v.label}</button>`).join('')}</div>
+    <div class="wheel" id="wheel"><svg id="lines"></svg><div id="handles"></div></div>
+    <label class="light">Dark<input id="light" type="range" min="0.15" max="0.85" step="0.01" value="${S.wheel.l}">Light</label>
+    <div id="wheelOut"></div>`;
+  if (!S.inspo.length) return top + `<div class="empty"><h2>Pin your inspo here</h2><p>Save looks from Pinterest or Instagram to your phone — or screenshot them — and add them here. Each one gets its colors pulled out, then rebuilt from what you own.</p><button class="btn" data-action="addinspo">Add inspo</button></div>`;
+  return top + `<p class="sub">Tap a look to rebuild it from your closet.</p><div class="board">${S.inspo.slice().sort((a, b) => b.at - a.at).map(i => `<button data-inspo="${i.id}"><img src="${src(i)}" alt="">
+    <span class="pals">${i.palette.filter(h => !i.off.includes(h)).map(h => `<i style="background:${h}"></i>`).join('')}</span></button>`).join('')}</div>`;
+}
+
+function meView() {
+  const st = streaks(S.log), items = S.items, p = S.profile ?? {}, m = p.measure ?? {};
+  const priced = items.filter(i => i.price > 0), value = priced.reduce((t, i) => t + i.price, 0);
+  const pricedWears = priced.reduce((t, i) => t + (i.wears || 0), 0);
+  const never = items.filter(i => !i.wears), most = items.filter(i => i.wears).sort((a, b) => b.wears - a.wears).slice(0, 6);
+  const byCat = CATS.map(c => [c, items.filter(i => i.cat === c).length]), maxC = Math.max(1, ...byCat.map(x => x[1]));
+  const colors = Object.entries(items.reduce((t, i) => { const n = colorName(i.color); (t[n] ??= { n: 0, hex: i.color }).n++; return t; }, {})).sort((a, b) => b[1].n - a[1].n);
+  const strip = list => `<div class="strip">${list.map(i => `<button data-open="${i.id}"><img src="${src(i)}" alt="${esc(i.name)}">${i.wears ? `<em>${i.wears}×</em>` : ''}</button>`).join('')}</div>`;
+  return `<header><div><div class="eyebrow">${p.styles?.map(s => STYLES[s]).join(' · ') || 'You'}</div><h1>Me</h1></div><div class="right">${streakChip()}</div></header>
+    <div class="tiles"><div><span class="mono">Pieces</span><b>${items.length}</b></div><div><span class="mono">Saved fits</span><b>${S.saved.length}</b></div>
+      <div><span class="mono">Fits logged</span><b>${S.log.length}</b></div><button data-go="progress"><span class="mono">Day streak →</span><b>${st.cur}</b></button></div>
+    <h3><span>Closet value</span><span>${priced.length} of ${items.length} priced</span></h3>
+    ${priced.length ? `<div class="tiles"><div><span class="mono">Total</span><b>${money(value)}</b></div><div><span class="mono">Cost per wear</span><b>${pricedWears ? money(value / pricedWears) : '—'}</b>${pricedWears ? '' : '<small class="sub">Log a wear to see it</small>'}</div></div>`
+      : `<p class="sub">Tap a piece and add what you paid — you'll see what your closet is worth and your cost per wear.</p>`}
+    <h3><span>By category</span></h3>
+    <div class="bars">${byCat.map(([c, n]) => `<div><span>${c}</span><i><b style="width:${n / maxC * 100}%"></b></i><em>${n}</em></div>`).join('')}</div>
+    <h3><span>Your colors</span></h3>
+    ${items.length ? `<div class="colorbar">${colors.map(([n, x]) => `<i style="flex:${x.n};background:${x.hex}" title="${n}"></i>`).join('')}</div>
+      <p class="mono legend">${colors.slice(0, 6).map(([n, x]) => `${n} ${Math.round(x.n / items.length * 100)}%`).join(' · ')}</p>` : ''}
+    <h3><span>Most worn</span></h3>
+    ${most.length ? strip(most) : `<p class="sub">Hit “Wear today” on an outfit and your go-to pieces show up here.</p>`}
+    <h3><span>Never worn</span><span>${never.length}${items.length ? ` · ${Math.round(never.length / items.length * 100)}%` : ''}</span></h3>
+    ${never.length ? strip(never.slice(0, 20)) : ''}
+    <h3><span>Measurements</span></h3>
+    <form id="measure" class="group">${MEASURE.map(([k, label, ph]) => `<label class="cell"><span>${label}</span><input name="${k}" value="${esc(m[k] ?? '')}" placeholder="${ph}"></label>`).join('')}</form>
+    <h3><span>Setup</span></h3>
+    <p class="sub">${p.goals?.map(g => GOALS[g]).join(' · ') || 'Not set up yet'}</p>
+    <div class="row"><button class="btn ghost sm" data-action="redo">Redo setup</button><button class="btn ghost sm" data-go="progress">Badges</button></div>
+    <h3><span>Backup</span><span>${p.lastBackup ? `last ${ago(p.lastBackup)}` : 'never'}</span></h3>
+    <p class="sub">${kept ? 'This browser has agreed to keep your closet.' : 'Your closet lives only in this browser and it can be cleared — Safari wipes sites you skip for 7 days. Add the app to your Home Screen and export a backup now and then.'}</p>
+    <div class="row"><button class="btn ghost sm" data-action="export">Export backup</button><button class="btn ghost sm" data-action="import">Import backup</button></div>`;
+}
+
+function progressView() {
+  const st = streaks(S.log), bs = badges(progressCtx()), today = dayKey();
+  const week = Array.from({ length: 7 }, (_, i) => { let k = today; for (let j = 0; j < 6 - i; j++) k = prevDay(k); return k; });
+  const wd = k => 'SMTWTFS'[new Date(k + 'T12:00').getDay()];
+  return `<header><div><div class="eyebrow">Progress</div><h1>Streak</h1></div><div class="right"><button class="icon" data-go="me" aria-label="Back">${xIcon}</button></div></header>
+    <section class="hud glass"><div><div class="big">${st.cur}</div><div class="mono" style="margin-top:14px">Day streak${st.today ? '' : st.cur ? ' · log today to keep it' : ''}</div></div>
+      <div class="stats"><div><span class="mono">Best</span><b>${st.best}</b></div><div><span class="mono">Fits logged</span><b>${S.log.length}</b></div></div></section>
+    <div class="week">${week.map(k => `<div class="${st.days.has(k) ? 'on' : ''} ${k === today ? 'now' : ''}"><span class="mono">${wd(k)}</span><i></i></div>`).join('')}</div>
+    ${st.today ? '' : `<button class="btn go wide" data-go="outfits">Pick today's fit</button>`}
+    <h3><span>Badges</span><span>${bs.filter(b => b.done).length}/${bs.length}</span></h3>
+    <div class="badges">${bs.map(b => `<div class="badge glass ${b.done ? 'done' : ''}"><div class="medal">${svg(ICON[b.icon])}</div><b>${b.name}</b><small>${b.desc}</small>
+      ${b.done ? '<span class="mono">Unlocked</span>' : `<div class="bar"><i style="width:${b.v / b.goal * 100}%"></i></div><span class="mono">${b.v}${b.unit ?? ''} / ${b.goal}${b.unit ?? ''}</span>`}</div>`).join('')}</div>`;
+}
+
+function paintWheel() {
+  const { h, s, l, harmony: hk } = S.wheel, cols = harmony(h, s, l, hk);
+  const pos = c => [50 + 50 * c.s * Math.sin(c.h * Math.PI / 180), 50 - 50 * c.s * Math.cos(c.h * Math.PI / 180)];
+  document.getElementById('handles').innerHTML = cols.map(c => { const [x, y] = pos(c); return `<i class="h ${c.base ? 'base' : ''}" style="left:${x}%;top:${y}%;background:${c.hex}"></i>`; }).join('');
+  document.getElementById('lines').innerHTML = cols.map(c => { const [x, y] = pos(c); return `<line x1="50%" y1="50%" x2="${x}%" y2="${y}%" stroke="#fff" stroke-width="2" opacity=".8"/>`; }).join('');
+  const neutrals = S.items.filter(i => isNeutral(i.color));
+  const uniq = [...new Map(cols.map(c => [Math.round(c.h), c])).values()]; // mono = one hue, three shades
+  document.getElementById('wheelOut').innerHTML = `
+    <div class="pal">${cols.map(c => `<div style="background:${c.hex};color:${c.l > 0.6 ? '#141414' : '#fff'}">${colorName(c.hex)}<small>${c.hex.toUpperCase()}</small></div>`).join('')}
+      ${hk === 'formula' ? '<div style="background:#111;color:#fff">neutral<small>base</small></div><div style="background:#efece6;color:#141414">neutral<small>base</small></div>' : ''}</div>
+    ${S.items.length ? `<h3>From your closet</h3>
+      ${uniq.map(c => matchRow(c.hex, nearHue(S.items, c.h))).join('')}
+      ${hk === 'formula' || hk === 'mono' ? matchRow('linear-gradient(135deg,#1a1a1a 50%,#efece6 50%)', neutrals) : ''}
+      <button class="btn wide" data-action="paletteFits">Show outfits in these colors</button>
+      <p class="eyebrow" style="text-align:center;margin-top:10px">Tip: open any piece and tap “Match its color” to start the wheel from it.</p>` : ''}`;
+  const sl = document.getElementById('light'); if (sl) sl.value = l;
+}
+
+const VIEWS = { onboard: onboardView, closet: closetView, outfits: outfitsView, build: buildView, inspo: inspoView, list: listView, me: meView, progress: progressView };
+const NAV_OF = { build: 'outfits', progress: 'me' };
+function render() {
+  const app = document.getElementById('app'), scrollers = () => document.querySelectorAll('.strip, .colls, .chips');
+  const keep = render.view === S.view ? [...scrollers()].map(e => e.scrollLeft) : []; // swapping in the builder keeps each strip where it was
+  app.innerHTML = VIEWS[S.view]();
+  scrollers().forEach((e, i) => { e.scrollLeft = keep[i] ?? 0; });
+  render.view = S.view;
+  if (S.view === 'inspo' && S.inspoTab === 'wheel') paintWheel();
+  if (S.view === 'build') wireDress();
+  document.body.classList.toggle('onboarding', S.view === 'onboard');
+  document.querySelectorAll('nav [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === (NAV_OF[S.view] ?? S.view)));
+}
+
+// ---------- sheets ----------
+const sheet = document.getElementById('sheet');
+const showSheet = html => { openItem = null; sheet.innerHTML = html; sheet.onclose = render; if (!sheet.open) sheet.showModal(); sheet.scrollTop = 0; };
+sheet.addEventListener('click', e => { if (e.target === sheet) sheet.close(); }); // tap the dimmed backdrop to close
+const closeBtn = `<button class="icon close" data-action="close" aria-label="Close">${xIcon}</button>`;
+const fitOptions = it => (FITS[it.cat] ?? FITS.default).map((f, i) => `<option value="${i}" ${(it.fit ?? 1) === i ? 'selected' : ''}>${f}</option>`).join('');
+
+const looksWith = it => {
+  const fav = S.saved.filter(r => r.ids.includes(it.id)), seen = S.history.filter(r => r.ids.includes(it.id) && !isFav(r.key));
+  const cards = [...fav.map(r => mini(r, true)), ...seen.map(r => mini(r, false))].join('');
+  return cards ? `<div><div class="looks-h"><span>Looks with this piece</span><span>${fav.length} favorite${fav.length === 1 ? '' : 's'} · ${seen.length} from history</span></div><div class="looks">${cards}</div></div>` : '';
+};
+let openItem = null;
+function openSheet(id) {
+  const it = byId(id), left = S.items.filter(i => i.review).length;
+  showSheet(`<div class="hero spot"><img src="${src(it)}" alt="">${closeBtn}
+    <div class="tools"><button type="button" data-rotate="${it.id}" class="${it.review && ['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? 'hl' : ''}">↻ Rotate</button><button type="button" data-touchup="${it.id}">Touch up</button>${it.photo ? `<button type="button" data-recut="${it.id}">Re-cut</button>` : ''}<button type="button" data-replace="${it.id}">Replace</button></div></div>
+  <form>
+    <div class="stat mono">${it.review ? `AI guessed these — fix anything wrong${['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? ' · is it upright? tap ↻ Rotate' : ''}` : wornText(it)}</div>
+    <div class="row" ${it.review ? 'hidden' : ''}><button type="button" class="btn" data-style="${it.id}">Style it</button><button type="button" class="btn ghost" data-wheel="${it.id}">Match color</button></div>
+    <div class="group">
+      <label class="cell"><span>Name</span><input name="name" value="${esc(it.name)}"></label>
+      <label class="cell"><span>Category</span><select name="cat">${CATS.map(c => `<option ${c === it.cat ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+      <label class="cell" ${it.cat === 'Accessories' ? 'hidden' : ''}><span>Fit</span><select name="fit">${fitOptions(it)}</select></label>
+      <label class="cell"><span>Vibe</span><select name="vibe">${Object.keys(VIBES).map(v => `<option value="${v}" ${v === it.vibe ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)}</option>`).join('')}</select></label>
+    </div>
+    <div class="group">
+      <label class="cell"><span>Main color</span><span class="cname" id="cname">${colorName(it.color)}</span><input type="color" name="color" value="${it.color}"></label>
+      ${it.accents?.length ? `<div class="cell"><span>Print colors</span><span class="accs">${it.accents.map(h => `<button type="button" data-accdel="${it.id}|${h}" style="background:${h}" aria-label="Remove ${colorName(h)}" title="${colorName(h)} · tap to remove"></button>`).join('')}</span></div>` : ''}
+      <label class="cell"><span>Graphic / pattern</span><input type="checkbox" class="switch" name="patterned" ${it.patterned ? 'checked' : ''}></label>
+      <label class="cell"><span>Price paid</span><input name="price" inputmode="decimal" placeholder="—" value="${it.price ?? ''}"></label>
+    </div>
+    ${S.colls.length ? `<div class="incoll"><span class="mono">Collections</span><div>${S.colls.map(c => `<button type="button" class="pill ${c.ids.includes(it.id) ? 'on' : ''}" data-collitem="${it.id}" data-collid="${c.id}">${esc(c.name)}</button>`).join('')}</div></div>` : ''}
+    ${looksWith(it)}
+    ${it.review ? `<button type="button" class="btn" data-confirm="${it.id}">Looks right${left > 1 ? ` · ${left - 1} more` : ''}</button>` : ''}
+    <button type="button" class="btn danger" data-del="${it.id}">Delete item</button>
+  </form>`);
+  openItem = id; // after showSheet, which clears it
+  sheet.querySelector('form').oninput = async e => {
+    const f = e.currentTarget.elements, price = parseFloat(f.price.value.replace(/[^0-9.]/g, ''));
+    Object.assign(it, { name: f.name.value, cat: f.cat.value, fit: +f.fit.value, vibe: f.vibe.value, color: f.color.value, patterned: f.patterned.checked, price: price > 0 ? price : null });
+    if (e.target.name === 'cat') { f.fit.innerHTML = fitOptions(it); f.fit.closest('label').hidden = it.cat === 'Accessories'; }
+    if (e.target.name === 'color' && it.accents) it.accents = it.accents.filter(a => colorDist(a, it.color) > 90);
+    sheet.querySelector('#cname').textContent = colorName(it.color) + (isNeutral(it.color) ? ' · neutral' : '');
+    S.ideas = null; await put('items', it);
+  };
+}
+
+function openPicker() {
+  const c = collById(S.coll), order = i => CATS.indexOf(i.cat);
+  showSheet(`<div class="pickhead"><div><div class="eyebrow">Pull into</div><h2>${esc(c.name)}</h2></div><button class="btn sm" data-action="close">Done</button></div>
+    <div class="pickgrid">${S.items.slice().sort((a, b) => order(a) - order(b)).map(i => `<button class="${c.ids.includes(i.id) ? 'on' : ''}" data-collitem="${i.id}"><img src="${src(i)}" alt=""><span>${esc(i.name)}</span></button>`).join('')}</div>`);
+}
+
+function openNewColl() {
+  const have = new Set(S.colls.map(c => c.name.toLowerCase()));
+  showSheet(`<form class="newcoll" id="newcoll"><div class="pickhead"><div><div class="eyebrow">New</div><h2>Collection</h2></div>${closeBtn}</div>
+    <input name="name" placeholder="Miami trip, Club, Work…" required autocomplete="off" maxlength="40">
+    <div class="sugg">${PRESET_COLLS.filter(n => !have.has(n.toLowerCase())).map(n => `<button type="button" class="pill" data-collname="${n}">${n}</button>`).join('')}</div>
+    <button class="btn wide">Create &amp; add pieces</button></form>`);
+}
+
+const shopUrl = name => `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(name)}`;
+const lookRows = ins => {
+  const rows = ins.pieces.map((g, i) => { const own = closestOwned(S.items, g), listed = S.wish.some(w => w.from === `${ins.id}:${i}`);
+    return `<div class="lookrow">${own ? `<img src="${src(own)}" alt="">` : ghostEl(g)}<div><b>${esc(g.name)}</b><span class="mono">${own ? `You have it · ${esc(own.name)}` : 'Missing'}</span></div>
+      <div class="acts">${own ? '' : `${listed ? '<span class="mono">On list ✓</span>' : `<button class="btn ghost sm" data-lookwish="${ins.id}|${i}">+ List</button>`}<a class="shop" href="${shopUrl(g.name)}" target="_blank" rel="noopener">Shop ↗</a>`}
+      <button class="x" data-lookdrop="${ins.id}|${i}" aria-label="Not in this look">×</button></div></div>`; }).join('');
+  return (rows || '<p class="sub">No pieces read — try a full-body photo.</p>') + (ins.pieces.length ? `<button class="btn wide" data-lookbuild="${ins.id}">Wear it with what I own</button>` : '');
+};
+// Cut the person out, then read each body zone (hat / top / bottoms / shoes) with CLIP and take its main non-skin color.
+// ponytail: fixed zones of the person's height, so it assumes a standing full-body shot; wrong reads get an ×.
+const ZONES = [['Hat', 0, 0.15, ['baseball cap', 'beanie', 'bucket hat'], 'hair with no hat'],
+  ['Tops', 0.15, 0.5, ['t-shirt', 'hoodie', 'sweater', 'button-up shirt', 'jersey', 'tank top', 'jacket', 'coat', 'puffer jacket', 'denim jacket', 'blazer'], null],
+  ['Bottoms', 0.47, 0.87, ['jeans', 'cargo pants', 'sweatpants', 'trousers', 'shorts', 'skirt'], 'bare legs or nothing'],
+  ['Shoes', 0.87, 1, ['sneakers', 'boots', 'loafers', 'sandals'], 'bare floor, no shoes']];
+async function readLook(ins, status = () => {}) {
+  status('Finding the person…');
+  const url = await toDataUrl(ins.img), person = await createImageBitmap(await segment(url)), photo = await createImageBitmap(ins.img), c = await loadClf();
+  const k = Math.min(1, 700 / Math.max(photo.width, photo.height)), w = Math.round(photo.width * k), h = Math.round(photo.height * k);
+  const cv = Object.assign(document.createElement('canvas'), { width: w, height: h }), x = cv.getContext('2d', { willReadFrequently: true });
+  x.drawImage(person, 0, 0, w, h); const m = x.getImageData(0, 0, w, h).data; x.clearRect(0, 0, w, h); x.drawImage(photo, 0, 0, w, h); const d = x.getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let xx = 0; xx < w; xx++) if (m[(y * w + xx) * 4 + 3] > 128) { x0 = Math.min(x0, xx); x1 = Math.max(x1, xx); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (x1 < 0) return [];
+  ins.cropped = y0 <= 2 || y1 >= h - 3; // head or feet cut off by the frame: the zones are guesses
+  const out = [], ph = y1 - y0;
+  for (const [slot, a, b, kinds, none] of ZONES) {
+    const top = Math.round(y0 + a * ph), bot = Math.round(y0 + b * ph), px = [];
+    for (let y = top; y < bot; y++) for (let xx = x0; xx <= x1; xx += 2) { const i = (y * w + xx) * 4; if (m[i + 3] > 200) px.push([d[i], d[i + 1], d[i + 2]]); }
+    if (px.length < (bot - top) * (x1 - x0) * 0.08) continue; // zone mostly empty (photo cut off there)
+    const crop = Object.assign(document.createElement('canvas'), { width: x1 - x0 + 1, height: bot - top });
+    crop.getContext('2d').drawImage(cv, x0, top, crop.width, crop.height, 0, 0, crop.width, crop.height);
+    const curl = crop.toDataURL('image/jpeg', 0.9), labels = none ? [...kinds, none] : kinds;
+    status(`Reading the ${slot === 'Tops' ? 'top' : slot.toLowerCase()}…`);
+    const kind = (await c(curl, labels, { hypothesis_template: 'a photo of {}' }))[0].label;
+    if (kind === none) continue;
+    const color = extractPalette(px, 4, 0.08).find(p => !isSkin(p.hex))?.hex; if (!color) continue;
+    const cat = slot === 'Hat' ? 'Accessories' : KINDS[kind];
+    const fp = cat === 'Accessories' ? null : (FIT_PROMPTS[cat] ?? FIT_PROMPTS.default).map(f => `${f} ${kind}`);
+    const fit = fp ? fp.indexOf((await c(curl, fp, { hypothesis_template: 'a photo of {}' }))[0].label) : 1;
+    out.push({ cat, kind, color, fit, name: `${colorName(color)[0].toUpperCase() + colorName(color).slice(1)} ${kind}` });
+  }
+  return out;
+}
+function openInspo(id) {
+  const ins = S.inspo.find(x => x.id === id), on = ins.palette.filter(h => !ins.off.includes(h));
+  showSheet(`<div class="hero spot inspohero"><img src="${src(ins)}" alt="">${closeBtn}</div>
+    <div class="pad">
+      <span class="mono">Colors in this look — tap one to leave it out (skin, background)</span>
+      <div class="palrow">${ins.palette.map(h => `<button class="${ins.off.includes(h) ? 'off' : ''}" data-insoff="${id}|${h}" style="background:${h};color:${hexToHsl(h).l > 0.6 ? '#141414' : '#fff'}">${colorName(h)}</button>`).join('')}</div>
+      <button class="btn wide" data-inspofits="${id}" ${on.length ? '' : 'disabled'}>Build it from my closet</button>
+      <h3><span>Shop the look</span></h3>
+      ${ins.pieces ? (ins.cropped ? `<p class="sub">The photo cuts off part of the body, so double-check these — × anything that's wrong.</p>` : '') + lookRows(ins) : `<p class="sub">Reads the hat, top, bottoms and shoes, finds your closest piece for each and lists what you're missing. Works best on one person, head to toe. Takes about 20 seconds.</p><button class="btn ghost wide" data-readlook="${id}">Find the pieces</button>`}
+      <button class="btn danger wide" data-inspodel="${id}">Remove from board</button>
+    </div>`);
+}
+
+// ---------- touch up: erase what the cutout kept by mistake (a ruler edge, a tag, a bag) ----------
+let touch = null;
+async function touchUp(it) {
+  showSheet(`<div class="touch"><div class="pickhead" style="padding:0"><div><div class="eyebrow">${esc(it.name)}</div><h2>Touch up</h2></div>${closeBtn}</div>
+    <canvas id="tc"></canvas><p class="sub">Drag over anything that isn't the piece to erase it.</p>
+    <div class="row3"><button class="btn ghost" data-touch="undo">Undo</button><button class="btn ghost" data-touch="reset">Reset</button><button class="btn" data-touch="save">Save</button></div></div>`);
+  const c = document.getElementById('tc'), x = c.getContext('2d'), bmp = await createImageBitmap(it.img);
+  Object.assign(c, { width: bmp.width, height: bmp.height }); x.drawImage(bmp, 0, 0);
+  touch = { it, c, x, bmp, undo: [] };
+  let last = null;
+  const at = e => { const r = c.getBoundingClientRect(), k = Math.min(r.width / c.width, r.height / c.height), ox = (r.width - c.width * k) / 2, oy = (r.height - c.height * k) / 2;
+    return [(e.clientX - r.left - ox) / k, (e.clientY - r.top - oy) / k]; }; // object-fit: contain letterboxes the canvas
+  const dab = p => { x.globalCompositeOperation = 'destination-out'; x.lineCap = 'round'; x.lineWidth = Math.max(c.width, c.height) * 0.05;
+    x.beginPath(); x.moveTo(...(last ?? p)); x.lineTo(...p); x.stroke(); last = p; };
+  c.onpointerdown = e => { c.setPointerCapture(e.pointerId); touch.undo.push(x.getImageData(0, 0, c.width, c.height)); if (touch.undo.length > 5) touch.undo.shift(); /* each step is a full copy (~4 MB) — phones run out fast */ last = null; dab(at(e)); };
+  c.onpointermove = e => { if (e.buttons) dab(at(e)); };
+}
+// Trim to what's left (+12px, same as prep), so an erased ruler doesn't leave the piece small in its flat-lay box.
+function crop(c) {
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 30) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (x1 < 0) return c;
+  const pad = 12, o = Object.assign(document.createElement('canvas'), { width: x1 - x0 + 1 + pad * 2, height: y1 - y0 + 1 + pad * 2 });
+  o.getContext('2d').drawImage(c, x0, y0, x1 - x0 + 1, y1 - y0 + 1, pad, pad, x1 - x0 + 1, y1 - y0 + 1);
+  return o;
+}
+async function touchAct(a) {
+  const { it, c, x, bmp, undo } = touch;
+  if (a === 'undo' && undo.length) x.putImageData(undo.pop(), 0, 0);
+  if (a === 'reset') { undo.push(x.getImageData(0, 0, c.width, c.height)); x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, c.width, c.height); x.drawImage(bmp, 0, 0); }
+  if (a === 'save') { it.img = await new Promise(r => crop(c).toBlob(r, 'image/png')); resetSrc(it); await put('items', it); S.ideas = null; touch = null; openSheet(it.id); toast('Saved'); }
+}
+
+// ---------- backup: one JSON file, photos inlined as data URLs ----------
+const toDataUrl = b => new Promise((res, rej) => { const f = new FileReader(); f.onload = () => res(f.result); f.onerror = () => rej(f.error); f.readAsDataURL(b); });
+async function exportBackup() {
+  const items = await Promise.all(S.items.map(async ({ photo, ...i }) => ({ ...i, img: await toDataUrl(i.img) }))); // ponytail: originals (for Re-cut) skipped, they'd ~triple the file
+  const inspo = await Promise.all(S.inspo.map(async i => ({ ...i, img: await toDataUrl(i.img) })));
+  const blob = new Blob([JSON.stringify({ app: 'closet', v: 3, items, outfits: S.saved, log: S.log, wish: S.wish, colls: S.colls, inspo, profile: S.profile, history: S.history, plan: S.plan })], { type: 'application/json' });
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `closet-backup-${dayKey()}.json` });
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  if (S.profile) { S.profile.lastBackup = Date.now(); await put('profile', S.profile); render(); }
+  toast(`Exported ${items.length} pieces`);
+}
+// Merges into what's here (same id = replaced). Untrusted file: only well-formed records get in.
+async function importBackup(file) {
+  try {
+    const b = JSON.parse(await file.text()), arr = x => Array.isArray(x) ? x : [], str = x => typeof x === 'string';
+    if (b.app !== 'closet' || !Array.isArray(b.items)) throw new Error('not a closet backup');
+    const hex = x => /^#[0-9a-f]{6}$/i.test(x), pic = x => /^data:image\//.test(x), blob = async u => (await fetch(u)).blob();
+    const items = b.items.filter(i => str(i?.id) && CATS.includes(i.cat) && hex(i.color) && pic(i.img));
+    for (const i of items) await put('items', { ...i, name: String(i.name ?? 'Item'), img: await blob(i.img) });
+    for (const [s, k] of [['outfits', 'key'], ['log', 'day'], ['wish', 'id']]) for (const r of arr(b[s])) if (str(r?.[k])) await put(s, r);
+    const ids = x => arr(x).filter(str), look = r => str(r?.key) && { key: r.key, ids: ids(r.ids) };
+    for (const c of arr(b.colls)) if (str(c?.id)) await put('colls', { id: c.id, name: String(c.name ?? 'Collection').slice(0, 40), ids: ids(c.ids), at: +c.at || Date.now(), packed: ids(c.packed),
+      ...(c.trip ? { trip: { days: Math.min(21, Math.max(1, +c.trip.days || 1)), fits: arr(c.trip.fits).map(ids) } } : {}) });
+    const piece = g => CATS.includes(g?.cat) && hex(g.color) && { cat: g.cat, color: g.color, kind: String(g.kind ?? ''), fit: [0, 1, 2].includes(g.fit) ? g.fit : 1, name: String(g.name ?? 'Piece').slice(0, 60) };
+    for (const i of arr(b.inspo)) if (str(i?.id) && pic(i.img)) await put('inspo', { id: i.id, img: await blob(i.img), palette: arr(i.palette).filter(hex), off: arr(i.off).filter(hex), at: +i.at || Date.now(),
+      ...(Array.isArray(i.pieces) ? { pieces: i.pieces.map(piece).filter(Boolean) } : {}) });
+    if (Array.isArray(b.history)) await put('profile', { k: 'history', list: b.history.map(r => look(r) && { ...look(r), at: +r.at || 0 }).filter(Boolean).slice(0, 40) });
+    if (b.plan?.days) { const days = {}, weekly = {};
+      for (const [k, r] of Object.entries(b.plan.days)) if (/^\d{4}-\d\d-\d\d$/.test(k) && str(r?.key)) days[k] = { key: r.key, ids: ids(r.ids) };
+      for (const [k, r] of Object.entries(b.plan.weekly ?? {})) if (/^[0-6]$/.test(k) && look(r)) weekly[k] = look(r);
+      await put('profile', { k: 'plan', days, weekly }); }
+    if (b.profile?.k === 'me') await put('profile', { k: 'me', done: true, styles: arr(b.profile.styles).filter(str), goals: arr(b.profile.goals).filter(str),
+      measure: Object.fromEntries(Object.entries(b.profile.measure ?? {}).filter(([, v]) => str(v)).map(([k, v]) => [k, v.slice(0, 80)])) });
+    toast(`Imported ${items.length} pieces`); setTimeout(() => location.reload(), 900);
+  } catch (e) { console.warn(e); toast("That file isn't a closet backup"); }
+}
+const picker = (accept, multiple, fn) => { const i = Object.assign(document.createElement('input'), { type: 'file', accept, multiple }); i.onchange = () => { if (i.files.length) fn([...i.files]); i.value = ''; }; return i; };
+const restoreInput = picker('application/json,.json', false, ([f]) => importBackup(f));
+const inspoInput = picker('image/*', true, addInspo);
+let replacing = null;
+const replaceInput = picker('image/*', false, async ([f]) => {
+  const it = byId(replacing); if (!it) return;
+  toast('Cutting out the new photo…');
+  try { const { img, color, accents, photo } = await cutout(f, undefined, it); Object.assign(it, { img, color, accents, photo, turns: 0 }); /* new photo, new orientation */ resetSrc(it); await put('items', it); S.ideas = null; openSheet(it.id); toast('Photo replaced'); }
+  catch (e) { console.warn(e); toast(`Couldn't read ${f.name} — try a JPG`); }
+});
+const fileInput = document.getElementById('file');
+fileInput.onchange = () => { addFiles(fileInput.files); fileInput.value = ''; };
+
+// ---------- outfits: find one by key wherever it lives ----------
+function outfitByKey(k) {
+  const idea = S.ideas?.find(o => o.key === k); if (idea) return idea;
+  if (S.build && keyOf(S.build) === k) return { key: k, items: S.build };
+  const s = S.saved.find(x => x.key === k) ?? S.history.find(x => x.key === k) ?? [...Object.values(S.plan.days), ...Object.values(S.plan.weekly)].find(x => x.key === k); return s && { key: k, items: s.ids.map(byId).filter(Boolean) };
+}
+function startBuild(items) {
+  const base = items ?? generate(pool(), S.mode)[0]?.items ?? ['Tops', 'Bottoms', 'Shoes'].map(c => pool().find(i => i.cat === c)).filter(Boolean);
+  if (!complete(base)) return toast('Needs at least a top, bottoms and shoes');
+  S.build = base.slice(); S.view = 'build'; remember(S.build); render(); scrollTo(0, 0);
+}
+async function finishOnboarding() {
+  const f = document.getElementById('obsizes')?.elements, measure = { ...(S.profile?.measure ?? {}) };
+  if (f) for (const k of ['top', 'bottom', 'shoe']) if (f[k].value.trim()) measure[k] = f[k].value.trim();
+  S.profile = { k: 'me', done: true, styles: S.ob.styles, goals: S.ob.goals, measure };
+  await put('profile', S.profile);
+  if (!S.colls.length) for (const name of ['Everyday', 'Vacation', 'Club', 'Dressy']) { const c = { id: uid(), name, ids: [], at: Date.now() }; await put('colls', c); S.colls.push(c); }
+  S.mode = defaultMode(S.profile); S.ideas = null; S.view = S.items.length ? 'outfits' : 'closet'; render(); scrollTo(0, 0);
+}
+
+// Wheel drag: angle from 12 o'clock = hue, distance from center = saturation (same as the CSS conic gradient).
+function wheelAt(e) {
+  const r = document.getElementById('wheel').getBoundingClientRect(), dx = e.clientX - r.left - r.width / 2, dy = e.clientY - r.top - r.height / 2;
+  S.wheel.h = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+  S.wheel.s = Math.min(1, Math.hypot(dx, dy) / (r.width / 2));
+  paintWheel();
+}
+document.addEventListener('pointerdown', e => { if (e.target.id === 'wheel') { S.dragging = true; wheelAt(e); } });
+document.addEventListener('pointermove', e => { if (S.dragging) wheelAt(e); });
+document.addEventListener('pointerup', () => { S.dragging = false; });
+document.addEventListener('input', async e => {
+  if (e.target.id === 'light') { S.wheel.l = +e.target.value; paintWheel(); }
+  if (e.target.form?.id === 'measure') { S.profile ??= { k: 'me', done: true, styles: [], goals: [] }; (S.profile.measure ??= {})[e.target.name] = e.target.value.slice(0, 80); await put('profile', S.profile); }
+});
+
+document.addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target.elements;
+  if (e.target.id === 'wishform') {
+    const name = f.name.value.trim(), price = parseFloat(f.price.value.replace(/[^0-9.]/g, '')), link = f.link.value.trim();
+    if (!name) return;
+    const w = { id: uid(), name, cat: f.cat.value, color: f.color.value, got: false, at: Date.now(), price: price > 0 ? price : null, link: /^https?:\/\//.test(link) ? link : null };
+    await put('wish', w); S.wish.push(w); render(); document.querySelector('#wishform input')?.focus();
+  } else if (e.target.id === 'newcoll') {
+    const name = f.name.value.trim(); if (!name) return;
+    const c = { id: uid(), name, ids: [], at: Date.now() };
+    await put('colls', c); S.colls.push(c); S.coll = c.id; S.ideas = null; openPicker();
+  }
+});
+
+document.addEventListener('click', async e => {
+  const t = e.target.closest('button'); if (!t) return;
+  const ds = t.dataset;
+  if (ds.go) { S.view = ds.go; if (ds.listtab) S.listTab = ds.listtab; render(); scrollTo(0, 0); }
+  else if (ds.sub) { const [k, v] = ds.sub.split(':'); S[k] = v; render(); }
+  else if (ds.ob) { if (ds.ob === 'next') { S.ob.step++; render(); scrollTo(0, 0); } else finishOnboarding(); }
+  else if (ds.obpick) { const [g, k] = ds.obpick.split(':'), a = S.ob[g]; a.includes(k) ? a.splice(a.indexOf(k), 1) : a.push(k); render(); }
+  else if (ds.action === 'redo') { S.ob = { step: 1, styles: [...(S.profile?.styles ?? [])], goals: [...(S.profile?.goals ?? [])] }; S.view = 'onboard'; render(); scrollTo(0, 0); }
+  else if (ds.listtab) { S.listTab = ds.listtab; render(); }
+  else if (ds.wishgap) {
+    if (onList(ds.wishgap)) return;
+    const g = getGaps()?.find(x => x.ghost.id === ds.wishgap)?.ghost; if (!g) return;
+    const w = { id: g.id, name: g.name, cat: g.cat, color: g.color, fit: g.fit, got: false, at: Date.now() };
+    await put('wish', w); S.wish.push(w); toast('Added to list'); render();
+  }
+  else if (ds.wishgot) { const w = S.wish.find(x => x.id === ds.wishgot); w.got = !w.got; await put('wish', w); if (w.got) toast('Copped — add a photo with +'); render(); }
+  else if (ds.wishdel) { await del('wish', ds.wishdel); S.wish = S.wish.filter(x => x.id !== ds.wishdel); render(); }
+  else if (ds.action === 'add') fileInput.click();
+  else if (ds.action === 'addinspo') inspoInput.click();
+  else if (ds.action === 'export') exportBackup();
+  else if (ds.action === 'import') restoreInput.click();
+  else if (ds.action === 'review') { const n = S.items.find(i => i.review); if (n) openSheet(n.id); }
+  else if (ds.confirm) {
+    const it = byId(ds.confirm); delete it.review; await put('items', it);
+    const next = S.items.find(i => i.review);
+    if (next) openSheet(next.id); else { sheet.close(); toast('All pieces checked'); }
+  }
+  else if (ds.action === 'shuffle') { S.ideas = null; render(); }
+  else if (ds.action === 'unanchor') { S.anchor = null; S.ideas = null; render(); }
+  else if (ds.action === 'close') sheet.close();
+  else if (ds.action === 'build') startBuild(S.ideas?.[0]?.items);
+  else if (ds.buildkey) { if (sheet.open) sheet.close(); startBuild(outfitByKey(ds.buildkey)?.items); }
+  else if (ds.pick) centerOn(t.parentElement, t); // tap a peeking piece = swipe to it
+  else if ('coll' in ds) { S.coll = ds.coll || null; S.cat = 'All'; S.ideas = null; render(); }
+  else if (ds.action === 'newcoll') openNewColl();
+  else if (ds.collname) sheet.querySelector('input[name=name]').value = ds.collname;
+  else if (ds.action === 'collpick') openPicker();
+  else if (ds.action === 'collfits') { S.view = 'outfits'; S.tab = 'ideas'; S.ideas = null; render(); scrollTo(0, 0); }
+  else if (ds.action === 'uncoll') { S.coll = null; S.ideas = null; render(); }
+  else if (ds.action === 'colldel') {
+    if (!t.classList.contains('armed')) { t.classList.add('armed'); t.textContent = 'Tap to confirm'; return; }
+    await del('colls', S.coll); S.colls = S.colls.filter(c => c.id !== S.coll); S.coll = null; S.ideas = null; render();
+  }
+  else if (ds.collitem) {
+    const c = collById(ds.collid ?? S.coll), id = ds.collitem;
+    c.ids = c.ids.includes(id) ? c.ids.filter(x => x !== id) : [...c.ids, id];
+    await put('colls', c); t.classList.toggle('on', c.ids.includes(id)); S.ideas = null;
+  }
+  else if (ds.harmony) { S.wheel.harmony = ds.harmony; render(); }
+  else if (ds.cat) { S.cat = ds.cat; render(); }
+  else if (ds.mode) { S.mode = ds.mode; S.ideas = null; render(); }
+  else if (ds.open) openSheet(ds.open);
+  else if (ds.rotate) { const it = byId(ds.rotate); await rotate(it); const im = sheet.querySelector('.hero img'); if (im) im.src = src(it); S.ideas = null; }
+  else if (ds.replace) { replacing = ds.replace; replaceInput.click(); }
+  else if (ds.recut) {
+    const it = byId(ds.recut); t.disabled = true; toast('Cutting it out again…');
+    try { const { img, accents } = await cutout(it.photo, undefined, it); Object.assign(it, { img: await turnBlob(img, it.turns ?? 0), accents }); resetSrc(it); await put('items', it); S.ideas = null; if (sheet.open) openSheet(it.id); toast('Re-cut'); }
+    catch (e) { console.warn(e); t.disabled = false; toast("Couldn't re-cut — check your connection and try again"); }
+  }
+  else if (ds.touchup) touchUp(byId(ds.touchup));
+  else if (ds.touch) touchAct(ds.touch);
+  else if (ds.style) { S.anchor = ds.style; S.ideas = null; S.view = 'outfits'; S.tab = 'ideas'; sheet.close(); render(); scrollTo(0, 0); }
+  else if (ds.wheel) {
+    const { h, s, l } = hexToHsl(byId(ds.wheel).color);
+    Object.assign(S.wheel, { h, s: Math.max(s, 0.25), l: Math.min(0.85, Math.max(0.15, l)) });
+    S.view = 'inspo'; S.inspoTab = 'wheel'; sheet.close(); render(); scrollTo(0, 0);
+  }
+  else if (ds.action === 'paletteFits') {
+    const { h, s, l, harmony: hk } = S.wheel;
+    S.palette = [...new Set(harmony(h, s, l, hk).map(c => Math.round(c.h)))];
+    S.mode = 'palette'; S.ideas = null; S.view = 'outfits'; S.tab = 'ideas'; render(); scrollTo(0, 0);
+  }
+  else if (ds.inspo) openInspo(ds.inspo);
+  else if (ds.accdel) { const [id, h] = ds.accdel.split('|'), it = byId(id); it.accents = it.accents.filter(x => x !== h); await put('items', it); S.ideas = null; openSheet(id); }
+  else if (ds.readlook) {
+    const ins = S.inspo.find(x => x.id === ds.readlook); t.disabled = true; t.textContent = 'Reading the pieces…';
+    try { ins.pieces = await readLook(ins, s => { t.textContent = s; }); await put('inspo', ins); } catch (e) { console.warn(e); toast("Couldn't read this photo"); }
+    if (sheet.open) openInspo(ins.id);
+  }
+  else if (ds.lookdrop) { const [id, i] = ds.lookdrop.split('|'), ins = S.inspo.find(x => x.id === id); ins.pieces.splice(+i, 1); await put('inspo', ins); openInspo(id); }
+  else if (ds.lookwish) {
+    const [id, i] = ds.lookwish.split('|'), g = S.inspo.find(x => x.id === id).pieces[+i];
+    const w = { id: uid(), name: g.name, cat: g.cat, color: g.color, fit: g.fit, kind: g.kind, got: false, at: Date.now(), price: null, link: shopUrl(g.name), from: `${id}:${i}` };
+    await put('wish', w); S.wish.push(w); toast('Added to list'); openInspo(id);
+  }
+  else if (ds.lookbuild) { // your closest pieces; a missing top/bottoms/shoes falls back to the nearest color you own at all
+    const ins = S.inspo.find(x => x.id === ds.lookbuild), ps = [];
+    for (const g of ins.pieces) { const p = closestOwned(S.items, g) ?? (['Tops', 'Bottoms', 'Shoes'].includes(g.cat) ? closestOwned(S.items, g, Infinity) : null); if (p && !ps.some(q => slotOf(q) === slotOf(p))) ps.push(p); }
+    for (const c of ['Tops', 'Bottoms', 'Shoes']) if (!ps.some(p => p.cat === c)) { const p = S.items.find(i => i.cat === c); if (p) ps.push(p); }
+    sheet.close(); startBuild(ps);
+  }
+  else if (ds.week) { S.weekOff = (S.weekOff ?? 0) + +ds.week; render(); }
+  else if (ds.plan) openPlanPicker(ds.plan);
+  else if (ds.unplan) { S.plan.days[ds.unplan] = { key: '', ids: [] }; await savePlan(); render(); }
+  else if (ds.planpick) {
+    const [k, key] = ds.planpick.split('|'), r = openPlanPicker.list.find(x => x.key === key);
+    await setPlan(k, { key, ids: r.ids }, document.getElementById('planrepeat')?.checked); sheet.close(); render(); toast('Planned');
+  }
+  else if (ds.planbuild) { sheet.close(); startBuild(); }
+  else if (ds.action === 'planthis') openDayPicker();
+  else if (ds.planday) { await setPlan(ds.planday, lookRec(S.build), document.getElementById('planrepeat')?.checked); sheet.close(); render(); toast(`Planned · ${i18nDay(ds.planday, dayKey())}`); }
+  else if (ds.action === 'pack') { if (!complete(pool())) return toast('This collection needs a top, bottoms and shoes'); S.packDays = null; openPack(); }
+  else if (ds.packdays) { const c = collById(S.coll); S.packDays = Math.min(21, Math.max(1, (S.packDays ?? c.trip?.days ?? 3) + +ds.packdays)); openPack(); }
+  else if (ds.action === 'packgo') {
+    const c = collById(S.coll), days = S.packDays ?? c.trip?.days ?? 3, r = packTrip(pool(), days);
+    c.trip = { days, fits: r.fits.map(o => o.items.map(p => p.id)) }; c.packed = (c.packed ?? []).filter(id => r.pieces.some(p => p.id === id));
+    await put('colls', c); S.packDays = null; openPack();
+  }
+  else if (ds.packcheck) { const c = collById(S.coll), s2 = new Set(c.packed ?? []); s2.has(ds.packcheck) ? s2.delete(ds.packcheck) : s2.add(ds.packcheck); c.packed = [...s2]; await put('colls', c); openPack(); }
+  else if (ds.action === 'packplan') {
+    const c = collById(S.coll), tm = dayAdd(dayKey(), 1), taken = c.trip.fits.filter((_, i) => plannedFor(dayAdd(tm, i))).length;
+    if (taken && !t.classList.contains('armed')) { t.classList.add('armed'); t.textContent = `Replaces ${taken} planned day${taken > 1 ? 's' : ''} — tap again`; return; }
+    for (const [i, ids] of c.trip.fits.entries()) S.plan.days[dayAdd(tm, i)] = { key: ids.slice().sort().join(), ids };
+    await savePlan(); sheet.close(); S.view = 'outfits'; S.tab = 'week'; S.weekOff = 0; render(); scrollTo(0, 0); toast(`${c.trip.fits.length} days planned`);
+  }
+  else if (ds.insoff) {
+    const [id, h] = ds.insoff.split('|'), ins = S.inspo.find(x => x.id === id);
+    ins.off = ins.off.includes(h) ? ins.off.filter(x => x !== h) : [...ins.off, h]; await put('inspo', ins); openInspo(id);
+  }
+  else if (ds.inspofits) {
+    const ins = S.inspo.find(x => x.id === ds.inspofits);
+    S.inspoColors = ins.palette.filter(h => !ins.off.includes(h)); S.mode = 'inspo'; S.ideas = null; S.anchor = null; S.view = 'outfits'; S.tab = 'ideas';
+    sheet.close(); render(); scrollTo(0, 0);
+  }
+  else if (ds.inspodel) { await del('inspo', ds.inspodel); S.inspo = S.inspo.filter(x => x.id !== ds.inspodel); sheet.close(); render(); }
+  else if (ds.del) {
+    if (!t.classList.contains('armed')) { t.classList.add('armed'); t.textContent = 'Tap again to delete'; return; }
+    const uses = [...S.saved, ...Object.values(S.plan.days), ...Object.values(S.plan.weekly)].filter(r => r.ids.includes(ds.del)).length;
+    await del('items', ds.del); S.items = S.items.filter(i => i.id !== ds.del);
+    toast(uses ? `Deleted · it was in ${uses} favorite or planned look${uses > 1 ? 's' : ''}` : 'Deleted');
+    if (S.anchor === ds.del) S.anchor = null;
+    if (S.build) S.build = S.build.filter(p => p.id !== ds.del);
+    S.ideas = null; sheet.close(); render();
+  }
+  else if (ds.save) {
+    const i = S.saved.findIndex(s => s.key === ds.save);
+    if (i >= 0) { await del('outfits', ds.save); S.saved.splice(i, 1); }
+    else {
+      const o = outfitByKey(ds.save); if (!o) return;
+      const mode = S.view === 'build' ? bestMode(o.items)?.mode ?? 'custom' : S.mode;
+      const rec = { key: ds.save, ids: o.items.map(x => x.id), mode, savedAt: Date.now() }; await put('outfits', rec); S.saved.unshift(rec); toast('Added to favorites');
+    }
+    if (sheet.open && openItem) { openSheet(openItem); return; }
+    render();
+  }
+  else if (ds.wear) {
+    const o = outfitByKey(ds.wear), day = dayKey(), prev = S.log.find(l => l.day === day); if (!o) return;
+    if (prev?.key === o.key) return toast('Already logged for today');
+    const before = new Set(badges(progressCtx()).filter(b => b.done).map(b => b.id));
+    for (const id of prev?.ids ?? []) { const it = byId(id); if (it) { it.wears = Math.max(0, (it.wears || 1) - 1); await put('items', it); } } // swapping today's fit
+    for (const it of o.items) { it.wears = (it.wears || 0) + 1; it.lastWorn = Date.now(); await put('items', it); }
+    const mode = S.saved.find(x => x.key === o.key)?.mode ?? (S.view === 'build' ? bestMode(o.items)?.mode : S.mode) ?? 'custom';
+    const entry = { day, key: o.key, ids: o.items.map(i => i.id), mode, at: Date.now() };
+    await put('log', entry); S.log = [...S.log.filter(l => l.day !== day), entry];
+    const fresh = badges(progressCtx()).find(b => b.done && !before.has(b.id));
+    toast(fresh ? `Badge unlocked · ${fresh.name}` : prev ? "Swapped today's fit" : `Day ${streaks(S.log).cur} streak`);
+    render();
+  }
+});
+
+// Pieces added before print colors existed: read them once from the cutout, in the background.
+async function backfillAccents() {
+  let n = 0;
+  for (const it of S.items.filter(i => !i.accents)) {
+    try {
+      const bmp = await createImageBitmap(it.img), k = Math.min(1, 240 / Math.max(bmp.width, bmp.height));
+      const c = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) }), x = c.getContext('2d');
+      x.drawImage(bmp, 0, 0, c.width, c.height); const d = x.getImageData(0, 0, c.width, c.height).data, px = [];
+      for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 220) px.push([d[i], d[i + 1], d[i + 2]]);
+      it.accents = accentsOf(extractPalette(px, 6, 0.02), it.color); await put('items', it); n++;
+    } catch (e) { console.warn(e); }
+  }
+  if (n) { S.ideas = null; if (S.view !== 'build') render(); }
+}
+
+render();
+backfillAccents();
+navigator.serviceWorker?.register('sw.js').catch(e => console.warn(e)); // opens with no signal once installed (sw.js)
+</script>
+</body>
+</html>

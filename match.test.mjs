@@ -1,0 +1,164 @@
+// node closet/match.test.mjs
+import assert from 'node:assert/strict';
+import { streaks, prevDay, badges } from './progress.js';
+import { isNeutral, colorName, hueDist, scoreOutfit, generate, proportion, harmony, hslToHex, gaps, tryPiece, isHat, rankSwaps, bestMode, extractPalette, flatLayout, closestOwned, packTrip, echoes, accentsOf } from './match.js';
+import { cleanAlpha } from './cutout.js';
+
+assert.equal(isNeutral('#000000'), true);
+assert.equal(isNeutral('#1c2541'), true, 'navy is neutral');
+assert.equal(isNeutral('#c8b18b'), true, 'khaki is neutral');
+assert.equal(isNeutral('#d62828'), false, 'red is a color');
+assert.equal(colorName('#d62828'), 'red');
+assert.equal(colorName('#1c2541'), 'navy');
+assert.equal(hueDist(350, 10), 20);
+
+const it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, ...x });
+const white = it('tee', 'Tops', '#f4f4f4');
+const black = it('jeans', 'Bottoms', '#151515');
+const orange = it('jacket', 'Layers', '#e8731c');
+const blue = it('kicks', 'Shoes', '#1c6fe8', { kind: 'sneakers' });
+const red = it('cap', 'Accessories', '#d62828');
+
+// 2 neutrals + orange + its complement (blue)
+assert.ok(scoreOutfit([white, black, orange, blue], 'formula').score > 0);
+assert.equal(scoreOutfit([white, black, orange, red], 'formula'), null, 'orange+red are not complements');
+assert.equal(scoreOutfit([white, black, orange, blue], 'classic'), null, 'classic allows one accent max');
+assert.ok(scoreOutfit([white, black, blue], 'street') != null);
+
+// proportions
+const wide = it('wide', 'Bottoms', '#151515', { fit: 2 }), skinny = it('skinny', 'Bottoms', '#151515', { fit: 0 });
+const chunky = it('chunky', 'Shoes', '#eeeeee', { fit: 2, kind: 'sneakers' }), sleek = it('sleek', 'Shoes', '#111111', { fit: 0, kind: 'loafers' });
+const boxy = it('boxy', 'Tops', '#f4f4f4', { fit: 2 }), slimJacket = it('sj', 'Layers', '#222222', { fit: 0 });
+assert.equal(scoreOutfit([white, wide, sleek], 'classic'), null, 'wide pants + sleek shoes is vetoed');
+assert.ok(scoreOutfit([white, wide, chunky], 'classic').score > scoreOutfit([white, skinny, chunky], 'classic').score, 'chunky shoes belong with wide pants');
+assert.equal(scoreOutfit([boxy, skinny, sleek, slimJacket], 'classic'), null, 'slim layer over baggy top is vetoed');
+assert.match(proportion([boxy, skinny, sleek]).note, /Volume up top|Slim line/);
+
+// color wheel
+assert.equal(hslToHex(0, 1, 0.5), '#ff0000');
+assert.deepEqual(harmony(30, 1, 0.5, 'complementary').map(c => c.h), [30, 210]);
+assert.ok(generate([white, black, orange, blue], 'palette', { palette: [30, 210] }).length, 'palette mode finds orange + blue');
+
+assert.match(generate([white, wide, sleek], 'classic').blocked, /swallowed/, 'empty result explains the deal-breaker');
+
+assert.equal(generate([white, wide, sleek], 'formula').blocked, undefined, 'color failure is not blamed on proportions');
+
+const closet = [white, black, orange, blue, red];
+assert.deepEqual(generate([white, black], 'classic'), [], 'no shoes, no outfits');
+const ideas = generate(closet, 'formula', { anchor: orange });
+assert.ok(ideas.length && ideas.every(o => o.items.includes(orange)));
+// wardrobe gaps
+assert.equal(gaps([white, black])[0].ghost.cat, 'Shoes', 'no shoes → shoes are the #1 gap');
+const g = gaps(closet);
+assert.ok(g.length && g.every(x => x.examples.every(o => o.items.includes(x.ghost))), 'examples include the ghost');
+assert.ok(!g.some(x => x.ghost.cat === 'Tops' && x.ghost.fit === 1 && /white/.test(x.ghost.name)), 'never suggests what you own');
+assert.ok(tryPiece([white, black], { id: 'w', cat: 'Shoes', color: '#eeeeee', name: 'White sneakers' }).count > 0, 'wishlist piece gets a fit count');
+assert.ok(!gaps([white, wide, chunky]).some(x => x.ghost.cat === 'Bottoms' && x.ghost.fit !== 2), 'only wide pants owned → only wide pants suggested');
+assert.ok(gaps(closet).every(x => !/cyan|lime|magenta|yellow|pink/.test(x.ghost.name)), 'no neon suggestions');
+assert.equal(colorName('#6d2232'), 'burgundy'); assert.equal(colorName('#5a3a33'), 'brown'); assert.equal(colorName('#9a4a2a'), 'rust'); assert.equal(colorName('#b08a5a'), 'camel');
+
+// hats + accessories make it into fits
+const hat = it('cap', 'Accessories', '#151515', { kind: 'baseball cap' }), chain = it('chain', 'Accessories', '#c0c0c0', { kind: 'chain necklace' });
+assert.ok(isHat(hat) && !isHat(chain));
+const withAcc = generate([white, black, chunky, hat, chain], 'street', { n: 99 });
+assert.ok(withAcc.some(o => o.items.includes(hat) && o.items.includes(chain)), 'a fit can carry a hat AND a chain');
+assert.ok(withAcc[0].items.some(p => p.cat === 'Accessories'), 'the top-ranked fit is accessorized');
+
+// builder: swapping shoes ranks what works first, rule-breakers last
+const swaps = rankSwaps([white, wide, chunky, sleek], [white, wide, chunky], 'Shoes');
+assert.equal(swaps[0].item, chunky); assert.equal(swaps.at(-1).score, null, 'sleek shoes under wide pants break every rule');
+assert.equal(bestMode([white, wide, sleek]).score, null);
+
+// inspo: palette from pixels, then fits in those colors (all-neutral inspo works too)
+const pal = extractPalette([...Array(60).fill([200, 30, 30]), ...Array(40).fill([20, 20, 20])]);
+assert.deepEqual(pal.map(c => c.hex), ['#c81e1e', '#141414']); assert.equal(pal[0].share, 0.6);
+const greyFit = generate([white, black, chunky, orange], 'inspo', { inspo: ['#151515', '#f2f2f2', '#e9e9e9'], n: 99 });
+assert.ok(greyFit.length && greyFit.every(o => !o.items.includes(orange)), 'black/white inspo → no orange jacket');
+
+// variety: ideas spread across your pieces instead of one star item in every fit
+const many = [...['#151515', '#f4f4f4', '#8c8c8c'].map((c, i) => it('t' + i, 'Tops', c)), ...['#151515', '#2b2b2b', '#5b5f3a', '#d8c3a0'].map((c, i) => it('b' + i, 'Bottoms', c)), chunky, it('s2', 'Shoes', '#151515', { kind: 'sneakers' })];
+assert.ok(new Set(generate(many, 'classic', { n: 6 }).map(o => o.items.find(p => p.cat === 'Bottoms').id)).size >= 3, 'top 6 ideas use at least 3 different pants');
+
+// accessories rotate: with one cap and one chain, neither shows up in more than 3 of 12 ideas
+{ const ts = ['#151515', '#f4f4f4', '#8c8c8c', '#2b2b2b'].map((c, i) => it('t' + i, 'Tops', c)), bs = ['#151515', '#2b2b2b', '#d8c3a0', '#5b5f3a'].map((c, i) => it('b' + i, 'Bottoms', c));
+  const fits = generate([...ts, ...bs, chunky, it('s2', 'Shoes', '#151515', { kind: 'sneakers' }), hat, chain], 'classic', { n: 12, tries: 3000 });
+  assert.ok(fits.filter(o => o.items.includes(hat)).length <= 3 && fits.filter(o => o.items.includes(chain)).length <= 3, 'accessories capped per feed'); }
+
+// flat-lay: every combination of slots fits the card and nothing overlaps
+for (let mask = 0; mask < 8; mask++) {
+  const slots = ['Tops', 'Bottoms', 'Shoes', ...['Layers', 'Hat', 'Accessory'].filter((_, i) => mask >> i & 1)], L = flatLayout(slots), bx = Object.values(L);
+  assert.deepEqual(Object.keys(L).sort(), slots.sort());
+  assert.ok(bx.every(([x, y, w, h]) => x >= 0 && y >= 0 && x + w <= 100 && y + h <= 100), 'inside the card');
+  for (const a of bx) for (const b of bx) if (a !== b) assert.ok(a[0] + a[2] <= b[0] || b[0] + b[2] <= a[0] || a[1] + a[3] <= b[1] || b[1] + b[3] <= a[1], `overlap in ${slots}`);
+  assert.ok(L.Hat ? L.Hat[2] < L.Tops[2] * 0.7 : true, 'a cap is smaller than a tee');
+}
+
+// shop the look: nearest color in the same slot, nothing when too far
+{ const navy = it('n', 'Bottoms', '#1c2541', { fit: 2 }), khaki = it('k', 'Bottoms', '#c8b18b', { fit: 1 });
+  assert.equal(closestOwned([navy, khaki, white], { cat: 'Bottoms', color: '#202a48', fit: 2 }), navy);
+  assert.equal(closestOwned([navy, khaki], { cat: 'Bottoms', color: '#d62828' }), null, 'red pants: you have nothing close');
+  assert.equal(closestOwned([hat, chain], { cat: 'Accessories', kind: 'baseball cap', color: '#101010' }), hat, 'a cap only matches caps'); }
+
+// packing: 5 days from a small closet uses few pieces, tops rotate, every day has a complete fit
+{ const ts = ['#151515', '#f4f4f4', '#8c8c8c', '#2b2b2b', '#d8c3a0'].map((c, i) => it('pt' + i, 'Tops', c)), bs = ['#151515', '#5b5f3a', '#1c2541'].map((c, i) => it('pb' + i, 'Bottoms', c));
+  const all = [...ts, ...bs, chunky, it('ps', 'Shoes', '#151515', { kind: 'sneakers' })];
+  const { fits, pieces } = packTrip(all, 5, { rand: (() => { let s = 7; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32; })() });
+  assert.equal(fits.length, 5); assert.ok(fits.every(o => ['Tops', 'Bottoms', 'Shoes'].every(c => o.items.some(p => p.cat === c))));
+  assert.ok(pieces.length <= 9, `packed ${pieces.length} pieces`); assert.ok(new Set(fits.map(o => o.items.find(p => p.cat === 'Tops').id)).size >= 3, 'tops rotate');
+  assert.equal(packTrip([white, black, blue], 4).fits.length, 4, 'one possible fit still covers 4 days'); }
+
+// print colors: a red cap picks up the red in a black graphic tee — boosts the fit, names it, and doesn't count as an extra loud color
+{ const tee = it('gt', 'Tops', '#151515', { patterned: true, accents: ['#c8202a', '#f2f2f2'] }), redCap = it('rc', 'Accessories', '#c4232c', { kind: 'baseball cap' }), greenCap = it('gc', 'Accessories', '#2e8b3a', { kind: 'baseball cap' });
+  assert.equal(echoes([tee, black, chunky, redCap]).length, 1); assert.equal(echoes([tee, black, chunky, greenCap]).length, 0);
+  assert.equal(echoes([it('wt', 'Tops', '#121111', { accents: ['#3f3736'] }), black, chunky, it('dk', 'Accessories', '#3a3a33', { kind: 'baseball cap' })]).length, 0, 'grey wash on a black tee is not a print color');
+  assert.equal(echoes([it('hd', 'Tops', '#0e0b0c', { accents: ['#42302b', '#c59c7b'] }), black, chunky, it('as', 'Accessories', '#294c36', { kind: 'baseball cap' })]).length, 0, 'dark brown print ≠ forest green cap');
+  const r = scoreOutfit([tee, black, chunky, redCap], 'street'), g = scoreOutfit([tee, black, chunky, greenCap], 'street');
+  assert.ok(r.score > g.score && /picks up the red/.test(r.note), r.note);
+  const blueTee = it('bt', 'Tops', '#1c6fe8', { accents: ['#e8731c'] }), orangeCap = it('oc', 'Accessories', '#e2701f', { kind: 'baseball cap' });
+  assert.ok(scoreOutfit([blueTee, black, chunky, orangeCap], 'classic'), 'classic allows it: the cap belongs to the tee\'s palette');
+  assert.deepEqual(accentsOf([{ hex: '#151515', share: 0.8 }, { hex: '#1e1e1e', share: 0.1 }, { hex: '#c8202a', share: 0.06 }, { hex: '#c42530', share: 0.03 }], '#151515'), ['#c8202a'], 'shading and near-duplicates dropped'); }
+
+const t0 = performance.now(); gaps([...closet, ...closet.map(i => ({ ...i, id: i.id + 2 })), ...closet.map(i => ({ ...i, id: i.id + 3 }))]);
+console.log(`gaps on 15 items: ${Math.round(performance.now() - t0)}ms`);
+// streaks + badges
+const L = days => days.map((day, i) => ({ day, key: 'o' + i, ids: [], mode: 'classic' }));
+assert.equal(prevDay('2026-03-01'), '2026-02-28');
+assert.deepEqual([streaks(L(['2026-11-06', '2026-11-07', '2026-11-08']), '2026-11-08').cur, streaks(L(['2026-11-06', '2026-11-07']), '2026-11-08').cur], [3, 2], 'streak alive until today ends');
+assert.equal(streaks(L(['2026-11-05', '2026-11-06']), '2026-11-08').cur, 0, 'missed a day breaks it');
+assert.equal(streaks(L(['2026-10-01', '2026-10-02', '2026-10-03', '2026-11-08']), '2026-11-08').best, 3);
+const bs = badges({ items: closet, log: L(['2026-11-06', '2026-11-07', '2026-11-08']), saved: [] }, '2026-11-08');
+assert.deepEqual(bs.filter(b => b.done).map(b => b.id), ['first', 'streak3'], 'first fit + 3-day streak');
+
+// cutout: 20x10 canvas — tee (8x8 solid), shoe pair (two 3x3), haze (alpha 60), ruler strip (1x10)
+{
+  const w = 20, h = 10, d = new Uint8ClampedArray(w * h * 4), set = (x, y, a) => { d[(y * w + x) * 4 + 3] = a; };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) set(x, y, 60);          // haze everywhere
+  for (let y = 1; y < 9; y++) for (let x = 1; x < 9; x++) set(x, y, 200);         // the piece (semi-solid)
+  for (let y = 0; y < h; y++) set(19, y, 255);                                    // ruler: 10px blob, 1/6 of the piece
+  const kept = cleanAlpha(d, w, h), a = (x, y) => d[(y * w + x) * 4 + 3];
+  assert.equal(a(4, 4), 255); assert.equal(a(0, 0), 0); assert.equal(a(19, 5), 0); // piece solid, haze + ruler gone
+  assert.equal(kept, 60 / 200, 'round trim takes the 4 corner pixels, not a square chunk');
+  assert.ok(a(1, 4) > 0 && a(1, 4) < 255, 'edges are feathered');
+  const shoes = () => { const e = new Uint8ClampedArray(w * h * 4); for (let y = 2; y < 5; y++) for (let x = 2; x < 5; x++) { e[(y * w + x) * 4 + 3] = 255; e[(y * w + x + 10) * 4 + 3] = 255; } return e; };
+  assert.equal(cleanAlpha(shoes(), w, h), 18 / 200, 'both shoes of a pair survive');
+  assert.equal(cleanAlpha(shoes(), w, h, { pieces: 1 }), 9 / 200, 'a tee photo keeps one piece, not the bag beside it');
+}
+{ // hole fill: a light logo the model read as table gets filled; a chain's open links don't
+  const w = 40, h = 40, mk = () => { const d = new Uint8ClampedArray(w * h * 4); for (let y = 5; y < 35; y++) for (let x = 5; x < 35; x++) if (!(x >= 18 && x < 22 && y >= 18 && y < 22)) d[(y * w + x) * 4 + 3] = 255; return d; };
+  const d = mk(); cleanAlpha(d, w, h, { trim: 0 }); assert.equal(d[(20 * w + 20) * 4 + 3], 255, 'hole filled');
+  const c = mk(); cleanAlpha(c, w, h, { trim: 0, fill: false }); assert.equal(c[(20 * w + 20) * 4 + 3], 0, 'fill off for chains');
+}
+{ // 30x20 (trim radius 1): a ruler glued to the piece gets trimmed; a thin chain is left alone
+  const w = 30, h = 20, mk = () => new Uint8ClampedArray(w * h * 4), on = (d, x, y) => { d[(y * w + x) * 4 + 3] = 255; };
+  const d = mk();
+  for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) on(d, x, y);         // 12x12 piece
+  for (let y = 0; y < h; y++) { on(d, 14, y); on(d, 15, y); }                     // 2px ruler touching its right edge
+  cleanAlpha(d, w, h); const a = (x, y) => d[(y * w + x) * 4 + 3];
+  assert.equal(a(7, 7) + a(7, 2) + a(13, 7), 510 + a(7, 2), 'piece intact');
+  assert.ok(a(7, 2) > 0 && a(2, 2) < 255, 'edge kept, corner softened');
+  assert.equal(a(14, 0) + a(15, 19) + a(14, 17), 0, 'ruler sticking out past the piece is trimmed');
+  const c = mk();
+  for (let x = 2; x < 28; x++) { on(c, x, 5); on(c, x, 6); }                      // chain: 2px thick everywhere
+  assert.equal(cleanAlpha(c, w, h), 52 / 600, 'thin piece not eaten by the trim');
+}
+console.log('match.js ok');

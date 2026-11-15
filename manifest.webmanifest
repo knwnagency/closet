@@ -1,0 +1,9 @@
+{
+  "name": "Closet",
+  "short_name": "Closet",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ebe7e0",
+  "theme_color": "#1d1a17",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
