@@ -226,3 +226,41 @@ console.log('shop ok');
   assert.match(m.fixTip([it('t', 'Tops', m.SWATCHES.red), it('b', 'Bottoms', m.SWATCHES.yellow), it('s', 'Shoes', m.SWATCHES.blue)]), /Busy/);
 }
 console.log('style notes ok');
+{
+  const m = await import('./match.js'), c = await import('./cutout.js');
+  const it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, ...x });
+  const tee = it('tee', 'Tops', '#f6f5f1', { kind: 't-shirt' }), hood = it('hood', 'Tops', '#151515', { kind: 'hoodie' });
+  const zip = it('zip', 'Layers', '#7d7b78', { kind: 'hoodie' }), jkt = it('jkt', 'Layers', '#151515', { kind: 'jacket' });
+  const pants = it('pants', 'Bottoms', '#151515', { kind: 'cargo pants' }), kicks = it('kicks', 'Shoes', '#f6f5f1', { kind: 'sneakers' });
+  // layering ladder: no hoodie over a hoodie, no tee-weight layer over a jacket-weight top
+  assert.ok(m.proportion([hood, zip, pants, kicks]).veto, 'two hoodies stacked');
+  assert.ok(!m.proportion([tee, zip, pants, kicks]).veto, 'zip hoodie over a tee is fine');
+  assert.ok(!m.proportion([hood, jkt, pants, kicks]).veto, 'jacket over a hoodie is fine');
+  assert.ok(m.proportion([it('dj', 'Tops', '#4d6a8c', { kind: 'denim jacket' }), zip, pants, kicks]).veto, 'hoodie over a jacket');
+  // dressy + sporty is allowed now (button-up with track pants)
+  assert.ok(m.bestMode([it('b', 'Tops', '#f6f5f1', { vibe: 'formal' }), it('t', 'Bottoms', '#151515', { vibe: 'athletic' }), kicks]).score != null);
+  // half-built outfits rank: baggy pants alone put chunky shoes above sleek ones
+  const baggy = it('baggy', 'Bottoms', '#151515', { fit: 2 }), chunky = it('chunky', 'Shoes', '#f6f5f1', { fit: 2, kind: 'sneakers' }), sleek = it('sleek', 'Shoes', '#151515', { fit: 0, kind: 'loafers' });
+  const r = m.rankSwaps([baggy, chunky, sleek], [baggy], 'Shoes');
+  assert.equal(r[0].item.id, 'chunky'); assert.ok(r[0].score != null, 'chunky shoes score with baggy pants'); assert.equal(r.find(x => x.item.id === 'sleek').score, null, 'sleek shoes with baggy pants clash');
+  // see what you can make: every look has the piece, varied
+  const closet = [tee, hood, it('t2', 'Tops', '#7d7b78', { kind: 't-shirt' }), pants, it('p2', 'Bottoms', '#1e2a45', { kind: 'jeans' }), kicks, it('k2', 'Shoes', '#151515', { kind: 'boots' })];
+  const made = m.madeWith(closet, pants);
+  assert.ok(made.length >= 2 && made.every(o => o.items.includes(pants)), 'madeWith keeps the anchor');
+  // weather: hot drops hoodies, cold drops shorts
+  assert.ok(!m.forWeather(closet, 30).includes(hood)); assert.ok(m.forWeather([...closet, it('sh', 'Bottoms', '#151515', { kind: 'shorts' })], 5).every(p => p.kind !== 'shorts'));
+  assert.ok(m.today(closet, { n: 5 }).length >= 2, 'today makes picks');
+  // background by color: grey mat with a white tee in the middle → mat gone, tee kept
+  const w = 40, h = 40, d = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4, inTee = x > 10 && x < 30 && y > 10 && y < 30, v = inTee ? 240 : 150 + (x % 3); d.set([v, v, v, 255], i); }
+  c.floodOut(d, w, h, c.edge(w, h));
+  assert.equal(d[(20 * w + 20) * 4 + 3], 255, 'tee stays'); assert.equal(d[3], 0, 'mat goes'); assert.equal(d[(5 * w + 35) * 4 + 3], 0);
+}
+{
+  const c = await import('./cutout.js'), w = 40, h = 40, d = new Uint8ClampedArray(w * h * 4);
+  // white 1px frame (old padding, ~5% of a real photo), grey mat, white tee: the frame alone would stop the fill
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const fr = x < 1 || y < 1 || x > 38 || y > 38, tee = x > 10 && x < 30 && y > 10 && y < 30, v = fr || tee ? 250 : 150; d.set([v, v, v, 255], (y * w + x) * 4); }
+  c.keyOut(d, w, h);
+  assert.equal(d[(20 * w + 20) * 4 + 3], 255, 'tee stays'); assert.equal(d[(5 * w + 5) * 4 + 3], 0, 'mat inside the frame goes');
+}
+console.log('redesign ok');

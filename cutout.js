@@ -79,3 +79,32 @@ function dist(m, w, h, toOff) {
   }
   return D.map(v => v / 3);
 }
+
+// Erase background by color: flood out from `seeds` through pixels that change smoothly (step) and stay near the seed color (far).
+// For when the model keeps the whole photo (a white tee on a grey mat), and for Touch up's tap-to-erase. Sets alpha to 0 on what it reaches.
+export function floodOut(d, w, h, seeds, { step = 18, far = 90 } = {}) {
+  const n = w * h, seen = new Uint8Array(n), q = [];
+  const diff = (a, b) => Math.abs(d[a * 4] - d[b * 4]) + Math.abs(d[a * 4 + 1] - d[b * 4 + 1]) + Math.abs(d[a * 4 + 2] - d[b * 4 + 2]);
+  for (const s of seeds) {
+    if (seen[s] || !d[s * 4 + 3]) continue;
+    seen[s] = 1; q.push(s);
+    while (q.length) {
+      const p = q.pop(), x = p % w; d[p * 4 + 3] = 0;
+      for (const m of [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, p - w, p + w])
+        if (m >= 0 && m < n && !seen[m] && d[m * 4 + 3] && diff(m, p) < step && diff(m, s) < far) { seen[m] = 1; q.push(m); }
+    }
+  }
+}
+// Every pixel on the frame edge, as flood seeds.
+export const edge = (w, h) => { const s = []; for (let x = 0; x < w; x++) s.push(x, (h - 1) * w + x); for (let y = 1; y < h - 1; y++) s.push(y * w, y * w + w - 1); return s; };
+// Key the background out from the frame edges in. If that only peels off a thin frame (white padding from an earlier cutout),
+// go again from just inside it. Only then: in a normal photo the first pass already took the background, and a second would eat the piece.
+export function keyOut(d, w, h) {
+  const n = w * h, gone = () => { let c = 0; for (let p = 0; p < n; p++) c += !d[p * 4 + 3]; return c / n; };
+  floodOut(d, w, h, edge(w, h));
+  if (gone() > 0.15) return;
+  const rim = [];
+  for (let p = 0; p < n; p++) { if (!d[p * 4 + 3]) continue; const x = p % w;
+    if ((x > 0 && !d[(p - 1) * 4 + 3]) || (x < w - 1 && !d[(p + 1) * 4 + 3]) || (p >= w && !d[(p - w) * 4 + 3]) || (p < n - w && !d[(p + w) * 4 + 3])) rim.push(p); }
+  floodOut(d, w, h, rim);
+}

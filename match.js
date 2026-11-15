@@ -64,14 +64,21 @@ const compOff = hs => Math.min(Infinity, ...pairs(hs).map(([a, b]) => Math.abs(h
 export const FITS = { Tops: ['Fitted', 'Regular', 'Oversized', 'Cropped'], Layers: ['Fitted', 'Regular', 'Oversized', 'Cropped'], Bottoms: ['Slim', 'Straight', 'Baggy'], Shoes: ['Sleek', 'Regular', 'Chunky'], default: ['Slim', 'Regular', 'Baggy'] };
 const fit = p => p?.fit === 3 ? 1 : p?.fit ?? 1, cropped = p => p?.fit === 3;
 
+// Layering ladder (style notes): tank < tee/polo/shirt < knit/hoodie < jacket/overshirt < coat. Order matters: "flannel overshirt" is a jacket, not a shirt.
+const LEVELS = [[/coat|puffer|parka|trench/i, 4], [/jacket|blazer|overshirt|flannel|vest|bomber|windbreaker|cardigan/i, 3], [/sweater|hoodie|knit|crewneck|sweatshirt|zip/i, 2], [/tank/i, 0]];
+export const level = p => LEVELS.find(([re]) => re.test(`${p.kind ?? ''} ${p.name ?? ''}`))?.[1] ?? (p.cat === 'Layers' ? 3 : 1);
+
 // Silhouette rules: volume should balance top vs bottom, and shoes should carry the weight of the pants.
+// Works on half-built outfits too (the builder ranks picks before you have all three): a rule only fires when its pieces are there.
 export function proportion(ps) {
   const get = c => ps.find(p => p.cat === c);
   const top = get('Tops'), layer = get('Layers'), bottom = get('Bottoms'), shoes = get('Shoes');
-  const legs = !/short/i.test(bottom.kind || bottom.name); // shorts show the leg, so pant-width rules don't apply
-  const up = Math.max(fit(top), layer ? fit(layer) : 0), down = fit(bottom), feet = fit(shoes);
+  const legs = !!bottom && !/short/i.test(bottom.kind || bottom.name); // shorts show the leg, so pant-width rules don't apply
+  const up = top || layer ? Math.max(top ? fit(top) : 0, layer ? fit(layer) : 0) : null, down = bottom ? fit(bottom) : null, feet = shoes ? fit(shoes) : null;
   const notes = [], add = (s, note) => notes.push([s, note]);
-  if (layer && fit(layer) < fit(top)) add(-2, 'Slim layer over a baggy top bunches up');
+  if (layer && top && fit(layer) < fit(top)) add(-2, 'Slim layer over a baggy top bunches up');
+  if (layer && top && level(layer) < level(top)) add(-2, `A ${layer.kind || 'layer'} doesn't go over a ${top.kind || 'heavier top'}`);
+  if (layer && top && level(layer) === level(top) && level(top) >= 2) add(-2, level(top) === 2 ? 'Two knits or hoodies stacked is too bulky' : 'Two jackets at once, drop one');
   if (legs && down === 2 && feet === 0) add(-2, 'Sleek shoes get swallowed by wide pants');
   if (legs && down === 0 && feet === 2) add(-1.5, 'Chunky shoes overpower slim pants');
   if (legs && down === 2 && feet === 2) add(1, 'Wide pants anchored by chunky shoes');
@@ -79,7 +86,7 @@ export function proportion(ps) {
   if (up === 2 && down === 0) add(0.8, 'Volume up top, clean and slim below');
   if (up === 0 && down === 2) add(0.8, 'Fitted top balances wide-leg pants');
   if (cropped(top) && !layer && down >= 1) add(0.8, down === 2 ? 'Cropped top shows off wide-leg pants' : 'Cropped top keeps the legs looking long');
-  if (up === 2 && down === 2) add(feet === 2 ? 0.3 : -1, feet === 2 ? 'Full oversized fit, grounded by chunky shoes' : 'All-baggy needs a chunky shoe to ground it');
+  if (up === 2 && down === 2 && feet != null) add(feet === 2 ? 0.3 : -1, feet === 2 ? 'Full oversized fit, grounded by chunky shoes' : 'All-baggy needs a chunky shoe to ground it');
   notes.sort((a, b) => Math.abs(b[0]) - Math.abs(a[0]));
   return { score: notes.reduce((t, [s]) => t + s, 0), veto: notes.some(([s]) => s <= -2), note: notes[0]?.[1] ?? 'Balanced, regular proportions', up, down };
 }
@@ -128,7 +135,7 @@ export const MODES = {
     label: 'Streetwear', blurb: 'Sneakers, layers, one statement piece.',
     score(ps) {
       const shoes = ps.find(p => p.cat === 'Shoes');
-      if (vibe(ps, 'formal') || !/sneaker|boot|trainer|dunk|jordan/i.test(`${shoes.name} ${shoes.kind}`)) return null;
+      if (vibe(ps, 'formal') || shoes && !/sneaker|boot|trainer|dunk|jordan/i.test(`${shoes.name} ${shoes.kind}`)) return null;
       const pr = prints(ps);
       const { up, down } = proportion(ps);
       return (up === 2 || down === 2 ? 0.5 : 0) + vibe(ps, 'streetwear') * 1.5 + vibe(ps, 'athletic') * 0.4 + (ps.some(p => p.cat === 'Layers') ? 0.5 : 0)
@@ -249,7 +256,6 @@ export function fixTip(ps) {
 
 // Returns { score, note } or null. Color mode decides if it's allowed; proportions can veto or boost.
 export function scoreOutfit(ps, mode, opts = {}) {
-  if (vibe(ps, 'formal') && vibe(ps, 'athletic')) return null; // suit + joggers: never
   // A cap or shoes repeating a color from the print up top belongs to that print's palette, so the color rule judges the fit without them.
   const ech = echoes(ps), base = MODES[mode].score(ps, opts) ?? (ech.length ? MODES[mode].score(ps.filter(p => !ech.some(e => e.p === p)), opts) : null);
   if (base == null) return null;
@@ -315,9 +321,8 @@ export function rankSwaps(items, outfit, slot, modes = Object.keys(MODES).filter
   return items.filter(SLOTS[slot]).map(item => {
     const ps = [...rest, item];
     let best = null;
-    if (['Tops', 'Bottoms', 'Shoes'].every(c => ps.some(p => p.cat === c)))
-      for (const m of modes) { const r = scoreOutfit(ps, m); if (r && (!best || r.score > best.score)) best = { ...r, mode: m }; }
-    return { item, score: best?.score ?? null, mode: best?.mode, note: best?.note };
+    for (const m of modes) { /* half-built outfits score too: only the rules whose pieces are there count */ const r = scoreOutfit(ps, m); if (r && (!best || r.score > best.score)) best = { ...r, mode: m }; }
+    return { item, score: best?.score ?? null, mode: best?.mode, note: best?.note ?? (proportion(ps).veto ? proportion(ps).note : null) }; // a clash says why when it's the shape
   }).sort((a, b) => (b.score ?? -99) - (a.score ?? -99));
 }
 
@@ -382,6 +387,41 @@ export function generate(items, mode, { anchor, palette, inspo, n = 12, tries = 
   }
   out.blocked = [...blocked].sort((a, b) => b[1] - a[1])[0]?.[0]; // most common deal-breaker, to explain empty results
   return out;
+}
+
+// ---------- "see what you can make" + today's picks ----------
+const VISIBLE = () => Object.keys(MODES).filter(k => !MODES[k].hidden);
+// Best outfits across every style, varied: a top, bottoms or shoes other than the anchor shows up at most twice.
+function varied(list, n) {
+  const used = new Map(), out = [];
+  for (const o of list.sort((a, b) => b.score - a.score)) {
+    const main = o.items.filter(p => ['Tops', 'Bottoms', 'Shoes', 'Layers'].includes(p.cat) && p !== o.anchor);
+    if (main.some(p => (used.get(p.id) ?? 0) >= 2)) continue;
+    out.push(o); main.forEach(p => used.set(p.id, (used.get(p.id) ?? 0) + 1));
+    if (out.length === n) break;
+  }
+  return out;
+}
+const collect = (items, opts, modes = VISIBLE()) => {
+  const best = new Map();
+  for (const m of modes) for (const o of generate(items, m, { n: 10, ...opts })) if ((best.get(o.key)?.score ?? -99) < o.score) best.set(o.key, { ...o, mode: m, anchor: opts.anchor });
+  return [...best.values()];
+};
+export const madeWith = (items, anchor, n = 5) => varied(collect(items, { anchor }), n);
+
+// What the weather rules out. t = feels-like °C, null = unknown (nothing ruled out).
+export function forWeather(items, t) {
+  if (t == null) return items;
+  const k = p => `${p.kind ?? ''} ${p.name ?? ''}`;
+  if (t >= 24) return items.filter(p => !/coat|puffer|parka|sweater|hoodie|knit|beanie|boot/i.test(k(p)) && (p.cat !== 'Layers' || /overshirt|flannel|shirt/i.test(k(p))));
+  if (t < 12) return items.filter(p => !/short|tank|sandal|slipper|flip/i.test(k(p)));
+  return items.filter(p => !/puffer|parka/i.test(k(p)));
+}
+// Today: n varied outfits from every style, a little random so each visit (or Shuffle) is different. Cold days want a layer.
+export function today(items, { t = null, n = 5, rand = Math.random } = {}) {
+  const pool = forWeather(items, t), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
+  const list = collect(pool, { rand }).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
+  return varied(list.map(o => ({ ...o, score: o.score + rand() * 1.5 })), n);
 }
 
 // ---------- wardrobe gaps ----------
