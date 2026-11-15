@@ -223,7 +223,7 @@ console.log('shop ok');
   assert.match(m.fixTip([it('t', 'Tops', '#7d7b78'), it('b', 'Bottoms', m.SWATCHES.navy), it('s', 'Shoes', '#f6f5f1')]), /Plain/);
   assert.match(m.combo([it('t', 'Tops', '#151515'), it('b', 'Bottoms', '#7d7b78'), it('s', 'Shoes', '#151515')]).label, /stoic/, 'grey reads as grey, not taupe');
   assert.equal(m.combo([it('t', 'Tops', m.SWATCHES.orange), it('b', 'Bottoms', '#7d7b78'), it('s', 'Shoes', m.SWATCHES.forest)]), null, 'combo must explain the orange top');
-  assert.match(m.fixTip([it('t', 'Tops', m.SWATCHES.red), it('b', 'Bottoms', m.SWATCHES.yellow), it('s', 'Shoes', m.SWATCHES.blue)]), /Busy/);
+  assert.match(m.fixTip([it('t', 'Tops', m.SWATCHES.red), it('b', 'Bottoms', m.SWATCHES.yellow), it('s', 'Shoes', m.SWATCHES.blue)]), /Busy|let one lead/);
 }
 console.log('style notes ok');
 {
@@ -281,3 +281,44 @@ console.log('redesign ok');
   assert.ok(picks.length && picks.every(o => !o.items.includes(t1)), "yesterday's top rests");
 }
 console.log('v2 ok');
+{
+  const c = await import('./cutout.js');
+  // draw a tee: wide shoulders/sleeves band on top, narrower body below
+  const W = 60, H = 60, img = () => new Uint8ClampedArray(W * H * 4), set = (d, x, y) => { d[(y * W + x) * 4 + 3] = 255; };
+  const tee = (d, tf) => { for (let y = 10; y < 50; y++) for (let x = 2; x < 58; x++) { const sleeve = y < 22, body = x >= 18 && x < 42; if (sleeve || body) { const [X, Y] = tf(x, y); set(d, X, Y); } } };
+  const up = img(); tee(up, (x, y) => [x, y]); assert.equal(c.orient(up, W, H, 'Tops'), 0, 'upright tee stays');
+  const left = img(); tee(left, (x, y) => [y, W - 1 - x]); assert.equal(c.orient(left, W, H, 'Tops'), 1, 'shoulders on the left → turn clockwise');
+  const right = img(); tee(right, (x, y) => [W - 1 - y, x]); assert.equal(c.orient(right, W, H, 'Tops'), 3);
+  // pants: solid waist band, two legs with a gap
+  const pants = (d, tf) => { for (let y = 2; y < 58; y++) for (let x = 15; x < 45; x++) { const waist = y < 18, leg = x < 27 || x >= 33; if (waist || leg) { const [X, Y] = tf(x, y); set(d, X, Y); } } };
+  const pu = img(); pants(pu, (x, y) => [x, y]); assert.equal(c.orient(pu, W, H, 'Bottoms'), 0, 'upright pants stay');
+  const pl = img(); pants(pl, (x, y) => [y, W - 1 - x]); assert.equal(c.orient(pl, W, H, 'Bottoms'), 1, 'waist on the left → turn clockwise');
+}
+console.log('orient ok');
+{
+  const m = await import('./match.js');
+  const it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, ...x });
+  const shirt = it('shirt', 'Tops', '#f6f5f1', { kind: 'button-up shirt' }), trousers = it('tr', 'Bottoms', '#1b1a19', { kind: 'trousers' });
+  const loafers = it('lf', 'Shoes', '#1b1a19', { kind: 'loafers', fit: 0 }), runners = it('rn', 'Shoes', '#f6f5f1', { kind: 'sneakers', name: 'foam runner', fit: 2 });
+  const blazer = it('bz', 'Layers', '#1e2a45', { kind: 'blazer' }), hoodie = it('hd', 'Layers', '#7d7b78', { kind: 'hoodie' });
+  // dress shirt pulls dress shoes and a sharp layer first
+  const shoes = m.rankSwaps([shirt, trousers, loafers, runners], [shirt, trousers], 'Shoes');
+  assert.equal(shoes[0].item.id, 'lf', 'dress shirt + trousers → loafers first');
+  const layers = m.rankSwaps([shirt, trousers, loafers, blazer, hoodie], [shirt, trousers, loafers], 'Layers');
+  assert.equal(layers[0].item.id, 'bz', 'dress shirt → blazer before hoodie');
+  // one sporty piece is tension (+), many on both sides clash (−)
+  const track = it('tp', 'Bottoms', '#1b1a19', { kind: 'sweatpants', name: 'track pants' });
+  assert.ok(m.style([shirt, track, loafers]).some(([s, n]) => s > 0 && /One (dressy|sporty)/.test(n)));
+  assert.ok(m.style([shirt, blazer, track, runners]).some(([s]) => s < 0), 'two dressy + two sporty fight');
+  // materials, prints, palette
+  assert.ok(m.style([{ ...shirt, material: 'linen' }, { ...trousers, material: 'wool' }, loafers]).some(([, n]) => /texture/.test(n)));
+  assert.ok(m.style([{ ...shirt, patterned: true }, { ...trousers, patterned: true }, loafers]).some(([s, n]) => s < 0 && /prints/.test(n)));
+  m.setTaste({ avoid: ['white'] }); assert.ok(m.style([shirt, trousers, loafers]).some(([s, n]) => s < 0 && /suit you/.test(n))); m.setTaste();
+  // occasion: work prefers the dressy look
+  assert.ok(m.occasionFit([shirt, trousers, loafers], 'work') > m.occasionFit([it('t', 'Tops', '#151515', { kind: 't-shirt' }), track, runners], 'work'));
+  // rain drops suede
+  assert.equal(m.forWeather([{ ...loafers, material: 'suede' }, runners], null, true).length, 1);
+  // why: rows explain the total
+  const e = m.explain([shirt, trousers, loafers]); assert.ok(e && e.rows.length >= 2 && e.rows.some(([l]) => /Color rule/.test(l)));
+}
+console.log('batch2 ok');

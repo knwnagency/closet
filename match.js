@@ -88,7 +88,7 @@ export function proportion(ps) {
   if (cropped(top) && !layer && down >= 1) add(0.8, down === 2 ? 'Cropped top shows off wide-leg pants' : 'Cropped top keeps the legs looking long');
   if (up === 2 && down === 2 && feet != null) add(feet === 2 ? 0.3 : -1, feet === 2 ? 'Full oversized fit, grounded by chunky shoes' : 'All-baggy needs a chunky shoe to ground it');
   notes.sort((a, b) => Math.abs(b[0]) - Math.abs(a[0]));
-  return { score: notes.reduce((t, [s]) => t + s, 0), veto: notes.some(([s]) => s <= -2), note: notes[0]?.[1] ?? 'Balanced, regular proportions', up, down };
+  return { score: notes.reduce((t, [s]) => t + s, 0), veto: notes.some(([s]) => s <= -2), note: notes[0]?.[1] ?? 'Balanced, regular proportions', up, down, list: notes };
 }
 
 // ---------- color wheel ----------
@@ -229,9 +229,42 @@ export function combo(ps) {
 export const isDenim = p => /jean|denim|jort/i.test(`${p.kind ?? ''} ${p.name ?? ''}`);
 const WASH = ({ s, l }) => l > 0.85 ? 0 : l > 0.6 ? 1 : l > 0.4 ? 2 : l > 0.22 ? 3 : s < 0.15 ? 5 : 4; // white, light, mid, dark, raw, black
 const cap = s => s[0].toUpperCase() + s.slice(1);
+// ---------- dressiness: 0 sporty/lounge, 1 everyday, 2 dressy. From the type and name; p.dress overrides. ----------
+const DRESS = [[/blazer|suit|dress shirt|oxford|derby|loafer|slacks|trouser|pleated|chelsea|trench|overcoat|button|polo|sweater|knit|cardigan|chino|turtleneck|\bcoat\b/i, 2],
+  [/hoodie|sweat|jogger|track|tank|jersey|basketball|gym|slide|slipper|sandal|flip|foam|runner|athletic|compression/i, 0]];
+export const dress = p => p.dress ?? DRESS.find(([re]) => re.test(`${p.kind ?? ''} ${p.name ?? ''}`))?.[1] ?? ({ formal: 2, athletic: 0 }[[].concat(p.vibe ?? [])[0]] ?? 1);
+export const MATERIALS = ['cotton', 'denim', 'leather', 'suede', 'knit', 'wool', 'linen', 'nylon', 'fleece', 'corduroy', 'silk'];
+const TEXTURED = ['denim', 'leather', 'suede', 'knit', 'wool', 'corduroy', 'linen'];
+const material = p => p.material ?? (isDenim(p) ? 'denim' : null);
+// Rough share of the outfit each piece covers, for the 60/30/10 color rule. A top under a layer mostly hides.
+const AREA = { Layers: 0.35, Tops: 0.3, Bottoms: 0.35, Shoes: 0.1, Accessories: 0.05 };
+
 // Small nudges from the notes: [score, note] list, strongest first.
 export function style(ps) {
   const out = [], c = combo(ps), b = ps.find(p => p.cat === 'Bottoms');
+  const cl = ps.filter(p => CLOTHES.includes(p.cat)), top = ps.find(p => p.cat === 'Tops'), layer = ps.find(p => p.cat === 'Layers'), shoes = ps.find(p => p.cat === 'Shoes');
+  // dressy vs sporty: one odd piece is tension (button-up with track pants); several on each side just clash
+  const lv = cl.map(dress), hi = lv.filter(v => v === 2).length, lo = lv.filter(v => v === 0).length;
+  if (cl.length >= 3 && hi && lo) out.push(hi === 1 || lo === 1 ? [0.3, hi === 1 ? 'One dressy piece makes it interesting' : 'One sporty piece keeps it relaxed'] : [-1, 'Too many dressy and sporty pieces fighting']);
+  if (top && dress(top) === 2 && shoes && dress(shoes) === 2) out.push([0.5, `${cap(top.kind || 'dressy top')} with ${shoes.kind || 'dress shoes'}, same polish`]);
+  if (top && dress(top) === 2 && layer && dress(layer) === 2) out.push([0.4, `A sharp ${layer.kind || 'layer'} over a dressy top`]);
+  // textures: two different materials add depth; leather on leather is a lot
+  const mats = [...new Set(cl.map(material).filter(Boolean))];
+  if (mats.length >= 2 && mats.some(m => TEXTURED.includes(m))) out.push([0.3, `${cap(mats[0])} with ${mats[1]}, texture mix`]);
+  if (cl.filter(p => material(p) === 'leather').length >= 2) out.push([-0.4, 'Leather on leather is a lot']);
+  // 60/30/10: one color leads; two loud colors at the same size fight
+  if (cl.length >= 3) {
+    const share = {}, tot = ps.reduce((t, p) => t + (p.cat === 'Tops' && layer ? 0.12 : AREA[p.cat] ?? 0), 0);
+    for (const p of colored(ps)) { const n = colorName(p.color); share[n] = (share[n] ?? 0) + (p.cat === 'Tops' && layer ? 0.12 : AREA[p.cat] ?? 0) / tot; }
+    const big = Object.values(share).filter(v => v >= 0.25).length, fam = Object.entries(share);
+    if (big >= 2) out.push([-0.4, 'Two loud colors the same size, let one lead']);
+    else if (fam.length === 1 && fam[0][1] <= 0.15) out.push([0.3, `${cap(fam[0][0])} as the small pop, the 10 in 60/30/10`]);
+  }
+  if (prints(ps) >= 2) out.push([-0.6, 'Two prints compete, let one stand out']);
+  // your palette (Me): colors that suit you near the face, colors you avoid
+  const face = ps.filter(p => p.cat === 'Tops' || p.cat === 'Layers' || isHat(p)).map(p => colorName(p.color));
+  if (face.some(n => TASTE.avoid.includes(n))) out.push([-0.6, "A color you said doesn't suit you, near your face"]);
+  else if (face.some(n => TASTE.good.includes(n))) out.push([0.3, 'A color that suits you, up top']);
   if (c) out.push([0.4, `${cap(c.text)} · ${c.label}`]);
   const row = b && (isDenim(b) ? JEANS : TROUSERS)[colorName(b.color)];
   const hit = row && ps.find(p => (p.cat === 'Tops' || p.cat === 'Layers') && row[1].split('+').some(w => alt(w).includes(colorName(p.color))));
@@ -247,6 +280,7 @@ export function style(ps) {
 
 // One fix for a fit that feels off (builder hint). null = nothing to add.
 export function fixTip(ps) {
+  const warn = style(ps).find(([v]) => v < 0); if (warn) return warn[1]; // a rule the look breaks (two prints, leather on leather)
   const hs = new Set(colored(ps).map(p => colorName(p.color)));
   if (hs.size >= 3) return 'Busy? Keep one main color, let the rest go neutral';
   if (!hs.size && !prints(ps) && !ps.some(p => p.cat === 'Accessories')) return 'Plain? Add a cap, a chain or one pop of color';
@@ -257,11 +291,11 @@ export function fixTip(ps) {
 // ---------- your taste: learned from favorites, wears and "not for me" ----------
 // Pairs of pieces you keep putting together score higher; pairs from looks you rejected score lower; a rejected look never comes back.
 // ponytail: module-level state set by the app (setTaste) so every scorer sees it without threading opts through. Fine for one user.
-let TASTE = { pair: new Map(), nope: new Set() };
-export function setTaste({ liked = [], worn = [], nope = [] } = {}) { // each: lists of piece-id arrays
+let TASTE = { pair: new Map(), nope: new Set(), good: [], avoid: [] };
+export function setTaste({ liked = [], worn = [], nope = [], good = [], avoid = [] } = {}) { // liked/worn/nope: lists of piece-id arrays. good/avoid: color names
   const pair = new Map(), bump = (ids, w) => { for (const [a, b] of pairs([...ids].sort())) pair.set(a + '|' + b, (pair.get(a + '|' + b) ?? 0) + w); };
   liked.forEach(ids => bump(ids, 1)); worn.forEach(ids => bump(ids, 0.5)); nope.forEach(ids => bump(ids, -1));
-  TASTE = { pair, nope: new Set(nope.map(ids => [...ids].sort().join())) };
+  TASTE = { pair, nope: new Set(nope.map(ids => [...ids].sort().join())), good, avoid };
 }
 const taste = ps => {
   const ids = ps.map(p => p.id).sort(); if (TASTE.nope.has(ids.join())) return null;
@@ -282,8 +316,8 @@ export function scoreOutfit(ps, mode, opts = {}) {
   const pr = proportion(ps);
   if (pr.veto) return null; // one deal-breaker outweighs any number of good points
   const finish = Math.min(2, ps.filter(p => p.cat === 'Accessories').length) * 0.3; // a hat / chain finishes the look
-  const st = style(ps), e = ech[0]; // a shape problem outranks a nice combo; otherwise your notes explain the fit
-  const note = e ? `${e.p.name} picks up the ${colorName(e.p.color)} in the ${e.from.name}` : st[0] && (st[0][0] < 0 || pr.score >= 0) ? st[0][1] : pr.note;
+  const st = style(ps), e = ech[0], good = st.find(([v]) => v > 0); // the caption says what works; warnings go to the builder's tip (fixTip)
+  const note = e ? `${e.p.name} picks up the ${colorName(e.p.color)} in the ${e.from.name}` : good && pr.score >= 0 ? good[1] : pr.note;
   return { score: base + pr.score + finish + Math.min(2, ech.length) * 0.7 + st.reduce((t, [x]) => t + x, 0) + tb, note: tb >= 1 && !e ? `${note} · you wear these together` : note };
 }
 
@@ -429,8 +463,9 @@ const collect = (items, opts, modes = VISIBLE()) => {
 };
 export const madeWith = (items, anchor, n = 5) => varied(collect(items, { anchor }), n);
 
-// What the weather rules out. t = feels-like °C, null = unknown (nothing ruled out).
-export function forWeather(items, t) {
+// What the weather rules out. t = feels-like °C, null = unknown (nothing ruled out). rain: no suede.
+export function forWeather(items, t, rain = false) {
+  if (rain) items = items.filter(p => p.material !== 'suede' && !/suede/i.test(p.name ?? ''));
   if (t == null) return items;
   const k = p => `${p.kind ?? ''} ${p.name ?? ''}`;
   if (t >= 24) return items.filter(p => !/coat|puffer|parka|sweater|hoodie|knit|beanie|boot/i.test(k(p)) && (p.cat !== 'Layers' || /overshirt|flannel|shirt/i.test(k(p))));
@@ -438,11 +473,26 @@ export function forWeather(items, t) {
   return items.filter(p => !/puffer|parka/i.test(k(p)));
 }
 // Today: n varied outfits from every style, a little random so each visit (or Shuffle) is different. Cold days want a layer.
-export function today(items, { t = null, n = 5, rand = Math.random, skip = [] } = {}) {
+// Occasions: how dressed up (0-2) and which vibe fits. A look scores by how close it lands.
+export const OCCASIONS = { work: { label: 'Work', dress: 2 }, date: { label: 'Date', dress: 1.5 }, club: { label: 'Club', dress: 1, vibe: 'streetwear' }, errands: { label: 'Errands', dress: 0.8 }, gym: { label: 'Gym', dress: 0, vibe: 'athletic' } };
+export const occasionFit = (ps, occ) => { const o = OCCASIONS[occ]; if (!o) return 0; const cl = ps.filter(p => CLOTHES.includes(p.cat)), avg = cl.reduce((t, p) => t + dress(p), 0) / cl.length;
+  return -Math.abs(avg - o.dress) * 1.5 + (o.vibe ? vibe(ps, o.vibe) * 0.3 : 0); };
+export function today(items, { t = null, rain = false, occasion = null, n = 5, rand = Math.random, skip = [] } = {}) {
   // skip: what you wore yesterday. Tops and layers rest a day; pants and shoes can repeat.
-  const pool = forWeather(items, t).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
+  const pool = forWeather(items, t, rain).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
   const list = collect(pool, { rand }).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
-  return varied(list.map(o => ({ ...o, score: o.score + rand() * 1.5 })), n);
+  return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + rand() * 1.5 })), n);
+}
+
+// Every rule that scored a look, biggest first: the builder's "Why?". null = no style rule takes it.
+export function explain(ps) {
+  const b = bestMode(ps); if (b?.score == null) return null;
+  const ech = echoes(ps), base = MODES[b.mode].score(ps, {}) ?? MODES[b.mode].score(ps.filter(p => !ech.some(e => e.p === p)), {}) ?? 0, tb = taste(ps) ?? 0;
+  const rows = [[`Color rule: ${MODES[b.mode].label}`, base], ...[...proportion(ps).list, ...style(ps)].map(([v, l]) => [l, v]),
+    ...ech.slice(0, 2).map(e => [`${e.p.name} picks up the ${colorName(e.p.color)} in the ${e.from.name}`, 0.7]),
+    [`Finished with ${ps.filter(p => p.cat === 'Accessories').length} accessor${ps.filter(p => p.cat === 'Accessories').length === 1 ? 'y' : 'ies'}`, Math.min(2, ps.filter(p => p.cat === 'Accessories').length) * 0.3],
+    [tb > 0 ? 'You wear these together' : 'Close to looks you passed on', tb]];
+  return { mode: b.mode, total: b.score, rows: rows.filter(([, v]) => Math.abs(v) >= 0.05).sort((x, y) => y[1] - x[1]) };
 }
 
 // ---------- wardrobe gaps ----------
@@ -452,7 +502,7 @@ const GAP_FIT = { Tops: ['Fitted', '', 'Oversized'], Layers: ['Fitted', '', 'Ove
 // Wearable palette — neutrals plus the muted "statement" colors people actually buy. No neon cyan pants.
 // black, white, grey, navy, beige, camel, brown, olive, slate · burgundy, rust, forest, sage
 const GAP_COLORS = ['#151515', '#f4f4f4', '#8c8c8c', '#1c2541', '#d8c3a0', '#b08a5a', '#4a3426', '#5b5f3a', '#4a5d78', '#6d2232', '#9a4a2a', '#2f4a36', '#889f6e'];
-const GAP_MODES = ['classic', 'street', 'formula', 'complementary', 'analogous'];
+const GAP_MODES = ['classic', 'combos', 'street', 'formula', 'complementary', 'analogous']; // combos: buys that complete your style-note color combos
 
 const seeded = () => { let seed = 1; return () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32; };
 

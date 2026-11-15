@@ -108,3 +108,27 @@ export function keyOut(d, w, h) {
     if ((x > 0 && !d[(p - 1) * 4 + 3]) || (x < w - 1 && !d[(p + 1) * 4 + 3]) || (p >= w && !d[(p - w) * 4 + 3]) || (p < n - w && !d[(p + w) * 4 + 3])) rim.push(p); }
   floodOut(d, w, h, rim);
 }
+
+// Which way is up, from the cutout's shape (alpha). Returns quarter turns clockwise to stand it upright: 0, 1, 2 or 3. 0 when unsure.
+// Only sideways (0, 1 or 3): a tee lies wider than tall with the shoulders the heavy end; pants are tall with a solid waist end and a gap
+// between the legs at the other. ponytail: shape heuristics with safe margins; anything borderline stays as shot. Upside down: not detected.
+export function orient(d, w, h, cat) {
+  let x0 = w, x1 = -1, y0 = h, y1 = -1;
+  const on = (x, y) => d[(y * w + x) * 4 + 3] > 128;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (on(x, y)) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (x1 < 0) return 0;
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+  const col = x => { let c = 0, a = -1, b = -1; for (let y = y0; y <= y1; y++) if (on(x, y)) { c++; if (a < 0) a = y; b = y; } return [c, a < 0 ? 0 : b - a + 1]; };
+  const row = y => { let c = 0, a = -1, b = -1; for (let x = x0; x <= x1; x++) if (on(x, y)) { c++; if (a < 0) a = x; b = x; } return [c, a < 0 ? 0 : b - a + 1]; };
+  const band = (f, from, to) => { let m = 0, fill = 0, n = 0; for (let i = from; i <= to; i++) { const [c, span] = f(i); m += c; if (span) { fill += c / span; n++; } } return { m, fill: n ? fill / n : 0 }; };
+  const q = 0.25, ends = (f, a, b) => { const k = Math.max(1, Math.round((b - a + 1) * q)); return [band(f, a, a + k - 1), band(f, b - k + 1, b)]; };
+  if (cat === 'Tops' || cat === 'Layers') {
+    if (bh > bw * 1.25) { const [l, r] = ends(col, x0, x1); return l.m > r.m * 1.35 ? 1 : r.m > l.m * 1.35 ? 3 : 0; } // shoulders left → turn clockwise
+    return 0; // upside down isn't readable from shape: a hood or a vest's narrow top fools it (tested on a real closet)
+  }
+  if (cat === 'Bottoms') {
+    if (bw > bh * 1.2) { const [l, r] = ends(col, x0, x1); return l.fill > r.fill + 0.15 ? 1 : r.fill > l.fill + 0.15 ? 3 : 0; } // waist left → turn clockwise
+    return 0;
+  }
+  return 0;
+}

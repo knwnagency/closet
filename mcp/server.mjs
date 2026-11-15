@@ -20,8 +20,9 @@ function load() {
   const path = files.map(f => [f, statSync(f).mtimeMs]).sort((a, b) => b[1] - a[1])[0];
   if (cache.path !== path[0] || cache.mtime !== path[1]) {
     const b = JSON.parse(readFileSync(path[0], 'utf8'));
-    for (const i of b.items) delete i.img; // photos aren't needed and are most of the file
-    cache = { path: path[0], mtime: path[1], data: b };
+    const imgs = new Map(b.items.map(i => [i.id, i.img])); // kept aside for show_pieces; the rest of the tools only need the text
+    for (const i of b.items) { delete i.img; delete i.photo; }
+    cache = { path: path[0], mtime: path[1], data: b, imgs };
   }
   return cache.data;
 }
@@ -74,6 +75,13 @@ const TOOLS = {
     run({ pieces }) { const b = load(), ps = pieces.map(q => find(b.items, q)), v = bestMode(ps);
       return { pieces: ps.map(p => p.name), works: v?.score != null, style: v?.mode ? MODES[v.mode].label : null, why: v?.note ?? 'Needs a top, bottoms and shoes', tip: v?.score != null ? fixTip(ps) : null }; },
   },
+  show_pieces: {
+    description: 'Show the photos of up to 6 pieces (names or ids), so you can judge an outfit visually, not just from the tags.',
+    inputSchema: { type: 'object', properties: { pieces: { type: 'array', items: { type: 'string' }, maxItems: 6 } }, required: ['pieces'] },
+    run({ pieces }) { const b = load(), ps = pieces.slice(0, 6).map(q => find(b.items, q));
+      return { content: ps.flatMap(p => { const m = /^data:(image\/[a-z+]+);base64,(.*)$/.exec(cache.imgs.get(p.id) ?? '');
+        return [{ type: 'text', text: `${p.name} (${colorName(p.color)} ${p.kind || p.cat})` }, ...(m ? [{ type: 'image', mimeType: m[1], data: m[2] }] : [])]; }) }; },
+  },
   best_for_slot: {
     description: 'Given the pieces picked so far, rank what to add for one slot (Tops, Layers, Bottoms, Shoes, Hat, Accessory), best match first, with the reason.',
     inputSchema: { type: 'object', properties: { pieces: { type: 'array', items: { type: 'string' } }, slot: { type: 'string', enum: Object.keys(SLOTS) }, count: { type: 'number' } }, required: ['slot'] },
@@ -90,7 +98,7 @@ function handle(msg) {
   if (method === 'tools/list') return send({ id, result: { tools: Object.entries(TOOLS).map(([name, t]) => ({ name, description: t.description, inputSchema: t.inputSchema })) } });
   if (method === 'tools/call') {
     const t = TOOLS[params?.name]; if (!t) return send({ id, error: { code: -32602, message: `Unknown tool ${params?.name}` } });
-    try { const r = t.run(params.arguments ?? {}); return send({ id, result: { content: [{ type: 'text', text: typeof r === 'string' ? r : JSON.stringify(r, null, 1) }] } }); }
+    try { const r = t.run(params.arguments ?? {}); return send({ id, result: r?.content ? r : { content: [{ type: 'text', text: typeof r === 'string' ? r : JSON.stringify(r, null, 1) }] } }); }
     catch (e) { return send({ id, result: { isError: true, content: [{ type: 'text', text: e.message }] } }); }
   }
   if (method === 'ping') return send({ id, result: {} });
