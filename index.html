@@ -6,7 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#ebe7e0">
+<meta name="theme-color" content="#f0efeb" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#111110" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
 <meta name="apple-mobile-web-app-title" content="Closet">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Closet</title>
@@ -357,16 +359,110 @@
   .sheet .tools button { flex: none; height: 44px; padding: 0 12px; background: var(--s1); box-shadow: inset 0 0 0 1px var(--hair); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; border-radius: var(--r); }
   .shop { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--ink); }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  /* ============ V3 · STREETWEAR ARCHIVE ============
+     Heavy condensed display (Anton, iPhone's condensed black as fallback), hard edges, near-black on off-white,
+     monospace sticker tags for labels, one safety-orange accent for "live" things. Body copy stays readable sentence case. */
+  :root { --bg: #f0efeb; --s1: #fafaf7; --tile: #e2e1dc; --ink: #0c0c0c; --muted: #55554f; --hair: rgb(12 12 12 / .14); --accent: #ff4d00; --bad: #c2341b;
+    --display: Anton, "HelveticaNeue-CondensedBlack", "Arial Narrow", Impact, sans-serif; --mono: ui-monospace, "SF Mono", Menlo, monospace; --r: 0px;
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --shadow: drop-shadow(0 5px 6px rgb(0 0 0 / .2)); color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111110; --s1: #1b1b19; --tile: #232320; --ink: #f1f0ec; --muted: #a6a59e; --hair: rgb(241 240 236 / .14); --bad: #ff7a5c; color-scheme: dark; --shadow: drop-shadow(0 5px 8px rgb(0 0 0 / .55)); } }
+  body { font-size: 15px; }
+  h1, .display { font-family: var(--display); font-weight: 400; text-transform: uppercase; letter-spacing: .005em; line-height: .92; }
+  h1 { font-size: 46px; } .pickhead h2 { font-family: var(--display); font-weight: 400; font-size: 30px; letter-spacing: .01em; }
+  .eyebrow, .mono, .tag, .chip, .pill, .btn, .seg button, nav .tabs button, .lab, .sec, .looks-h, h3, .weekbar, .cell > span:first-child, .plus { font-family: var(--mono); letter-spacing: .06em; }
+  /* sticker tags: the archive label */
+  .tag { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 7px; font-size: 11px; font-weight: 600; text-transform: uppercase; background: var(--ink); color: var(--bg); white-space: nowrap; }
+  .tag.o { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); } .tag.hot { background: var(--accent); color: #fff; }
+  button.tag { height: 32px; padding: 0 10px; } .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  /* buttons: hard, chunky */
+  .btn { height: 50px; font-size: 12px; font-weight: 700; box-shadow: none; } .btn.ghost, .btn.danger { box-shadow: inset 0 0 0 2px var(--ink); } .btn.go { background: var(--accent); color: #fff; }
+  .btn.danger { color: var(--bad); box-shadow: inset 0 0 0 2px var(--bad); } .btn.armed { background: var(--bad); }
+  .pill { box-shadow: inset 0 0 0 1.5px var(--hair); color: var(--ink); } .pill.on { background: var(--ink); color: var(--bg); }
+  .chip { color: var(--muted); } .chip.on { color: var(--ink); border-bottom-width: 3px; }
+  .seg.subnav { box-shadow: inset 0 0 0 2px var(--ink); } .seg.subnav button.on { background: var(--ink); color: var(--bg); }
+  /* readable copy: sentence case for reasons and captions */
+  .meta p, .dmeta p, .made .look p, .sub, .verdict, .why, .pickbest, .issue, .laundry { text-transform: none; letter-spacing: 0; font-family: inherit; font-size: 13px; }
+  .item b { font-family: var(--display); font-weight: 400; font-size: 17px; letter-spacing: .01em; line-height: 1.05; margin-top: 8px; }
+  .item span { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; }
+  /* clothes are the hero: grain surface + a soft shadow under every cutout */
+  .flat, .item .ph, .spot, .pickgrid button, .carousel, .strip button, .cday, .looks .look { background-color: var(--tile); background-image: var(--grain); }
+  .flat > img, .item .ph img, .pickgrid img, .carousel img, .strip img, .sheet .hero img, .cv img { filter: var(--shadow); }
+  .flat { background-color: color-mix(in srgb, var(--tint, var(--tile)) 16%, var(--tile)); }
+  /* nav: black bar, orange dot */
+  nav { background: var(--ink); border-top: 0; } nav .tabs button { color: rgb(255 255 255 / .55); font-size: 11px; } nav .tabs button.on { color: #fff; } nav .tabs button.on::after { background: var(--accent); width: 6px; height: 6px; margin-left: -3px; border-radius: 0; }
+  @media (prefers-color-scheme: dark) { nav { background: #000; } }
+  nav .add { background: var(--accent); color: #fff; }
+  /* dark-mode fixes for colors that were hard-coded */
+  /* dark mode: clothes still sit on a light studio surface, so black pieces don't vanish */
+  @media (prefers-color-scheme: dark) { :root { --tile: #d6d5d0; } .item b, .item span { color: var(--ink); } .pickgrid span { color: #0c0c0c; } .cday span { color: #0c0c0c; } }
+  @media (prefers-color-scheme: dark) { .verdict.bad, .why-list b.neg { color: var(--bad); } dialog::backdrop { background: rgb(0 0 0 / .6); } .wheel { filter: brightness(.95); } }
+  #toast { font-family: var(--mono); display: flex; align-items: center; gap: 14px; white-space: nowrap; } #toast button { color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 0 2px; height: 28px; }
+  /* Today */
+  .thead { margin-bottom: 12px; } .tbar { display: flex; gap: 5px; align-items: center; margin: 0 0 14px; } .tbar .sp { flex: 1; } .tbar svg { width: 16px; height: 16px; }
+  .stack { position: relative; display: grid; } .stack > * { grid-area: 1 / 1; }
+  .dcard { background: var(--s1); padding: 12px 12px 14px; box-shadow: inset 0 0 0 2px var(--ink); transition: transform .25s cubic-bezier(.2, .9, .3, 1), opacity .2s; touch-action: none; user-select: none; -webkit-user-select: none; position: relative; }
+  .dcard.under { transform: translate(6px, 6px); pointer-events: none; } .dcard.under > * { opacity: .25; } .dcard.end { touch-action: auto; text-align: center; padding: 40px 16px; }
+  .dtop { display: flex; justify-content: space-between; align-items: center; min-height: 24px; } .dtitle { font-size: clamp(34px, 11vw, 52px); margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .flatwrap { width: min(100%, calc(36dvh * .8)); margin: 0 auto 10px; } .flatwrap .flat { pointer-events: none; }
+  .dcard .hint::after { position: absolute; top: 18px; font-family: var(--display); font-size: 34px; padding: 2px 10px; transform: rotate(-8deg); opacity: 0; transition: opacity .1s; }
+  .dcard[data-hint=next] .hint::after { content: 'NEXT'; right: 16px; opacity: 1; color: var(--ink); box-shadow: inset 0 0 0 3px var(--ink); }
+  .dcard[data-hint=save] .hint::after { content: 'SAVE'; left: 16px; opacity: 1; color: var(--accent); box-shadow: inset 0 0 0 3px var(--accent); transform: rotate(8deg); }
+  .dcard[data-hint=wear] .hint::after { content: 'WEAR'; left: 50%; margin-left: -48px; opacity: 1; background: var(--accent); color: #fff; }
+  .dbtns { display: grid; grid-template-columns: 54px 54px minmax(0, 1fr); gap: 8px; margin-top: 12px; } .round { height: 54px; display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--ink); } .round.on svg { fill: var(--accent); stroke: var(--accent); }
+  .dbtns .btn { height: 54px; } .swipehint { text-align: center; margin: 10px 0 0; font-size: 11px; }
+  .filters .tags { margin-bottom: 6px; }
+  /* Build canvas */
+  .build .canvas { max-width: 420px; margin: 0 auto; } .cvs { position: absolute; } .cvs .carousel { height: 100%; margin: 0; background: none; } .cvs .carousel button { flex: 0 0 100%; height: 100%; scroll-snap-align: center; scroll-snap-stop: always; }
+  .cvs .carousel img { width: 100%; height: 100%; object-fit: contain; padding: 0; filter: var(--shadow); } .cvs.empty { display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--ink); background: rgb(255 255 255 / .35); }
+  .cvs.empty span { font-family: var(--mono); font-size: 11px; font-weight: 700; text-transform: uppercase; color: #0c0c0c; } .slab { position: absolute; left: 0; bottom: 0; display: flex; gap: 3px; align-items: center; font: 600 10px/1 var(--mono); padding: 3px 4px; background: rgb(12 12 12 / .75); color: #fff; pointer-events: none; } .slab svg { width: 10px; height: 10px; }
+  .cvs.drop { animation: drop .45s cubic-bezier(.2, 1.4, .4, 1); } @keyframes drop { from { transform: translateY(-14px) scale(1.06); opacity: .4 } }
+  .ring { width: 64px; height: 64px; border-radius: 50%; display: grid; place-content: center; text-align: center; background: radial-gradient(closest-side, var(--bg) 78%, transparent 80%), conic-gradient(var(--accent) calc(var(--p) * 1%), var(--hair) 0); }
+  .ring b { font-family: var(--display); font-weight: 400; font-size: 24px; line-height: .9; } .ring span { font: 600 9px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); } .ring.bad b { color: var(--bad); }
+  .build .verdict { margin: 0 auto 10px; max-width: 420px; } .whytags, .build .tools { max-width: 420px; margin: 10px auto 0; display: flex; flex-wrap: wrap; gap: 5px; } .build .tools svg { width: 14px; height: 14px; }
+  .tag.bad { background: transparent; color: var(--bad); box-shadow: inset 0 0 0 1.5px var(--bad); } .slotops { padding: 0 18px 12px; }
+  .build .actions { max-width: 420px; }
+  /* piece page */
+  .phead { display: grid; gap: 8px; } .pname { font-size: 34px; margin: 0; overflow-wrap: anywhere; }
+  .review { display: grid; gap: 8px; padding: 12px; box-shadow: inset 0 0 0 2px var(--accent); } .review p { margin: 0; font-size: 14px; }
+  details.more { border-top: 2px solid var(--ink); } details.more > summary { list-style: none; display: flex; justify-content: space-between; align-items: baseline; padding: 14px 0; cursor: pointer; font-family: var(--display); font-size: 22px; text-transform: uppercase; }
+  details.more > summary::-webkit-details-marker { display: none; } details.more > summary::after { content: '+'; font-family: var(--mono); font-size: 20px; } details.more[open] > summary::after { content: '−'; } details.more > summary .mono { flex: 1; margin-left: 10px; font-size: 11px; }
+  details.more > :not(summary) { margin-bottom: 14px; } .sheet .hero { position: relative; } .sheet .hero .grab { position: absolute; top: 0; left: 50%; margin-left: -22px; }
+  /* closet */
+  .ph { position: relative; } .tag.corner { position: absolute; left: 6px; top: 6px; height: 20px; font-size: 10px; padding: 0 5px; } .tag.o.corner { background: var(--s1); }
+  .ctags { margin: 0 0 12px; } .ctags .sp { flex: 1; } .ctags .tag { height: 30px; }
+  .shelf { display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 4px; scroll-padding: 0 18px; scroll-snap-type: x proximity; } .shelf::-webkit-scrollbar { display: none; }
+  .shelf .item { flex: 0 0 132px; scroll-snap-align: start; } .shelf .item b { font-size: 15px; } .shelf .item span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .quick { display: grid; gap: 8px; } .item { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+  ::view-transition-old(root) { animation: .16s ease-in both vtout; } ::view-transition-new(root) { animation: .22s cubic-bezier(.2, .9, .3, 1) both vtin; }
+  @keyframes vtout { to { opacity: 0; transform: translateY(-6px); } } @keyframes vtin { from { opacity: 0; transform: translateY(10px); } }
+  /* capsules */
+  .capbtn svg { width: 14px; height: 14px; } .capbtn { max-width: 60%; } .capbtn { overflow: hidden; text-overflow: ellipsis; }
+  .capbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: -4px 0 12px; padding: 8px 10px; background: var(--accent); color: #fff; font-size: 13px; }
+  .capbar button { color: #fff; font: 700 11px/1 var(--mono); text-transform: uppercase; text-decoration: underline; flex: none; min-height: 32px; }
+  .caprow { display: flex; align-items: center; border-bottom: 1px solid var(--hair); } .capsel { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 64px; text-align: left; }
+  .capsel i { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--ink); display: grid; place-items: center; flex: none; } .capsel i svg { width: 15px; height: 15px; opacity: 0; }
+  .caprow.on .capsel i { background: var(--accent); box-shadow: none; } .caprow.on .capsel i svg { opacity: 1; stroke: #fff; }
+  .capsel b { display: block; font-family: var(--display); font-weight: 400; font-size: 22px; text-transform: uppercase; line-height: 1; } .capsel small { color: var(--muted); font-size: 13px; }
+  .capacts { display: flex; } .capacts .icon { width: 40px; } .capacts .icon svg { width: 18px; height: 18px; } .capacts .armed svg { stroke: var(--bad); }
+  .caps > .mono { margin-top: 14px; }
+  /* update banner */
+  .update { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 70px); z-index: 8; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; background: var(--accent); color: #fff; font-family: var(--mono); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+  .update button { color: #fff; box-shadow: inset 0 0 0 2px #fff; height: 36px; padding: 0 12px; font-weight: 700; }
+  /* sheets: a grab bar you can drag down */
+  .grab { display: block; width: 44px; height: 5px; margin: 8px auto 0; background: var(--hair); } dialog.sheet { transition: transform .25s cubic-bezier(.2, .9, .3, 1); }
+  @media (prefers-reduced-motion: reduce) { .dcard.live { transition: none !important; } }
 </style>
 </head>
 <body>
 <main id="app"></main>
 <nav>
   <div class="tabs">
+    <button data-go="today">Today</button>
     <button data-go="closet">Closet</button>
-    <button data-go="outfits">Outfits</button>
     <button data-go="build">Build</button>
-    <button data-go="inspo">Inspo</button>
+    <button data-go="outfits">Calendar</button>
     <button data-go="me">Me</button>
   </div>
   <button class="add" data-action="add" aria-label="Add clothes"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -377,10 +473,10 @@
 
 <script type="module">
 import { dayKey, prevDay, streaks, badges } from './progress.js';
-import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
+import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, combo, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.15 · v2.4'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.15 · v3.0'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -399,15 +495,17 @@ const del = (name, k) => store(name, 'readwrite', s => s.delete(k));
 
 // ---------- state ----------
 const S = {
-  view: 'closet', cat: 'All', coll: null, mode: 'classic', tab: 'ideas', anchor: null, ideas: null, palette: null, inspoColors: null,
+  view: 'today', cat: 'All', coll: null, mode: 'classic', tab: 'cal', anchor: null, ideas: null, palette: null, inspoColors: null,
   build: null, inspoTab: 'board', listTab: null, pending: [],
   wheel: { h: 25, s: 0.8, l: 0.5, harmony: 'complementary' }, dragging: false,
   items: await all('items'), saved: await all('outfits'), log: await all('log'), wish: await all('wish'),
   colls: await all('colls'), inspo: await all('inspo'), ...await (async () => { const ps = await all('profile');
     return { profile: ps.find(p => p.k === 'me') ?? null, history: ps.find(p => p.k === 'history')?.list ?? [],
-      plan: ps.find(p => p.k === 'plan') ?? { k: 'plan', days: {}, weekly: {} }, nope: ps.find(p => p.k === 'nope')?.list ?? [], draft: ps.find(p => p.k === 'draft')?.ids ?? null }; })(), // plan: { days: {date: look}, weekly: {0-6: look} } // history: looks you swiped past, newest first
+      plan: ps.find(p => p.k === 'plan') ?? { k: 'plan', days: {}, weekly: {} }, deck: ps.find(p => p.k === 'deck') ?? null, nope: ps.find(p => p.k === 'nope')?.list ?? [], draft: ps.find(p => p.k === 'draft')?.ids ?? null }; })(), // plan: { days: {date: look}, weekly: {0-6: look} } // history: looks you swiped past, newest first
 };
 S.build = S.draft?.map(id => S.items.find(i => i.id === id)).filter(Boolean) ?? null; // the look you left half-built
+S.closetView = S.profile?.closetView ?? 'shelf';
+S.coll = S.profile?.capsule && (S.colls.some(c => c.id === S.profile.capsule) || S.profile.capsule.startsWith('smart:')) ? S.profile.capsule : null; // the capsule you were using
 S.cs = {}; S.past = []; S.q = ''; S.sort = 'type'; S.calOff = 0; S.locks = new Set(); S.sel = null; S.occ = null;
 // What you favorite, wear and reject teaches the scorer (match.js setTaste).
 const syncTaste = () => setTaste({ liked: S.saved.map(s => s.ids), worn: S.log.map(l => l.ids), nope: S.nope, good: S.profile?.colors?.good ?? [], avoid: S.profile?.colors?.avoid ?? [] });
@@ -427,7 +525,7 @@ const SMART = { never: ['Never worn', its => its.filter(i => !i.wears)], favs: [
   summer: ['Hot weather', its => forWeather(its, 28)], winter: ['Cold weather', its => forWeather(its, 4)], dressy: ['Dressed up', its => its.filter(i => dress(i) === 2 || i.cat === 'Accessories')] };
 const smart = () => S.coll?.startsWith('smart:') && SMART[S.coll.slice(6)];
 const owned = () => smart() ? smart()[1](S.items) : S.coll ? S.items.filter(i => collById(S.coll)?.ids.includes(i.id)) : S.items; // what the closet shows
-const pool = () => owned().filter(i => !i.dirty); // where outfits come from: nothing in the laundry
+const pool = () => owned().filter(i => !i.dirty && !i.stored); // where outfits come from: nothing in the laundry or stored for the season
 const keyOf = ps => ps.map(p => p.id).sort().join();
 const complete = ps => ['Tops', 'Bottoms', 'Shoes'].every(c => ps.some(p => p.cat === c));
 const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
@@ -439,6 +537,7 @@ const KIND_ALIAS = { 't-shirt': /\btees?\b|\bt-?shirt/i, sweater: /sweater|sweat
 const guessKind = it => Object.keys(KINDS).filter(k => KINDS[k] === it.cat).find(k => (KIND_ALIAS[k] ?? new RegExp(`\\b${k.split(/[\s-]/).pop()}`, 'i')).test(it.name));
 // Tags that contradict each other (AI guesses): a "denim jacket" filed under Tops, Air Force 1s called sleek. "It's right" silences it.
 const issueOf = it => { if (it.review) return null;
+  if (it.broken) return { text: "This photo didn't load", fix: 'photo:1', label: 'Replace photo' };
   if (it.turnHint) return { text: 'This may be lying sideways', fix: `turn:${it.turnHint}`, label: 'Turn it upright' };
   if (it.tagOk) return null;
   if (KINDS[it.kind] && KINDS[it.kind] !== it.cat) { const g = guessKind(it); // the name usually knows: "Grey stripe sweatpants" tagged hoodie → the type is wrong, not the category
@@ -451,8 +550,16 @@ const fitLabel = it => it.cat === 'Accessories' ? '' : (FITS[it.cat] ?? FITS.def
 const lum = hex => { const n = parseInt(hex.slice(1), 16); return [16, 8, 0].map(b => (n >> b & 255) / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((t, v, i) => t + v * [.2126, .7152, .0722][i], 0); };
 const inkOn = hex => (lum(hex) + .05) / .057 > 1.05 / (lum(hex) + .05) ? '#141414' : '#fff';
 const money = v => '$' + Math.round(v).toLocaleString();
-const toast = msg => { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2400); };
+// toast(msg) or toast(msg, { label: 'Undo', fn }): an action stays up 5s instead of 2.4s.
+const toast = (msg, act) => { const t = document.getElementById('toast'); t.textContent = msg;
+  if (act) { const b = document.createElement('button'); b.textContent = act.label; b.onclick = () => { t.classList.remove('show'); act.fn(); }; t.append(b); }
+  t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), act ? 5000 : 2400); };
 const svg = d => `<svg viewBox="0 0 24 24"><path d="${d}"/></svg>`;
+// one line-icon set (no emoji): lock, swap, rotate, close, filter, shuffle, sun, check, arrow
+const IC = { lock: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z', unlock: 'M7 11V8a5 5 0 0 1 9.6-2M5 11h14v10H5z', swap: 'M4 8h13l-3-3M20 16H7l3 3', rotate: 'M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5',
+  x: 'M6 6l12 12M18 6 6 18', filter: 'M4 6h16M7 12h10M10 18h4', shuffle: 'M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3', check: 'M5 12l5 5 9-10', arrow: 'M5 12h14M13 6l6 6-6 6', plus: 'M12 5v14M5 12h14',
+  camera: 'M4 8h4l2-3h4l2 3h4v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', copy: 'M8 8h12v12H8zM4 16V4h12', trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13', down: 'M6 9l6 6 6-6', hanger: 'M12 7a2 2 0 1 1 2-2c0 1-2 1.5-2 3m0 0L3 15a1.3 1.3 0 0 0 .8 2.4h16.4A1.3 1.3 0 0 0 21 15z', share: 'M12 15V3M8 7l4-4 4 4M5 12v8h14v-8' };
+const ic = k => svg(IC[k]);
 const heart = svg('M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z');
 const xIcon = svg('M6 6l12 12M18 6 6 18');
 // Ghost silhouettes for pieces you don't own yet (wardrobe gaps, wishlist)
@@ -497,10 +604,10 @@ let wxBusy = false;
 async function refreshWeather() {
   const w = S.profile.wx; if (wxBusy) return; wxBusy = true;
   try {
-    const r = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${w.lat}&longitude=${w.lon}&current=apparent_temperature,weather_code&daily=apparent_temperature_max,weather_code&forecast_days=14&timezone=auto`)).json();
+    const r = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${w.lat}&longitude=${w.lon}&current=apparent_temperature,weather_code&daily=apparent_temperature_max,apparent_temperature_min,weather_code&forecast_days=14&timezone=auto`)).json();
     const daily = Object.fromEntries(r.daily.time.map((d, i) => [d, { t: r.daily.apparent_temperature_max[i], code: r.daily.weather_code[i] }])); // planned days dress for their own forecast
-    Object.assign(w, { t: r.current.apparent_temperature, code: r.current.weather_code, daily, at: Date.now() }); await put('profile', S.profile);
-    if (S.mode === 'today') S.ideas = null; if (S.view === 'outfits') render();
+    Object.assign(w, { t: r.current.apparent_temperature, code: r.current.weather_code, lo: r.daily.apparent_temperature_min?.[0] ?? null, hi: r.daily.apparent_temperature_max[0], daily, at: Date.now() }); await put('profile', S.profile);
+    if (S.mode === 'today') S.ideas = null; if (S.view === 'today' || S.view === 'outfits') render();
   } catch (e) { console.warn(e); } finally { wxBusy = false; }
 }
 function askWeather() {
@@ -692,9 +799,11 @@ async function addInspo(files) {
 }
 
 // ---------- views ----------
+const badge = it => { const b = it.review || Date.now() - (it.createdAt ?? 0) < 864e5 ? ['New', 'hot'] : it.dirty ? ['Wash', ''] : it.stored ? ['Stored', 'o'] : it.wears ? [`×${it.wears}`, ''] : null;
+  return b ? `<span class="tag ${b[1]} corner">${b[0]}</span>` : ''; };
 const itemCard = it => `<button class="item ${S.sel?.has(it.id) ? 'picked' : ''}" ${S.sel ? `data-selitem="${it.id}" aria-pressed="${S.sel.has(it.id)}"` : `data-open="${it.id}"`}>
-  <div class="ph spot ${it.dirty ? 'dirty' : ''}"><img src="${src(it)}" alt=""><i style="background:${it.color}"></i></div>
-  <b>${esc(it.name)}</b><span>${it.dirty ? 'In the laundry' : it.review ? 'New · check tags' : issueOf(it) ? 'Check tags' : fitLabel(it) + wornText(it)}</span></button>`;
+  <div class="ph spot ${it.dirty || it.stored ? 'dirty' : ''}"><img src="${src(it)}" alt=""><i style="background:${it.color}"></i>${badge(it)}</div>
+  <b>${esc(it.name)}</b><span>${it.dirty ? 'In the laundry' : it.stored ? 'Stored away' : it.review ? 'New · check tags' : issueOf(it) ? 'Check tags' : fitLabel(it) + wornText(it)}</span></button>`;
 const matchRow = (c, items) => `<div class="match glass"><i style="background:${c}"></i>${items.length
   ? `<div class="thumbs">${items.map(i => `<button data-open="${i.id}"><img src="${src(i)}" alt="${esc(i.name)}"></button>`).join('')}</div>`
   : '<em>Nothing in your closet near this color yet</em>'}</div>`;
@@ -725,7 +834,9 @@ function closetView() {
   const kindAt = i => { const n = Object.keys(KINDS).indexOf(i.kind); return n < 0 ? 99 : n; };
   const words = S.q.toLowerCase().split(/\s+/).filter(Boolean), hit = i => words.every(w => `${i.name} ${i.kind} ${colorName(i.color)} ${[].concat(i.vibe ?? []).join(' ')}`.toLowerCase().includes(w));
   const SORTS = { type: (a, b) => kindAt(a) - kindAt(b) || hexToHsl(a.color).l - hexToHsl(b.color).l, new: (a, b) => b.createdAt - a.createdAt, worn: (a, b) => (b.wears || 0) - (a.wears || 0), never: (a, b) => (a.wears || 0) - (b.wears || 0) || (a.lastWorn ?? 0) - (b.lastWorn ?? 0) };
-  const groups = CATS.map(k => [k, inColl.filter(i => i.cat === k && hit(i)).sort(SORTS[S.sort] ?? SORTS.type)]).filter(([, l]) => l.length); // tees with tees, dark to light
+  const vib = i => !S.vibeF || [].concat(i.vibe ?? []).includes(S.vibeF);
+  const groups = CATS.map(k => [k, inColl.filter(i => i.cat === k && hit(i) && vib(i)).sort(SORTS[S.sort] ?? SORTS.type)]).filter(([, l]) => l.length); // tees with tees, dark to light
+  const stored = S.items.filter(i => i.stored).length, shelf = (S.closetView ?? 'shelf') === 'shelf' && !S.sel;
   const dirty = S.items.filter(i => i.dirty).length, issues = S.items.filter(issueOf).length;
   const toReview = S.items.filter(i => i.review).length;
   const best = !c && !toReview && !S.pending.length && S.items.length >= 3 && getGaps()?.find(g => !isNeutral(g.ghost.color));
@@ -734,22 +845,26 @@ function closetView() {
     issues && `<button class="nudge glass" data-action="fixtags"><div><span class="mono">Tags that don't add up</span><b>Check ${issues} piece${issues > 1 ? 's' : ''}</b></div><span class="plus">Fix →</span></button>`,
     !c && S.items.length >= 5 && Date.now() - (S.profile?.lastBackup ?? 0) > 7 * 864e5 && `<button class="nudge glass" data-action="export"><div><span class="mono">${S.profile?.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up'}</span><b>Save a backup of ${S.items.length} pieces</b></div><span class="plus">Export →</span></button>`,
     best && `<button class="nudge glass" data-go="list" data-listtab="ideas">${ghostEl(best.ghost)}<div><span class="mono">Next best add</span><b>${esc(best.ghost.name)}</b></div><span class="plus">+${best.count} outfits</span></button>`].find(Boolean) || '' /* one banner at a time, so the clothes stay up top */}
-    <label class="collsel"><select data-collsel aria-label="Collection"><option value="">All clothes · ${S.items.length}</option><optgroup label="Smart">${Object.entries(SMART).map(([k, [n, f]]) => `<option value="smart:${k}" ${S.coll === 'smart:' + k ? 'selected' : ''}>${n} · ${f(S.items).length}</option>`).join('')}</optgroup><optgroup label="Yours">${S.colls.map(k => `<option value="${k.id}" ${S.coll === k.id ? 'selected' : ''}>${esc(k.name)} · ${k.ids.filter(byId).length}</option>`).join('')}</optgroup><option value="__new">+ New collection</option></select></label>
-    ${c && !c.smart ? `<div class="collbar"><button class="btn sm" data-action="collpick">Add pieces</button><button class="btn ghost sm" data-action="collfits">Outfits</button><button class="btn ghost sm" data-action="pack">Pack</button><button class="btn ghost sm" data-action="colldel">Delete</button></div>` : ''}
+    <div class="tbar">${capBtn()}<span class="sp"></span>${c && !c.smart ? `<button class="tag o" data-action="collpick">${ic('plus')} Pieces</button><button class="tag o" data-action="pack">Pack</button>` : ''}</div>
+    ${capBar()}
+    ${false ? `<div class="collbar"><button class="btn sm" data-action="collpick">Add pieces</button><button class="btn ghost sm" data-action="collfits">Outfits</button><button class="btn ghost sm" data-action="pack">Pack</button><button class="btn ghost sm" data-action="colldel">Delete</button></div>` : ''}
     <div class="ctools"><button class="btn ghost sm" data-action="selmode">${S.sel ? 'Done' : 'Select'}</button><input type="search" data-q placeholder="Search: black tee, baggy, streetwear" value="${esc(S.q)}" aria-label="Search your closet"><select data-sort aria-label="Sort">${[['type', 'By type'], ['new', 'Newest'], ['worn', 'Most worn'], ['never', 'Least worn']].map(([k, l]) => `<option value="${k}" ${S.sort === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+    <div class="tags ctags">${Object.keys(VIBES).map(v => `<button class="tag ${S.vibeF === v ? '' : 'o'}" data-vibef="${v}">${v}</button>`).join('')}<span class="sp"></span><button class="tag o" data-action="closetview" aria-label="Switch to ${shelf ? 'grid' : 'shelves'}">${shelf ? 'Grid' : 'Shelves'}</button></div>
     ${dirty ? `<div class="laundry"><span>${dirty} in the laundry · left out of outfits</span><button class="btn ghost sm" data-action="allclean">All clean</button></div>` : ''}
+    ${stored ? `<div class="laundry"><span>${stored} stored away for the season · left out of outfits</span></div>` : ''}
     ${S.q && !groups.length ? `<p class="sub">Nothing matches "${esc(S.q)}".</p>` : ''}
     ${groups.length > 1 ? `<div class="chips sticky">${groups.map(([k, l]) => `<button class="chip" data-jump="${k}">${k}<small>${l.length}</small></button>`).join('')}</div>` : ''}
-    ${c && !inColl.length ? `<div class="empty"><h2>${esc(c.name)} is empty</h2><p>Pull pieces in from your closet, then get outfits made only from this collection.</p><button class="btn" data-action="collpick">Add pieces</button></div>` : ''}
+    ${c && !inColl.length ? `<div class="empty"><h2>${esc(c.name)} is empty</h2><p>Pick its pieces once. Then Today, the builder and packing only use them.</p><button class="btn" data-action="collpick">Add pieces</button></div>` : ''}
     ${S.pending.length ? `<div class="grid">${S.pending.map(p => `<div class="item pending" data-pending="${p.id}"><div class="ph"><img src="${p.url}" alt=""></div><b>Processing</b><span>${p.status}</span></div>`).join('')}</div>` : ''}
-    ${S.sel ? `<div class="selbar"><span>${S.sel.size} selected</span><span class="row2">${S.sel.size ? `<select data-selcoll aria-label="Add to collection"><option value="">Add to…</option>${S.colls.map(k => `<option value="${k.id}">${esc(k.name)}</option>`).join('')}</select><button class="btn ghost sm" data-action="selwash">Laundry</button><button class="btn ghost sm" data-action="seldel">Delete</button>` : ''}</span></div>` : ''}
-    ${groups.map(([k, l]) => `<h3 class="sec" id="sec-${k}">${k}<small>${l.length}</small></h3><div class="grid">${l.map(itemCard).join('')}</div>`).join('')}`;
+    ${S.sel ? `<div class="selbar"><span>${S.sel.size} selected</span><span class="row2">${S.sel.size ? `<select data-selcoll aria-label="Add to a capsule"><option value="">Add to capsule…</option>${S.colls.map(k => `<option value="${k.id}">${esc(k.name)}</option>`).join('')}</select><button class="btn ghost sm" data-action="selwash">Laundry</button><button class="btn ghost sm" data-action="seldel">Delete</button>` : ''}</span></div>` : ''}
+    ${groups.map(([k, l]) => `<h3 class="sec" id="sec-${k}">${k}<small>${l.length}</small></h3><div class="${shelf ? 'shelf' : 'grid'}">${l.map(itemCard).join('')}</div>`).join('')}`;
 }
 
 function outfitsView() {
   const items = pool(), c = S.coll && collById(S.coll);
-  const top = head(`${S.saved.length} favorite${S.saved.length === 1 ? '' : 's'}`, 'Outfits') + subnav('tab', [['ideas', 'Today'], ['week', 'Week'], ['cal', 'Calendar'], ['saved', 'Favorites']])
-    + (c ? `<button class="anchor" data-action="uncoll">From ${esc(c.name)} ✕</button>` : '');
+  if (S.tab === 'ideas' || S.tab === 'history') { S.tab = 'cal'; if (render.ideas !== false) { S.view = 'today'; return todayView(); } } // old "ideas" links (collection outfits, color wheel, inspo) open Today
+  const top = head(`${S.log.length} logged · ${S.saved.length} saved`, 'Calendar') + subnav('tab', [['cal', 'Month'], ['week', 'Week'], ['saved', 'Favorites']])
+    + (c && S.tab === 'saved' ? capBar() : '');
   if (S.tab === 'week') return top + weekView();
   if (S.tab === 'cal') return top + calView();
   if (S.tab === 'history') {
@@ -774,11 +889,94 @@ function outfitsView() {
   return top + `<div class="chips">${modes.map(([k, m]) => `<button class="chip ${S.mode === k ? 'on' : ''}" data-mode="${k}">${k === 'palette' ? dots(S.palette.map(h => `hsl(${h} 70% 50%)`)) : k === 'inspo' ? dots(S.inspoColors) : ''}${m.label}</button>`).join('')}</div>
     ${isToday ? `<div class="occ">${[['', 'Any'], ...Object.entries(OCCASIONS).map(([k, o]) => [k, o.label])].map(([k, l]) => `<button class="pill ${(S.occ ?? '') === k ? 'on' : ''}" data-occ="${k}">${l}</button>`).join('')}</div><div class="wx">${w ? `<span><b>${tempText(w.t)}</b> ${WX[w.code] ?? ''} · ${w.t >= 24 ? 'no heavy layers' : w.t < 12 ? 'layer up' : 'anything goes'}</span>` : `<span>Five looks from every style</span>`}<span class="row2">${w ? '' : `<button class="btn ghost sm" data-action="weather">Use weather</button>`}<button class="btn ghost sm" data-action="shuffle">Shuffle</button></span></div>`
       : `<div class="blurb"><span>${MODES[S.mode].blurb}</span><span class="row2"><button class="btn ghost sm" data-action="shuffle">Shuffle</button></span></div>`}
-    ${S.anchor && byId(S.anchor) ? `<button class="anchor" data-action="unanchor"><img src="${src(byId(S.anchor))}" alt="">Built around ${esc(byId(S.anchor).name)} ✕</button>` : ''}
+    ${S.anchor && byId(S.anchor) ? `<button class="anchor" data-action="unanchor"><img src="${src(byId(S.anchor))}" alt="">Built around ${esc(byId(S.anchor).name)} ${ic('x')}</button>` : ''}
     ${S.ideas.length && isToday ? deckHtml(S.ideas) : S.ideas.length ? `<div class="feed">${S.ideas.map(outfitCard).join('')}</div>`
       : `<div class="empty"><h2>No ${MODES[S.mode]?.label ?? ''} matches</h2><p>${S.ideas.blocked
         ? `Most combos break a proportion rule: <b>${S.ideas.blocked.toLowerCase()}</b>. If a fit tag is wrong, tap the piece in your closet and fix it.`
         : S.mode === 'classic' ? 'Add more neutral basics.' : 'Your closet needs more colors that fit this rule. Try another style.'}</p></div>`}`;
+}
+
+// ---------- capsules: pick one and the whole app only uses its pieces (Today, builder, planning, packing) ----------
+const capName = () => S.coll ? collById(S.coll)?.name ?? 'All clothes' : 'All clothes';
+const capBtn = () => `<button class="tag ${S.coll ? 'hot' : 'o'} capbtn" data-action="capsules" aria-label="Capsule: ${esc(capName())}. Change">${ic('hanger')}${esc(capName())}${ic('down')}</button>`;
+// when a capsule is on, say so where it matters: only its pieces are used
+const capBar = () => S.coll ? `<div class="capbar"><span>Only from <b>${esc(capName())}</b> · ${owned().length} pieces</span><button data-capsel="">Use all clothes</button></div>` : '';
+async function useCapsule(id) {
+  S.coll = id || null; S.ideas = null; S.deck = null; S.cs = {};
+  S.profile = { k: 'me', ...S.profile, capsule: S.coll }; await put('profile', S.profile);
+}
+function openCapsules() {
+  const row = (id, name, n, own) => `<div class="caprow ${(S.coll ?? '') === id ? 'on' : ''}"><button class="capsel" data-capsel="${id}" aria-pressed="${(S.coll ?? '') === id}"><i>${ic('check')}</i><span><b>${esc(name)}</b><small>${n} piece${n === 1 ? '' : 's'}</small></span></button>
+    ${own ? `<span class="capacts"><button class="icon" data-capedit="${id}" aria-label="Choose pieces for ${esc(name)}">${ic('plus')}</button><button class="icon" data-capren="${id}" aria-label="Rename ${esc(name)}">${ic('edit')}</button><button class="icon" data-capdup="${id}" aria-label="Duplicate ${esc(name)}">${ic('copy')}</button><button class="icon" data-capdel="${id}" aria-label="Delete ${esc(name)}">${ic('trash')}</button></span>` : ''}</div>`;
+  showSheet(`<div class="pad caps"><div class="pickhead"><div><div class="eyebrow">Today, the builder and packing only use the one you pick</div><h2>Your capsules</h2></div>${closeBtn}</div>
+    ${row('', 'All clothes', S.items.length, false)}
+    ${S.colls.map(c => row(c.id, c.name, c.ids.filter(byId).length, true)).join('')}
+    ${S.colls.length ? '' : '<p class="sub">Make one for a trip, the club, work or the gym: pick its pieces once, and every look comes only from them.</p>'}
+    <span class="mono">Automatic</span>${Object.entries(SMART).map(([k, [n, f]]) => row('smart:' + k, n, f(S.items).length, false)).join('')}
+    <button class="btn wide" data-action="newcoll">${ic('plus')} Create capsule</button></div>`);
+}
+
+// ---------- Today: one card at a time, stable for the day ----------
+// The deck is saved per day + filters + weather band, so leaving and coming back shows the same looks. Shuffle makes a new one.
+const greet = () => { const h = new Date().getHours(); return h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
+const band = w => w ? (w.t < 12 ? 'cold' : w.t >= 24 ? 'hot' : 'mild') + (RAINY(w.code) ? '-rain' : '') : 'none';
+const deckSig = () => [dayKey(), S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
+function getDeck(items) {
+  if (S.deck?.sig === deckSig()) return S.deck;
+  const w = weatherNow(), list = S.mode === 'today' || !MODES[S.mode] ? todayPicks(items, w?.t) : generate(items, S.mode, { n: 12, palette: S.palette, inspo: S.inspoColors });
+  S.deck = { k: 'deck', sig: deckSig(), at: 0, looks: list.map(o => ({ key: o.key, ids: o.items.map(p => p.id), mode: o.mode ?? S.mode, note: o.note })), blocked: list.blocked ?? null };
+  put('profile', S.deck); return S.deck;
+}
+const pad2 = n => String(n).padStart(2, '0');
+const tintOf = ps => colored(ps)[0]?.color ?? 'var(--tile)';
+const colored = ps => ps.filter(p => p.cat !== 'Accessories' && !isNeutral(p.color));
+// The card's headline is its vibe ("unapologetic"), from your style notes when a combo hits, else the style rule.
+const vibeOf = o => { const c = combo(o.items); return c ? [c.label, c.text] : [MODES[o.mode]?.label ?? 'Your pick', null]; };
+function deckCard(o, i, n, cls) {
+  const [title, cmb] = vibeOf(o), w = weatherNow(), worn = S.log.find(l => l.day === dayKey())?.key === o.key;
+  const tags = [cmb && `<span class="tag">${esc(cmb)}</span>`, w && `<span class="tag o">${esc(wxWhy(o).split(' · ')[1] ?? '')}</span>`, `<span class="tag o">${o.items.length} pcs</span>`, MODES[o.mode] && `<span class="tag o">${MODES[o.mode].label}</span>`].filter(Boolean).join('');
+  return `<article class="dcard ${cls}" data-key="${o.key}" style="--tint:${tintOf(o.items)}" aria-label="Look ${i + 1} of ${n}: ${esc(o.items.map(p => `${colorName(p.color)} ${p.kind || p.cat}`).join(', '))}">
+    <div class="dtop"><span class="mono">${pad2(i + 1)} / ${pad2(n)}</span>${worn ? '<span class="tag hot">Worn today</span>' : isFav(o.key) ? '<span class="tag">Saved</span>' : ''}</div>
+    <h2 class="display dtitle">${esc(title)}</h2>
+    <div class="flatwrap">${flat(o.items)}</div>
+    <div class="tags">${tags}</div><i class="hint" aria-hidden="true"></i></article>`;
+}
+function todayView() {
+  const items = pool(), w = weatherNow(), c = S.coll && collById(S.coll);
+  if (!MODES[S.mode] && S.mode !== 'today') S.mode = 'today';
+  if (!S.profile?.wx && !S.profile?.wxAsked) { S.profile = { k: 'me', ...S.profile, wxAsked: true }; put('profile', S.profile); setTimeout(askWeather, 400); } // once: the phone asks to share location
+  else if (S.items.length >= 5 && Date.now() - (S.profile?.lastBackup ?? 0) > 7 * 864e5 && S.profile?.nudged !== dayKey()) { S.profile = { k: 'me', ...S.profile, nudged: dayKey() }; put('profile', S.profile);
+    setTimeout(() => toast(S.profile.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up', { label: 'Back up', fn: exportBackup }), 900); } // once a day, a week after the last backup
+  const date = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const nf = (S.mode !== 'today' ? 1 : 0) + (S.occ ? 1 : 0);
+  const top = `<header class="thead"><div><div class="eyebrow">${greet()} · ${date}</div><h1>Today</h1></div><div class="right">${streakChip()}</div></header>
+    <div class="tbar">${capBtn()}${w ? `<span class="tag">${tempText(w.t)} ${esc(WX[w.code] ?? '')}</span>${w.lo != null && w.lo < w.t - 6 ? `<span class="tag o">${tempText(w.lo)} later</span>` : ''}` : `<button class="tag o" data-action="weather">+ Weather</button>`}
+      <span class="sp"></span><button class="tag o" data-action="filters" aria-label="Filter">${ic('filter')}${nf ? ` ${nf}` : ''}</button><button class="tag o" data-action="shuffle" aria-label="Shuffle">${ic('shuffle')}</button></div>`;
+  if (!complete(items)) return top + `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs at least a top, bottoms and shoes.` : 'Add at least one top, one bottom and one pair of shoes. Then this is where your looks land every morning.'}</p>
+    <button class="btn" data-action="${c ? 'collpick' : 'add'}">${c ? 'Add pieces' : 'Add clothes'}</button></div>`;
+  const d = getDeck(items), looks = d.looks.map(l => ({ ...l, items: l.ids.map(byId).filter(Boolean) })).filter(l => complete(l.items)), at = Math.min(d.at, looks.length);
+  if (!looks.length) return top + `<div class="empty"><h2>No ${MODES[S.mode]?.label ?? ''} matches</h2><p>${d.blocked ? `Most combos break a proportion rule: <b>${esc(d.blocked.toLowerCase())}</b>. If a fit tag is wrong, fix it on the piece.` : 'Your closet needs more colors for this rule. Try another filter.'}</p><button class="btn" data-action="filters">Change filter</button></div>`;
+  const cur = looks[at], next = looks[at + 1];
+  return top + capBar() + `<div class="stack">${next ? deckCard(next, at + 1, looks.length, 'under') : ''}${cur ? deckCard(cur, at, looks.length, 'live') : `<div class="dcard end"><h2 class="display dtitle">That's today's ${looks.length}</h2><p class="sub">Shuffle for a fresh deck, or build one yourself.</p><div class="row"><button class="btn" data-action="shuffle">Shuffle</button><button class="btn ghost" data-go="build">Build</button></div><button class="btn ghost wide" data-deck="back">Start over</button></div>`}</div>
+    ${cur ? `<div class="dbtns"><button class="round" data-deck="next" aria-label="Next look">${ic('x')}</button><button class="round ${isFav(cur.key) ? 'on' : ''}" data-deck="fav" aria-label="Save look">${heart}</button><button class="btn go" data-deck="wear">Wear it ${ic('arrow')}</button></div>
+    <p class="mono swipehint">Swipe ← next · → save · ↑ wear · tap to open</p>` : ''}`;
+}
+async function deckAct(act) {
+  const d = S.deck, l = d?.looks[d.at]; if (!l) return;
+  const o = { key: l.key, items: l.ids.map(byId).filter(Boolean), mode: l.mode };
+  if (act === 'fav' && !isFav(l.key)) { const rec = { key: l.key, ids: l.ids, mode: l.mode, savedAt: Date.now() }; await put('outfits', rec); S.saved.unshift(rec); syncTaste(); toast('Saved', { label: 'Undo', fn: async () => { await del('outfits', rec.key); S.saved = S.saved.filter(x => x.key !== rec.key); syncTaste(); render(); } }); }
+  if (act === 'wear') { const prev = S.log.find(x => x.day === dayKey()); await logDay(dayKey(), o, true);
+    toast(`Logged · day ${streaks(S.log).cur}`, { label: 'Undo', fn: async () => { await unlogDay(dayKey()); if (prev) await logDay(dayKey(), { key: prev.key, items: prev.ids.map(byId).filter(Boolean) }, true); render(); } });
+    render(); return; } // the worn card stays on top with its sticker: that's today's fit
+  d.at++; put('profile', d); render();
+}
+function openFilters() {
+  const modes = [['today', 'For today'], ...Object.entries(MODES).filter(([k, m]) => !m.hidden || (k === 'palette' && S.palette) || (k === 'inspo' && S.inspoColors)).map(([k, m]) => [k, m.label])];
+  showSheet(`<div class="pad filters"><div class="pickhead"><div><div class="eyebrow">Today</div><h2>Filter</h2></div>${closeBtn}</div>
+    <span class="mono">Style</span><div class="tags">${modes.map(([k, l]) => `<button class="tag ${S.mode === k ? '' : 'o'}" data-mode="${k}">${l}</button>`).join('')}</div>
+    <span class="mono">Occasion</span><div class="tags">${[['', 'Any'], ...Object.entries(OCCASIONS).map(([k, o]) => [k, o.label])].map(([k, l]) => `<button class="tag ${(S.occ ?? '') === k ? '' : 'o'}" data-occ="${k}">${l}</button>`).join('')}</div>
+    <span class="mono">Capsule</span><div class="tags">${capBtn()}</div>
+    <button class="btn wide" data-action="close">Show looks</button></div>`);
 }
 
 // Builder: one card per slot (like Cladwell). Tap a card or Swap to pick from a list, best matches first.
@@ -787,7 +985,8 @@ const isFav = k => S.saved.some(s => s.key === k);
 // Today's picks, one big card at a time: swipe for the next. Each card says why it fits the weather.
 const wxWhy = o => { const w = weatherNow(); if (!w) return '';
   const rain = RAINY(w.code), why = w.t < 12 ? (o.items.some(p => p.cat === 'Layers') ? 'layered up' : 'warmest pieces') : w.t >= 24 ? 'light, nothing heavy' : 'mild, anything goes';
-  return `${tempText(w.t)}${rain ? ' and rain' : ''} · ${why}${rain ? ', no suede' : ''}`; };
+  const later = w.lo != null && w.lo < w.t - 6 && w.t >= 12 ? ', bring a layer for later' : '';
+  return `${tempText(w.t)}${rain ? ' and rain' : ''} · ${why}${rain ? ', no suede' : ''}${later}`; };
 const deckHtml = list => `<div class="deck">${list.map((o, i) => `<article class="dcard"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in builder">${flat(o.items)}</button>
     <div class="dmeta">${wxWhy(o) ? `<span class="wxline">${wxWhy(o)}</span>` : ''}<p>${esc(o.note ?? '')}</p>
       <div class="dacts"><span class="mono">${i + 1} / ${list.length}</span><button class="icon" data-nope="${o.key}" aria-label="Not for me">${svg('M7 14V4M7 14l4 6c1.2 0 2-1 1.7-2.2L12 14h5.5a2 2 0 0 0 2-2.3l-1-6A2 2 0 0 0 16.5 4H7M7 14H4V4h3')}</button><button class="icon ${isFav(o.key) ? 'on' : ''}" data-save="${o.key}" aria-label="Favorite">${heart}</button><button class="btn sm go" data-wear="${o.key}">Wear today</button></div></div></article>`).join('')}</div>
@@ -796,7 +995,7 @@ const verdictHtml = o => { if (!complete(o)) return `<p class="verdict" id="verd
   const v = bestMode(o);
   return `<p class="verdict ${v?.score == null ? 'bad' : ''}" id="verdict">${v?.score == null ? svg('M12 4 2.5 20h19L12 4zM12 10v4M12 17v.5') : svg('M5 12l5 5 9-10')}${v?.score == null ? `Doesn't work · ${esc(v?.note ?? 'needs a top, bottoms and shoes')}` : `Works as ${MODES[v.mode].label} · ${esc(v.note)}`}</p>${v?.score != null && fixTip(o) ? `<p class="verdict hint">${svg('M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z')}${esc(fixTip(o))}</p>` : ''}`; };
 const actionsHtml = o => { const k = keyOf(o), worn = S.log.find(l => l.day === dayKey())?.key === k, off = complete(o) ? '' : 'disabled';
-  return `<div class="actions" id="bactions"><button class="btn ${isFav(k) ? '' : 'ghost'} sm" data-save="${k}" ${off}>${isFav(k) ? '♥ Favorited' : '♡ Favorite'}</button><button class="btn ghost sm" data-action="planthis" ${off}>Plan</button><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${k}" ${off}>${worn ? 'Logged today ✓' : 'Wear today'}</button></div>`; };
+  return `<div class="actions" id="bactions"><button class="btn ${isFav(k) ? '' : 'ghost'} sm" data-save="${k}" ${off}>${heart} ${isFav(k) ? 'Saved' : 'Save'}</button><button class="btn ghost sm" data-action="planthis" ${off}>Plan</button><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${k}" ${off}>${worn ? 'Logged today ✓' : 'Wear today'}</button></div>`; };
 const mini = (r, on) => { const items = r.ids.map(byId).filter(Boolean);
   return complete(items) ? `<div class="look"><button data-buildkey="${r.key}" aria-label="Open look">${flat(items)}</button><button class="icon ${on ? 'on' : ''}" data-save="${r.key}" aria-label="Favorite">${heart}</button></div>` : ''; };
 // What you actually wore (logged with Wear today or on the calendar), newest first. Looks you only glanced at in the builder don't count.
@@ -807,23 +1006,33 @@ const recentHtml = () => { const list = wornLooks().filter(h => h.key !== keyOf(
 // What you can pick from: the collection, plus whatever the outfit is already wearing (it may come from outside it).
 const buildItems = () => [...new Set([...pool(), ...S.build])];
 const PICK_TITLE = { Tops: 'Pick a top', Layers: 'Pick a layer', Bottoms: 'Pick bottoms', Shoes: 'Pick shoes', Hat: 'Pick a hat', Accessory: 'Pick an accessory' };
+// Builder = one flat-lay canvas. Each piece sits where it would lie and swipes in place; tap a piece for its list, lock, remove.
+const REQ = ['Tops', 'Bottoms', 'Shoes'];
 function buildView() {
-  const items = buildItems(), o = S.build, has = s => items.some(SLOTS[s]), worn = s => o.some(SLOTS[s]);
-  const card = s => { const cur = o.find(SLOTS[s]), lab = SLOT_LABEL[s], cs = cur && carouselFor(s, cur);
-    return cur ? `<div class="bcard"><span class="lab">${lab}<em>${cs.at + 1}/${cs.ids.length}</em></span><div class="carousel" data-cslot="${s}" aria-label="Swipe for other ${lab.toLowerCase()} options">${cs.ids.map(id => `<img src="${src(byId(id))}" alt="${esc(byId(id).name)}">`).join('')}</div><span class="nm">${esc(cur.name)}</span>
-        <div class="ops"><button data-swap="${s}">⇄ Swap</button><button data-lock="${s}" aria-pressed="${S.locks.has(s)}" aria-label="${S.locks.has(s) ? 'Unlock' : 'Lock'} ${lab.toLowerCase()}">${S.locks.has(s) ? '🔒' : '🔓'}</button><button data-unwear="${s}">Remove</button></div></div>`
-      : `<button class="bcard add" data-swap="${s}"><b>+</b>Add ${lab.toLowerCase()}</button>`; };
-  // Optional slots you're not wearing are small "+" buttons, not big empty boxes. With no layer they fill the 4th cell.
-  const main = ['Layers', 'Tops', 'Bottoms', 'Shoes'].filter(s => s !== 'Layers' || worn(s)), empty = OPTIONAL.filter(s => has(s) && !worn(s) && o.length);
-  const adds = empty.map(s => `<button class="pill" data-swap="${s}">+ ${SLOT_LABEL[s]}</button>`).join(''), inGrid = main.length % 2 && empty.length;
-  return `<header><div><div class="eyebrow">Builder${S.coll ? ` · ${esc(collById(S.coll)?.name ?? '')}` : ''}</div><h1>Outfit</h1></div><div class="right">${S.past.length ? `<button class="btn ghost sm" data-action="undobuild">Undo</button>` : ''}${o.length ? `<button class="btn ghost sm" data-action="clearbuild">Clear</button>` : ''}</div></header>
-    <div class="build">${verdictHtml(o)}
-      ${o.length && !complete(o) ? `<div class="bhead"><button class="btn ghost sm" data-action="fillbuild">Fill the rest for me</button></div>` : complete(o) ? `<div class="bhead"><button class="btn ghost sm" data-action="shufflebuild">Shuffle${S.locks.size ? ' the unlocked' : ''}</button><button class="btn ghost sm" data-action="why">Why it works</button></div>` : ''}
-      <div class="bgrid">${main.map(card).join('')}${inGrid ? `<div class="bcard more"><span class="lab">Add</span>${adds}</div>` : ''}</div>
-      ${EXTRAS.some(worn) ? `<div class="looks-h"><span>Hat &amp; accessories</span></div><div class="bgrid small">${EXTRAS.filter(worn).map(card).join('')}</div>` : ''}
-      ${!inGrid && adds ? `<div class="addrow">${adds}</div>` : ''}
-      ${recentHtml()}
+  const items = buildItems(), o = S.build, has = sl => items.some(SLOTS[sl]), worn = sl => o.some(SLOTS[sl]);
+  const slots = [...new Set([...o.map(slotOf).filter(Boolean), ...REQ])], L = flatLayout(slots), ok = complete(o), v = ok ? bestMode(o) : null;
+  const pct = v?.score == null ? 0 : Math.max(5, Math.min(99, Math.round(100 * (1 - Math.exp(-Math.max(0, v.score) / 5))))); // match ring: diminishing curve, 90+ is rare
+  const box = sl => { const [x, y, w, h] = L[sl], st = `left:${x}%;top:${y}%;width:${w}%;height:${h}%`, cur = o.find(SLOTS[sl]), lab = SLOT_LABEL[sl];
+    if (!cur) return `<button class="cvs empty" style="${st}" data-swap="${sl}"><span>+ ${lab}</span></button>`;
+    const cs = carouselFor(sl, cur);
+    return `<div class="cvs ${S.dropped === sl ? 'drop' : ''}" style="${st}"><div class="carousel" data-cslot="${sl}" aria-label="${lab}: ${esc(cur.name)}. Swipe for other options, tap for the list">${cs.ids.map(id => `<button data-swap="${sl}" tabindex="-1"><img src="${src(byId(id))}" alt="${esc(byId(id).name)}"></button>`).join('')}</div>
+      <span class="slab">${S.locks.has(sl) ? ic('lock') : ''}${cs.at + 1}/${cs.ids.length}</span></div>`; };
+  S.dropped = null;
+  const why = ok ? explain(o) : null, tip = ok && v?.score != null ? fixTip(o) : null;
+  const tags = why ? why.rows.filter(([, val]) => Math.abs(val) >= 0.25).slice(0, 5)
+    .map(([l, val]) => `<span class="tag ${val < 0 ? 'bad' : val >= 1 ? '' : 'o'}">${val < 0 ? '− ' : ''}${esc(l.replace(/^Color rule: /, '').replace(/ · .*|, .*/, '').toLowerCase())}</span>`).join('') : '';
+  const adds = ['Layers', 'Hat', 'Accessory'].filter(sl => has(sl) && !worn(sl)).map(sl => `<button class="tag o" data-swap="${sl}">+ ${SLOT_LABEL[sl]}</button>`).join('');
+  return `<header><div><div class="eyebrow">Builder</div><h1>Build</h1></div>
+      <div class="right">${ok ? `<button class="ring ${v?.score == null ? 'bad' : ''}" style="--p:${pct}" data-action="why" aria-label="Match ${pct} of 100. Why it works"><b>${v?.score == null ? '✕' : pct}</b><span>match</span></button>` : ''}</div></header>
+    <div class="build"><div class="tbar">${capBtn()}</div>${capBar()}
+      <p class="verdict ${v && v.score == null ? 'bad' : ''}">${!o.length ? 'Start with any piece. Best matches come first.' : !ok ? 'Add the rest. Best matches come first.' : v.score == null ? `Clashes · ${esc(v.note ?? '')}` : `Works as ${MODES[v.mode].label} · ${esc(v.note)}`}</p>
+      <div class="canvas flat">${slots.map(box).join('')}</div>
+      ${tags || tip || adds ? `<div class="tags whytags">${tags}${tip ? `<span class="tag bad">${esc(tip)}</span>` : ''}${adds}</div>` : ''}
+      <div class="tools">${S.past.length ? `<button class="tag o" data-action="undobuild">Undo</button>` : ''}${o.length ? `<button class="tag o" data-action="clearbuild">Clear</button>` : ''}
+        ${o.length && !ok ? `<button class="tag" data-action="fillbuild">Fill the rest</button>` : ''}${ok ? `<button class="tag o" data-action="shufflebuild">${ic('shuffle')} Shuffle${S.locks.size ? ' unlocked' : ''}</button><button class="tag o" data-action="why">Why it works</button>` : ''}
+        <button class="tag o" data-go="inspo">From a pic</button></div>
       ${actionsHtml(o)}
+      ${recentHtml()}
     </div>`;
 }
 // Swipe a slot: what you're wearing first, then every other option for it, best match first.
@@ -858,7 +1067,9 @@ function openSwap(slot) {
   const opts = rankSwaps(buildItems(), S.build, slot), cur = S.build.find(SLOTS[slot])?.id;
   const tile = r => `<button class="${r.item.id === cur ? 'on' : ''}" data-wearpick="${slot}:${r.item.id}"><img src="${src(r.item)}" alt=""><span>${esc(r.item.name)}</span>${r.score == null && r.note ? `<small class="why">${esc(r.note)}</small>` : ''}</button>`;
   const good = opts.filter(r => r.score != null), rest = opts.filter(r => r.score == null), best = S.build.length && good[0];
+  const wearing = S.build.some(SLOTS[slot]);
   showSheet(`<div class="pickhead"><div><div class="eyebrow">Outfit</div><h2>${PICK_TITLE[slot]}</h2></div>${closeBtn}</div>
+    ${wearing ? `<div class="tags slotops"><button class="tag ${S.locks.has(slot) ? '' : 'o'}" data-lock="${slot}">${ic(S.locks.has(slot) ? 'lock' : 'unlock')} ${S.locks.has(slot) ? 'Locked' : 'Lock'}</button><button class="tag o" data-unwear="${slot}">Remove</button></div>` : ''}
     ${best ? `<p class="pickbest"><b>Best match: ${esc(best.item.name)}</b><span class="sub">${esc(best.note ?? '')}</span></p>` : ''}
     ${good.length ? `<p class="pickh">Goes with this outfit</p><div class="pickgrid">${good.map(tile).join('')}</div>` : ''}
     ${rest.length ? `<p class="pickh">${good.length ? 'Also yours · clashes a bit' : 'Nothing here matches perfectly'}</p><div class="pickgrid">${rest.map(tile).join('')}</div>` : ''}`);
@@ -904,7 +1115,7 @@ function openPlanPicker(k) {
 }
 // ---------- calendar: what you wore, any day ----------
 // Log a look for a day (today or a past day you forgot). Replaces that day's look; wear counts follow.
-async function logDay(day, o) {
+async function logDay(day, o, quiet = false) {
   const prev = S.log.find(l => l.day === day);
   if (prev?.key === o.key) return toast(day === dayKey() ? 'Already logged for today' : 'Already logged for that day');
   const before = new Set(badges(progressCtx()).filter(b => b.done).map(b => b.id));
@@ -915,7 +1126,7 @@ async function logDay(day, o) {
   const entry = { day, key: o.key, ids: o.items.map(i => i.id), mode, at };
   await put('log', entry); S.log = [...S.log.filter(l => l.day !== day), entry]; syncTaste();
   const fresh = badges(progressCtx()).find(b => b.done && !before.has(b.id));
-  toast(fresh ? `Badge unlocked · ${fresh.name}` : day !== dayKey() ? 'Logged' : prev ? "Swapped today's fit" : `Day ${streaks(S.log).cur} streak`);
+  if (!quiet || fresh) toast(fresh ? `Badge unlocked · ${fresh.name}` : day !== dayKey() ? 'Logged' : prev ? "Swapped today's fit" : `Day ${streaks(S.log).cur} streak`);
 }
 async function unlogDay(day) {
   const prev = S.log.find(l => l.day === day); if (!prev) return;
@@ -1036,6 +1247,7 @@ function inspoView() {
     <span class="pals">${on.map(h => `<i style="background:${h}"></i>`).join('')}<span class="mono">${[...new Set(on.map(colorName))].slice(0, 3).join(' · ')}</span></span></button>`; }).join('')}</div>`;
 }
 
+navigator.storage?.estimate?.().then(e => { S.storage = e.usage > 0 ? `${Math.round(e.usage / 1e6)} MB${e.quota ? ` of ${Math.round(e.quota / 1e9 * 10) / 10} GB` : ''}` : null; }).catch(() => {});
 function meView() {
   const st = streaks(S.log), items = S.items, p = S.profile ?? {}, m = p.measure ?? {};
   const priced = items.filter(i => i.price > 0), value = priced.reduce((t, i) => t + i.price, 0);
@@ -1072,7 +1284,8 @@ function meView() {
     <h3><span>Ask Claude</span></h3>
     <p class="sub">Copies your closet and your style rules as text. Paste it into a Claude chat on any device and ask what to wear.</p>
     <button class="btn ghost sm" data-action="copyclaude">Copy closet for Claude</button>
-    <p class="mono version">Version ${VERSION}</p>`;
+    <p class="mono version">Version ${VERSION}${S.storage ? ` · using ${S.storage}` : ''}</p>
+    <a class="btn ghost wide" href="v2/">Open the previous version (v2.4)</a><p class="sub center">Same closet, same data. Use it if something here breaks.</p>`;
 }
 
 function progressView() {
@@ -1112,8 +1325,8 @@ function paintWheel(full = true) {
   const sl = document.getElementById('light'); if (sl) sl.value = l;
 }
 
-const VIEWS = { closet: closetView, outfits: outfitsView, build: buildView, inspo: inspoView, list: listView, me: meView, progress: progressView };
-const NAV_OF = { progress: 'me', list: 'me' };
+const VIEWS = { today: todayView, closet: closetView, outfits: outfitsView, build: buildView, inspo: inspoView, list: listView, me: meView, progress: progressView };
+const NAV_OF = { progress: 'me', list: 'me', inspo: 'build' };
 function render() {
   const app = document.getElementById('app'), scrollers = () => document.querySelectorAll('.strip, .colls, .chips, .deck, .occ');
   const keep = render.view === S.view ? [...scrollers()].map(e => e.scrollLeft) : []; // swapping in the builder keeps each strip where it was
@@ -1123,8 +1336,7 @@ function render() {
   if (S.view === 'build') document.querySelectorAll('.carousel').forEach(c => { c.scrollLeft = (S.cs[c.dataset.cslot]?.at ?? 0) * c.clientWidth; });
   if (render.qFocus) { const q = document.querySelector('[data-q]'); q?.focus(); q?.setSelectionRange(q.value.length, q.value.length); render.qFocus = false; }
   if (S.view === 'inspo' && S.inspoTab === 'wheel') paintWheel();
-  const add = document.querySelector('nav .add'), ins = S.view === 'inspo';
-  add.dataset.action = ins ? 'addinspo' : 'add'; add.setAttribute('aria-label', ins ? 'Add inspo' : 'Add clothes');
+  const add = document.querySelector('nav .add'); add.dataset.action = 'add'; add.setAttribute('aria-label', 'Add clothes, inspo or today\'s fit');
   document.querySelectorAll('nav [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === (NAV_OF[S.view] ?? S.view)));
 }
 
@@ -1155,15 +1367,19 @@ const accHtml = it => { const acc = (it.accents ?? []).filter(a => !isShade(a, i
   return acc.length ? `<div class="cell"><span>Accent colors</span><span class="mono acchint">tap × to remove</span><span class="accs">${acc.map(h => `<button type="button" data-accdel="${it.id}|${h}" aria-label="Remove ${colorName(h)}"><i style="background:${h}">×</i></button>`).join('')}</span></div>` : ''; };
 function openSheet(id) {
   const it = byId(id), left = S.items.filter(i => i.review).length;
-  showSheet(`<div class="hero spot"><img src="${src(it)}" alt="">${closeBtn}</div>
-    <div class="tools"><button type="button" data-rotate="${it.id}" class="${it.review && ['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? 'hl' : ''}">↻ Rotate</button><button type="button" data-recut="${it.id}">Remove background</button><button type="button" data-touchup="${it.id}">Touch up</button><button type="button" data-replace="${it.id}">Replace photo</button></div>
+  const cpw = it.price > 0 && it.wears ? ` · ${money(it.price / it.wears)}/wear` : '', n = S.items.filter(i => i.review).indexOf(it) + 1;
+  showSheet(`<div class="hero spot"><i class="grab" aria-hidden="true"></i><img src="${src(it)}" alt="">${closeBtn}</div>
   <form>
-    <div class="stat mono">${it.review ? `AI guessed these. Fix anything wrong${['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? ' · is it upright? tap ↻ Rotate' : ''}` : wornText(it)}</div>
+    <div class="phead"><h2 class="display pname">${esc(it.name)}</h2>
+      <div class="tags">${it.review ? `<span class="tag hot">New${left > 1 ? ` · ${n} of ${left}` : ''}</span>` : ''}${it.dirty ? '<span class="tag hot">In the laundry</span>' : ''}<span class="tag o">${colorName(it.color)}</span>${it.cat === 'Accessories' ? '' : `<span class="tag o">${(FITS[it.cat] ?? FITS.default)[it.fit ?? 1]}</span>`}${it.kind ? `<span class="tag o">${esc(it.kind)}</span>` : ''}<span class="tag o">${it.wears ? `Worn ${it.wears}×${cpw}` : 'Never worn'}</span></div></div>
+    ${it.review ? `<div class="review"><p>The AI tagged it as above. Right?</p><div class="row"><button type="button" class="btn go" data-confirm="${it.id}">Looks right${left > 1 ? ' · next' : ''}</button><button type="button" class="btn ghost" data-action="opendetails">Fix tags</button></div></div>` : ''}
     ${issueOf(it) ? `<div class="issue"><span>${esc(issueOf(it).text)}</span><span class="row"><button type="button" class="btn sm" data-fixtag="${it.id}|${issueOf(it).fix}">${issueOf(it).label}</button><button type="button" class="btn ghost sm" data-tagok="${it.id}">It's right</button></span></div>` : ''}
     <div class="pieceacts"><button type="button" class="btn full" data-made="${it.id}">See what you can make with this</button>
       <div class="row"><button type="button" class="btn ghost" data-buildwith="${it.id}">Build with it</button><button type="button" class="btn ghost" data-wheel="${it.id}">Match color</button></div></div>
     <div id="made"></div>
     ${looksWith(it)}
+    <details class="more" ${it.review ? 'open' : ''}><summary><span>Details &amp; tags</span><span class="mono">photo, type, fit, color, vibe</span></summary>
+    <div class="tools"><button type="button" data-rotate="${it.id}" class="${it.review && ['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? 'hl' : ''}">${ic('rotate')} Rotate</button><button type="button" data-recut="${it.id}">Remove background</button><button type="button" data-touchup="${it.id}">Touch up</button><button type="button" data-replace="${it.id}">Replace photo</button></div>
     <div class="group">
       <label class="cell"><span>Name</span><input name="name" value="${esc(it.name)}"></label>
       <label class="cell"><span>Category</span><select name="cat">${CATS.map(c => `<option ${c === it.cat ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
@@ -1179,11 +1395,13 @@ function openSheet(id) {
       <div id="accbox">${accHtml(it)}</div>
       <label class="cell"><span>Graphic / pattern</span><input type="checkbox" class="switch" name="patterned" ${it.patterned ? 'checked' : ''}></label>
       <label class="cell"><span>In the laundry</span><input type="checkbox" class="switch" name="dirty" ${it.dirty ? 'checked' : ''}></label>
+      <label class="cell"><span>Stored away (off season)</span><input type="checkbox" class="switch" name="stored" ${it.stored ? 'checked' : ''}></label>
       <label class="cell"><span>Price paid</span><input name="price" inputmode="decimal" placeholder="Add price" value="${it.price ?? ''}"></label>
     </div>
-    ${S.colls.length ? `<div class="incoll"><span class="mono">Collections</span><div>${S.colls.map(c => `<button type="button" class="pill ${c.ids.includes(it.id) ? 'on' : ''}" data-collitem="${it.id}" data-collid="${c.id}">${esc(c.name)}</button>`).join('')}</div></div>` : ''}
-    ${it.review ? `<button type="button" class="btn" data-confirm="${it.id}">Looks right${left > 1 ? ` · ${left - 1} more` : ''}</button>` : ''}
-    <button type="button" class="btn danger" data-del="${it.id}">Delete item</button>
+    ${S.colls.length ? `<div class="incoll"><span class="mono">In capsules</span><div>${S.colls.map(c => `<button type="button" class="pill ${c.ids.includes(it.id) ? 'on' : ''}" data-collitem="${it.id}" data-collid="${c.id}">${esc(c.name)}</button>`).join('')}</div></div>` : ''}
+    ${it.review ? `<button type="button" class="btn go" data-confirm="${it.id}">Looks right${left > 1 ? ' · next' : ''}</button>` : ''}
+    </details>
+    <button type="button" class="btn danger" data-del="${it.id}">Delete piece</button>
   </form>`);
   openItem = id; // after showSheet, which clears it
   const cp = sheet.querySelector('#cpick'), on = cp.querySelector('.on'); if (on) cp.scrollLeft = on.offsetLeft - (cp.clientWidth - on.offsetWidth) / 2; // chosen color in view
@@ -1191,6 +1409,7 @@ function openSheet(id) {
     const f = e.currentTarget.elements, price = parseFloat(f.price.value.replace(/[^0-9.]/g, ''));
     Object.assign(it, { name: f.name.value, cat: f.cat.value, kind: f.kind.value, fit: +f.fit.value, color: f.color.value, patterned: f.patterned.checked, price: price > 0 ? price : null });
     if (f.dirty.checked) it.dirty = true; else delete it.dirty;
+    if (f.stored.checked) it.stored = true; else delete it.stored;
     if (f.material.value) it.material = f.material.value; else delete it.material;
     if (e.target.name === 'dress') it.dress = +f.dress.value;
     if (e.target.name === 'cat') { f.fit.innerHTML = fitOptions(it); f.fit.closest('label').hidden = it.cat === 'Accessories'; f.kind.innerHTML = kindOptions(it); }
@@ -1202,13 +1421,13 @@ function openSheet(id) {
 
 function openPicker() {
   const c = collById(S.coll), order = i => CATS.indexOf(i.cat);
-  showSheet(`<div class="pickhead"><div><div class="eyebrow">Pull into</div><h2>${esc(c.name)}</h2></div><button class="btn sm" data-action="close">Done</button></div>
+  showSheet(`<div class="pickhead"><div><div class="eyebrow">Tap pieces in or out · ${c.ids.filter(byId).length} in</div><h2>${esc(c.name)}</h2></div><button class="btn sm" data-action="close">Done</button></div>
     <div class="pickgrid">${S.items.slice().sort((a, b) => order(a) - order(b)).map(i => `<button class="${c.ids.includes(i.id) ? 'on' : ''}" data-collitem="${i.id}"><img src="${src(i)}" alt=""><span>${esc(i.name)}</span></button>`).join('')}</div>`);
 }
 
 function openNewColl() {
   const have = new Set(S.colls.map(c => c.name.toLowerCase()));
-  showSheet(`<form class="newcoll" id="newcoll"><div class="pickhead"><div><div class="eyebrow">New</div><h2>Collection</h2></div>${closeBtn}</div>
+  showSheet(`<form class="newcoll" id="newcoll"><div class="pickhead"><div><div class="eyebrow">New capsule · pick its pieces next</div><h2>Capsule</h2></div>${closeBtn}</div>
     <input name="name" placeholder="Miami trip, Club, Work…" required autocomplete="off" maxlength="40">
     <div class="sugg">${PRESET_COLLS.filter(n => !have.has(n.toLowerCase())).map(n => `<button type="button" class="pill" data-collname="${n}">${n}</button>`).join('')}</div>
     <button class="btn wide">Create &amp; add pieces</button></form>`);
@@ -1355,24 +1574,26 @@ async function importBackup(file) {
     const b = JSON.parse(await file.text()), arr = x => Array.isArray(x) ? x : [], str = x => typeof x === 'string';
     if (b.app !== 'closet' || !Array.isArray(b.items)) throw new Error('not a closet backup');
     const hex = x => /^#[0-9a-f]{6}$/i.test(x), pic = x => /^data:image\//.test(x), blob = async u => (await fetch(u)).blob();
-    const items = b.items.filter(i => str(i?.id) && CATS.includes(i.cat) && hex(i.color) && pic(i.img));
+    // Merge, phone wins: anything already here (same id, same day, same key) stays as it is. A backup only adds what's missing.
+    const haveId = new Set(S.items.map(i => i.id));
+    const items = b.items.filter(i => str(i?.id) && CATS.includes(i.cat) && hex(i.color) && pic(i.img) && !haveId.has(i.id));
     for (const i of items) { const { photo, ...rest } = i; await put('items', { ...rest, name: String(i.name ?? 'Item'), img: await blob(i.img), ...(pic(photo) ? { photo: await blob(photo) } : {}) }); }
-    for (const [s, k] of [['outfits', 'key'], ['log', 'day'], ['wish', 'id']]) for (const r of arr(b[s])) if (str(r?.[k])) await put(s, r);
+    const have = { outfits: new Set(S.saved.map(r => r.key)), log: new Set(S.log.map(r => r.day)), wish: new Set(S.wish.map(r => r.id)) };
+    for (const [s, k] of [['outfits', 'key'], ['log', 'day'], ['wish', 'id']]) for (const r of arr(b[s])) if (str(r?.[k]) && !have[s].has(r[k])) await put(s, r);
     const ids = x => arr(x).filter(str), look = r => str(r?.key) && { key: r.key, ids: ids(r.ids) };
-    for (const c of arr(b.colls)) if (str(c?.id)) await put('colls', { id: c.id, name: String(c.name ?? 'Collection').slice(0, 40), ids: ids(c.ids), at: +c.at || Date.now(), packed: ids(c.packed),
+    for (const c of arr(b.colls)) if (str(c?.id) && !collById(c.id)) await put('colls', { id: c.id, name: String(c.name ?? 'Collection').slice(0, 40), ids: ids(c.ids), at: +c.at || Date.now(), packed: ids(c.packed),
       ...(c.trip ? { trip: { days: Math.min(21, Math.max(1, +c.trip.days || 1)), fits: arr(c.trip.fits).map(ids), ...(str(c.trip.city) ? { city: c.trip.city.slice(0, 60), temp: +c.trip.temp || null, rain: !!c.trip.rain } : {}) } } : {}) });
     const piece = g => CATS.includes(g?.cat) && hex(g.color) && { cat: g.cat, color: g.color, kind: String(g.kind ?? ''), fit: [0, 1, 2].includes(g.fit) ? g.fit : 1, name: String(g.name ?? 'Piece').slice(0, 60) };
-    for (const i of arr(b.inspo)) if (str(i?.id) && pic(i.img)) await put('inspo', { id: i.id, img: await blob(i.img), palette: arr(i.palette).filter(hex), off: arr(i.off).filter(hex), at: +i.at || Date.now(),
+    for (const i of arr(b.inspo)) if (str(i?.id) && pic(i.img) && !S.inspo.some(x => x.id === i.id)) await put('inspo', { id: i.id, img: await blob(i.img), palette: arr(i.palette).filter(hex), off: arr(i.off).filter(hex), at: +i.at || Date.now(),
       ...(Array.isArray(i.pieces) ? { pieces: i.pieces.map(piece).filter(Boolean) } : {}) });
-    if (Array.isArray(b.history)) await put('profile', { k: 'history', list: b.history.map(r => look(r) && { ...look(r), at: +r.at || 0 }).filter(Boolean).slice(0, 40) });
-    if (b.plan?.days) { const days = {}, weekly = {};
-      for (const [k, r] of Object.entries(b.plan.days)) if (/^\d{4}-\d\d-\d\d$/.test(k) && str(r?.key)) days[k] = { key: r.key, ids: ids(r.ids) };
-      for (const [k, r] of Object.entries(b.plan.weekly ?? {})) if (/^[0-6]$/.test(k) && look(r)) weekly[k] = look(r);
+    if (b.plan?.days) { const days = { ...S.plan.days }, weekly = { ...S.plan.weekly };
+      for (const [k, r] of Object.entries(b.plan.days)) if (/^\d{4}-\d\d-\d\d$/.test(k) && str(r?.key) && !days[k]) days[k] = { key: r.key, ids: ids(r.ids) };
+      for (const [k, r] of Object.entries(b.plan.weekly ?? {})) if (/^[0-6]$/.test(k) && look(r) && !weekly[k]) weekly[k] = look(r);
       await put('profile', { k: 'plan', days, weekly }); }
-    if (b.profile?.k === 'me') await put('profile', { k: 'me', done: true, styles: arr(b.profile.styles).filter(str), goals: arr(b.profile.goals).filter(str),
+    if (b.profile?.k === 'me' && !S.profile) await put('profile', { k: 'me', done: true, styles: arr(b.profile.styles).filter(str), goals: arr(b.profile.goals).filter(str),
       measure: Object.fromEntries(Object.entries(b.profile.measure ?? {}).filter(([, v]) => str(v)).map(([k, v]) => [k, v.slice(0, 80)])),
       colors: { good: arr(b.profile.colors?.good).filter(str), avoid: arr(b.profile.colors?.avoid).filter(str) }, fullBackup: !!b.profile.fullBackup });
-    toast(`Imported ${items.length} pieces`); setTimeout(() => location.reload(), 900);
+    toast(items.length ? `Added ${items.length} new piece${items.length > 1 ? 's' : ''} · nothing here was replaced` : 'Nothing new in that backup'); setTimeout(() => location.reload(), 1400);
   } catch (e) { console.warn(e); toast("That file isn't a closet backup"); }
 }
 const picker = (accept, multiple, fn) => { const i = Object.assign(document.createElement('input'), { type: 'file', accept, multiple }); i.onchange = () => { if (i.files.length) fn([...i.files]); i.value = ''; }; return i; };
@@ -1391,6 +1612,7 @@ fileInput.onchange = () => { addFiles(fileInput.files); fileInput.value = ''; };
 // ---------- outfits: find one by key wherever it lives ----------
 function outfitByKey(k) {
   const idea = S.ideas?.find(o => o.key === k) ?? S.made?.find(o => o.key === k); if (idea) return idea;
+  const dl = S.deck?.looks.find(o => o.key === k); if (dl) return { key: k, items: dl.ids.map(byId).filter(Boolean), mode: dl.mode };
   if (S.build && keyOf(S.build) === k) return { key: k, items: S.build };
   const s = S.saved.find(x => x.key === k) ?? S.log.find(x => x.key === k) ?? [...Object.values(S.plan.days), ...Object.values(S.plan.weekly)].find(x => x.key === k); return s && { key: k, items: s.ids.map(byId).filter(Boolean) };
 }
@@ -1400,7 +1622,7 @@ function startBuild(items = []) { S.view = 'build'; setBuild(items.slice()); scr
 // "Fill the rest": the best pick for each missing slot, one at a time, so each pick sees the ones before it.
 function fillBuild() {
   const next = S.build.slice();
-  for (const s of ['Bottoms', 'Tops', 'Shoes']) if (!next.some(SLOTS[s])) { const r = rankSwaps(buildItems(), next, s); const best = r.find(x => x.score != null) ?? r[0]; if (best) next.push(best.item); }
+  for (const s of ['Bottoms', 'Tops', 'Shoes']) if (!next.some(SLOTS[s])) { const r = rankSwaps(buildItems(), next, s); const best = r.find(x => x.score != null) ?? r[0]; if (best) { next.push(best.item); S.dropped = s; } }
   setBuild(next);
 }
 // "See what you can make": the 5 best outfits around this piece, across every style, shown right in its sheet.
@@ -1419,7 +1641,7 @@ function wheelAt(e) {
   S.wheel.s = Math.min(1, Math.hypot(dx, dy) / (r.width / 2));
   if (!wheelAt.raf) wheelAt.raf = requestAnimationFrame(() => { wheelAt.raf = 0; paintWheel(false); }); // one redraw per frame, handles only
 }
-document.addEventListener('pointerdown', e => { const w = e.target.closest?.('#wheel'); if (w) { S.dragging = true; w.setPointerCapture?.(e.pointerId); wheelAt(e); } });
+document.addEventListener('pointerdown', e => { const w = e.target.closest?.('#wheel'); if (w) { S.dragging = true; try { w.setPointerCapture(e.pointerId); } catch {} wheelAt(e); } });
 document.addEventListener('pointermove', e => { if (S.dragging) wheelAt(e); });
 document.addEventListener('pointerup', () => { if (S.dragging) { S.dragging = false; paintWheel(true); } });
 document.addEventListener('input', async e => {
@@ -1436,15 +1658,58 @@ document.addEventListener('submit', async e => {
     if (!name) return;
     const w = { id: uid(), name, cat: f.cat.value, color: f.color.value, got: false, at: Date.now(), price: price > 0 ? price : null, link: /^https?:\/\//.test(link) ? link : null };
     await put('wish', w); S.wish.push(w); render(); document.querySelector('#wishform input')?.focus();
+  } else if (e.target.id === 'renform') {
+    const c = collById(e.target.dataset.id), name = f.name.value.trim(); if (!name) return; c.name = name; await put('colls', c); openCapsules();
   } else if (e.target.id === 'newcoll') {
     const name = f.name.value.trim(); if (!name) return;
     const c = { id: uid(), name, ids: [], at: Date.now() };
-    await put('colls', c); S.colls.push(c); S.coll = c.id; S.ideas = null; openPicker();
+    await put('colls', c); S.colls.push(c); await useCapsule(c.id); openPicker();
   }
 });
 
 document.addEventListener('submit', e => { if (e.target.matches('[data-destform]')) { e.preventDefault(); sheet.querySelector('[data-action="packgo"]')?.click(); } });
 document.addEventListener('input', e => { if (!e.target.matches('[data-q]')) return; S.q = e.target.value; render.qFocus = true; render(); });
+// Drag a sheet down by its top (photo, title, grab bar) to close it.
+let pull = null;
+sheet.addEventListener('pointerdown', e => { if (sheet.scrollTop > 0 || !e.target.closest('.hero, .pickhead, .grab') || e.target.closest('button, input')) return; pull = { y: e.clientY, dy: 0 }; sheet.style.transition = 'none'; });
+document.addEventListener('pointermove', e => { if (!pull) return; pull.dy = Math.max(0, e.clientY - pull.y); sheet.style.transform = `translateY(${pull.dy}px)`; });
+document.addEventListener('pointerup', () => { if (!pull) return; const far = pull.dy > 110; pull = null; sheet.style.transition = ''; sheet.style.transform = far ? 'translateY(100%)' : '';
+  if (far) setTimeout(() => { sheet.close(); sheet.style.transform = ''; }, 200); });
+
+// Long-press a closet piece: quick actions without opening its page.
+let press = null;
+document.addEventListener('pointerdown', e => { const b = e.target.closest('.item[data-open]'); if (!b) return;
+  press = { b, x: e.clientX, y: e.clientY, t: setTimeout(() => { press.fired = true; quickSheet(b.dataset.open); }, 480) }; });
+document.addEventListener('pointermove', e => { if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) { clearTimeout(press.t); press = null; } });
+document.addEventListener('pointerup', () => { if (press) clearTimeout(press.t); });
+document.addEventListener('click', e => { if (press?.fired && e.target.closest('.item')) { e.stopImmediatePropagation(); e.preventDefault(); press = null; } }, true);
+document.addEventListener('contextmenu', e => { if (e.target.closest('.item')) e.preventDefault(); });
+function quickSheet(id) { const it = byId(id);
+  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">Quick</div><h2>${esc(it.name)}</h2></div>${closeBtn}</div>
+    <div class="quick"><button class="btn" data-quick="build|${id}">Build with it</button><button class="btn ghost" data-quick="made|${id}">See what you can make</button>
+    <button class="btn ghost" data-quick="wash|${id}">${it.dirty ? 'Out of the laundry' : 'In the laundry'}</button><button class="btn ghost" data-quick="store|${id}">${it.stored ? 'Bring back' : 'Store for the season'}</button>
+    <button class="btn danger" data-del="${id}">Delete piece</button></div></div>`); }
+async function quickAct(a, id) { const it = byId(id);
+  if (a === 'build') return buildWith(it);
+  if (a === 'made') { openSheet(id); return showMade(it); }
+  if (a === 'wash') it.dirty ? delete it.dirty : it.dirty = true;
+  if (a === 'store') it.stored ? delete it.stored : it.stored = true;
+  await put('items', it); S.ideas = null; S.deck = null; sheet.close(); toast(a === 'wash' ? (it.dirty ? 'In the laundry' : 'Clean') : it.stored ? 'Stored for the season' : 'Back in rotation'); }
+
+// Today's live card follows your finger: ← next, → save, ↑ wear; a tap opens it in the builder.
+let drag = null;
+document.addEventListener('pointerdown', e => { const c = e.target.closest('.dcard.live'); if (!c || e.target.closest('button')) return;
+  drag = { c, x: e.clientX, y: e.clientY, dx: 0, dy: 0 }; try { c.setPointerCapture(e.pointerId); } catch {} c.style.transition = 'none'; });
+document.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; Object.assign(drag, { dx, dy });
+  drag.c.style.transform = `translate(${dx}px, ${Math.min(dy, 30)}px) rotate(${dx / 18}deg)`;
+  drag.c.dataset.hint = dx < -60 ? 'next' : dx > 60 ? 'save' : dy < -60 ? 'wear' : ''; });
+document.addEventListener('pointerup', () => { if (!drag) return; const { c, dx, dy } = drag; drag = null; c.style.transition = '';
+  if (Math.hypot(dx, dy) < 8) { c.style.transform = ''; return startBuild(outfitByKey(c.dataset.key)?.items ?? []); }
+  const act = dx < -90 ? 'next' : dx > 90 ? 'fav' : dy < -90 ? 'wear' : null;
+  if (!act) { c.style.transform = ''; c.dataset.hint = ''; return; }
+  c.style.transform = act === 'wear' ? 'translateY(-115%)' : `translateX(${act === 'next' ? -130 : 130}%) rotate(${act === 'next' ? -14 : 14}deg)`; c.style.opacity = '0';
+  setTimeout(() => deckAct(act), 200); });
+document.addEventListener('pointercancel', () => { if (drag) { drag.c.style.transform = ''; drag = null; } });
 // Builder slots: when a swipe settles on a new piece, wear it.
 document.addEventListener('scroll', e => {
   const c = e.target; if (!c.classList?.contains('carousel')) return;
@@ -1464,7 +1729,9 @@ document.addEventListener('change', async e => {
 document.addEventListener('click', async e => {
   const t = e.target.closest('button'); if (!t) return;
   const ds = t.dataset;
-  if (ds.go) { S.view = ds.go; if (ds.go === 'build') S.build ??= []; if (ds.listtab) S.listTab = ds.listtab; render(); scrollTo(0, 0); }
+  if (ds.go) { const go = () => { S.view = ds.go; if (ds.go === 'build') S.build ??= []; if (ds.listtab) S.listTab = ds.listtab; render(); scrollTo(0, 0); };
+    if (sheet.open) { sheet.onclose = null; sheet.close(); } // a tap on the menu while a sheet is open: close it without a second render racing this one
+    if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches && ds.go !== S.view) document.startViewTransition(go); else go(); }
   else if (ds.sub) { const [k, v] = ds.sub.split(':'); S[k] = v; render(); }
   else if (ds.listtab) { S.listTab = ds.listtab; render(); }
   else if (ds.wishgap) {
@@ -1475,8 +1742,10 @@ document.addEventListener('click', async e => {
   }
   else if (ds.wishgot) { const w = S.wish.find(x => x.id === ds.wishgot); w.got = !w.got; await put('wish', w); if (w.got) toast('Copped! Add a photo with +'); render(); }
   else if (ds.wishdel) { await del('wish', ds.wishdel); S.wish = S.wish.filter(x => x.id !== ds.wishdel); render(); }
-  else if (ds.action === 'add') fileInput.click();
-  else if (ds.action === 'addinspo') inspoInput.click();
+  else if (ds.action === 'add' && t.closest('nav')) showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">Add</div><h2>What's new?</h2></div>${closeBtn}</div>
+    <div class="quick"><button class="btn" data-action="addfiles">${ic('camera')} Clothes · photos</button><button class="btn ghost" data-action="addinspo">Inspo pic</button><button class="btn ghost" data-calday="${dayKey()}">Log today's fit</button></div></div>`);
+  else if (ds.action === 'add' || ds.action === 'addfiles') { if (sheet.open) { sheet.onclose = null; sheet.close(); } fileInput.click(); }
+  else if (ds.action === 'addinspo') { if (sheet.open) { sheet.onclose = null; sheet.close(); } inspoInput.click(); }
   else if (ds.action === 'export') exportBackup();
   else if (ds.action === 'import') restoreInput.click();
   else if (ds.action === 'review') { const n = S.items.find(i => i.review); if (n) openSheet(n.id); }
@@ -1485,9 +1754,13 @@ document.addEventListener('click', async e => {
     const next = S.items.find(i => i.review);
     if (next) { openSheet(next.id); toast('Checked ✓ · next piece'); } else { sheet.close(); toast('All pieces checked'); }
   }
-  else if (ds.action === 'shuffle') { S.ideas = null; render(); }
+  else if (ds.action === 'shuffle') { S.ideas = null; S.deck = null; render(); }
+  else if (ds.action === 'filters') openFilters();
+  else if (ds.deck === 'back') { S.deck.at = 0; put('profile', S.deck); render(); }
+  else if (ds.deck) deckAct(ds.deck === 'next' ? 'next' : ds.deck);
   else if (ds.action === 'unanchor') { S.anchor = null; S.ideas = null; render(); }
   else if (ds.action === 'close') sheet.close();
+  else if (ds.action === 'opendetails') { const d = sheet.querySelector('details.more'); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   else if (ds.action === 'build') startBuild();
   else if (ds.action === 'clearbuild') setBuild([]);
   else if (ds.action === 'undobuild') { S.build = S.past.pop() ?? []; S.cs = {}; put('profile', { k: 'draft', ids: S.build.map(p => p.id) }); render(); }
@@ -1499,11 +1772,15 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'allclean') { for (const it of S.items.filter(i => i.dirty)) { delete it.dirty; await put('items', it); } S.ideas = null; toast('All clean'); render(); }
   else if (ds.action === 'fixtags') { const n = S.items.find(issueOf); if (n) openSheet(n.id); }
   else if (ds.fixtag) { const [id, kv] = ds.fixtag.split('|'), it = byId(id), [k, v] = kv.split(':');
+    if (k === 'photo') { replacing = id; sheet.close(); return replaceInput.click(); }
     if (k === 'turn') { for (let i = 0; i < +v; i++) await rotate(it); delete it.turnHint; } else it[k] = k === 'fit' ? +v : v; await put('items', it); S.ideas = null; S.cs = {}; toast('Fixed'); const n = S.items.find(issueOf); if (n) openSheet(n.id); else { sheet.close(); } }
   else if (ds.tagok) { const it = byId(ds.tagok); it.tagOk = true; delete it.turnHint; await put('items', it); const n = S.items.find(issueOf); if (n) openSheet(n.id); else openSheet(it.id); }
   else if (ds.calday) openDay(ds.calday);
-  else if ('occ' in ds) { S.occ = ds.occ || null; S.ideas = null; render(); }
-  else if (ds.lock) { S.locks.has(ds.lock) ? S.locks.delete(ds.lock) : S.locks.add(ds.lock); render(); }
+  else if (ds.vibef) { S.vibeF = S.vibeF === ds.vibef ? null : ds.vibef; render(); }
+  else if (ds.action === 'closetview') { S.closetView = (S.closetView ?? 'shelf') === 'shelf' ? 'grid' : 'shelf'; S.profile = { k: 'me', ...S.profile, closetView: S.closetView }; put('profile', S.profile); render(); }
+  else if (ds.quick) quickAct(...ds.quick.split('|'));
+  else if ('occ' in ds) { S.occ = ds.occ || null; S.ideas = null; render(); if (sheet.querySelector('.filters')) openFilters(); }
+  else if (ds.lock) { S.locks.has(ds.lock) ? S.locks.delete(ds.lock) : S.locks.add(ds.lock); if (sheet.open) openSwap(ds.lock); else render(); }
   else if (ds.action === 'shufflebuild') shuffleBuild();
   else if (ds.action === 'why') openWhy();
   else if (ds.action === 'selmode') { S.sel = S.sel ? null : new Set(); render(); }
@@ -1511,7 +1788,9 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'selwash') { for (const id of S.sel) { const it = byId(id); it.dirty = true; await put('items', it); } toast(`${S.sel.size} in the laundry`); S.sel = null; S.ideas = null; render(); }
   else if (ds.action === 'seldel') {
     if (!t.classList.contains('armed')) { t.classList.add('armed'); t.textContent = `Delete ${S.sel.size}?`; return; }
-    for (const id of S.sel) { await del('items', id); resetSrc({ id }); } S.items = S.items.filter(i => !S.sel.has(i.id)); toast(`Deleted ${S.sel.size}`); S.sel = null; S.ideas = null; render();
+    const gone = S.items.filter(i => S.sel.has(i.id)); for (const it of gone) await del('items', it.id);
+    S.items = S.items.filter(i => !S.sel.has(i.id)); S.sel = null; S.ideas = null; render();
+    toast(`Deleted ${gone.length}`, { label: 'Undo', fn: async () => { for (const it of gone) await put('items', it); S.items.push(...gone); S.ideas = null; render(); toast('Restored'); } });
   }
   else if (ds.setcolorpref) { const [kind, n] = ds.setcolorpref.split('|'), c = S.profile?.colors ?? { good: [], avoid: [] }, other = kind === 'good' ? 'avoid' : 'good';
     c[kind] = c[kind].includes(n) ? c[kind].filter(x => x !== n) : [...c[kind], n]; c[other] = c[other].filter(x => x !== n);
@@ -1527,8 +1806,17 @@ document.addEventListener('click', async e => {
   else if (ds.made) showMade(byId(ds.made));
   else if (ds.jump) document.getElementById('sec-' + ds.jump)?.scrollIntoView({ behavior: 'smooth' });
   else if (ds.buildkey) { if (sheet.open) sheet.close(); startBuild(outfitByKey(ds.buildkey)?.items ?? []); }
-  else if ('coll' in ds) { S.coll = ds.coll || null; S.cat = 'All'; S.ideas = null; render(); }
+  else if ('coll' in ds) { S.coll = ds.coll || null; S.cat = 'All'; S.ideas = null; render(); if (sheet.querySelector('.filters')) openFilters(); }
   else if (ds.action === 'newcoll') openNewColl();
+  else if (ds.action === 'capsules') openCapsules();
+  else if ('capsel' in ds) { await useCapsule(ds.capsel); if (sheet.open) { sheet.onclose = null; sheet.close(); } render(); toast(S.coll ? `Using ${capName()} · only its pieces` : 'Using all clothes'); }
+  else if (ds.capedit) { await useCapsule(ds.capedit); openPicker(); }
+  else if (ds.capren) { const c = collById(ds.capren); showSheet(`<form class="newcoll" id="renform" data-id="${c.id}"><div class="pickhead"><div><div class="eyebrow">Rename</div><h2>${esc(c.name)}</h2></div>${closeBtn}</div><input name="name" value="${esc(c.name)}" maxlength="40" required autocomplete="off"><button class="btn wide">Save</button></form>`); }
+  else if (ds.capdup) { const c = collById(ds.capdup), d = { ...c, id: uid(), name: `${c.name} copy`.slice(0, 40), ids: [...c.ids], at: Date.now(), packed: [], trip: undefined }; await put('colls', d); S.colls.push(d); openCapsules(); toast('Duplicated'); }
+  else if (ds.capdel) {
+    if (!t.classList.contains('armed')) { t.classList.add('armed'); t.setAttribute('aria-label', 'Tap again to delete'); return toast('Tap the bin again to delete'); }
+    const c = collById(ds.capdel); await del('colls', c.id); S.colls = S.colls.filter(x => x.id !== c.id); if (S.coll === c.id) await useCapsule(null); openCapsules();
+    toast(`Deleted ${c.name}`, { label: 'Undo', fn: async () => { await put('colls', c); S.colls.push(c); render(); } }); }
   else if (ds.collname) sheet.querySelector('input[name=name]').value = ds.collname;
   else if (ds.action === 'collpick') openPicker();
   else if (ds.action === 'collfits') { S.view = 'outfits'; S.tab = 'ideas'; S.ideas = null; render(); scrollTo(0, 0); }
@@ -1544,7 +1832,7 @@ document.addEventListener('click', async e => {
   }
   else if (ds.harmony) { S.wheel.harmony = ds.harmony; render(); }
   else if (ds.cat) { S.cat = ds.cat; render(); }
-  else if (ds.mode) { S.mode = ds.mode; S.ideas = null; render(); S.profile = { k: 'me', ...S.profile, mode: ds.mode }; put('profile', S.profile); }
+  else if (ds.mode) { S.mode = ds.mode; S.ideas = null; render(); S.profile = { k: 'me', ...S.profile, mode: ds.mode }; put('profile', S.profile); if (sheet.querySelector('.filters')) openFilters(); }
   else if (ds.open) openSheet(ds.open);
   else if (ds.setcolor) { const [id, h] = ds.setcolor.split('|'), it = byId(id); it.color = h; if (it.accents) it.accents = it.accents.filter(a => colorDist(a, h) > 90 && !isShade(a, h));
     sheet.querySelector('[name=color]').value = h; showColor(it); sheet.querySelector('#accbox').innerHTML = accHtml(it); S.ideas = null; await put('items', it); }
@@ -1553,8 +1841,8 @@ document.addEventListener('click', async e => {
     it.vibe = next.length === 1 ? next[0] : next; sheet.querySelector('#vibebox').innerHTML = vibeHtml(it); S.ideas = null; await put('items', it); }
   else if (ds.buildwith) buildWith(byId(ds.buildwith));
   else if (ds.swap) openSwap(ds.swap);
-  else if (ds.unwear) setBuild(S.build.filter(p => !SLOTS[ds.unwear](p)));
-  else if (ds.wearpick) { const [slot, id] = ds.wearpick.split(':'); sheet.onclose = null; sheet.close(); setBuild([...S.build.filter(p => !SLOTS[slot](p)), byId(id)]); }
+  else if (ds.unwear) { if (sheet.open) { sheet.onclose = null; sheet.close(); } setBuild(S.build.filter(p => !SLOTS[ds.unwear](p))); }
+  else if (ds.wearpick) { const [slot, id] = ds.wearpick.split(':'); sheet.onclose = null; sheet.close(); S.dropped = slot; setBuild([...S.build.filter(p => !SLOTS[slot](p)), byId(id)]); }
   else if (ds.rotate) { const it = byId(ds.rotate); await rotate(it); const im = sheet.querySelector('.hero img'); if (im) im.src = src(it); S.ideas = null; }
   else if (ds.replace) { replacing = ds.replace; replaceInput.click(); }
   else if (ds.recut) {
@@ -1605,7 +1893,7 @@ document.addEventListener('click', async e => {
   else if (ds.planbuild) { sheet.close(); startBuild(); }
   else if (ds.action === 'planthis') openDayPicker();
   else if (ds.planday) { await setPlan(ds.planday, lookRec(S.build), document.getElementById('planrepeat')?.checked); sheet.close(); render(); toast(`Planned · ${i18nDay(ds.planday, dayKey())}`); }
-  else if (ds.action === 'pack') { if (!complete(pool())) return toast('This collection needs a top, bottoms and shoes'); S.packDays = null; openPack(); }
+  else if (ds.action === 'pack') { if (!complete(pool())) return toast('This capsule needs a top, bottoms and shoes'); S.packDays = null; openPack(); }
   else if (ds.packdays) { const c = collById(S.coll); S.packDays = Math.min(21, Math.max(1, (S.packDays ?? c.trip?.days ?? 3) + +ds.packdays)); openPack(); }
   else if (ds.action === 'packgo') {
     const c = collById(S.coll), days = S.packDays ?? c.trip?.days ?? 3, city = sheet.querySelector('[name=city]')?.value.trim();
@@ -1640,8 +1928,8 @@ document.addEventListener('click', async e => {
   else if (ds.del) {
     if (!t.classList.contains('armed')) { t.classList.add('armed'); t.textContent = 'Tap again to delete'; return; }
     const uses = [...S.saved, ...Object.values(S.plan.days), ...Object.values(S.plan.weekly)].filter(r => r.ids.includes(ds.del)).length;
-    await del('items', ds.del); S.items = S.items.filter(i => i.id !== ds.del);
-    toast(uses ? `Deleted · it was in ${uses} favorite or planned look${uses > 1 ? 's' : ''}` : 'Deleted');
+    const gone = byId(ds.del); await del('items', ds.del); S.items = S.items.filter(i => i.id !== ds.del);
+    toast(uses ? `Deleted · was in ${uses} look${uses > 1 ? 's' : ''}` : 'Deleted', { label: 'Undo', fn: async () => { await put('items', gone); S.items.push(gone); S.ideas = null; render(); toast('Restored'); } });
     if (S.anchor === ds.del) S.anchor = null;
     if (S.build) S.build = S.build.filter(p => p.id !== ds.del);
     S.ideas = null; sheet.close(); render();
@@ -1675,6 +1963,12 @@ async function backfillOrient() {
   }
   if (n && S.view === 'closet') render();
 }
+// Photos that won't decode (a bad import, a cleared blob) get flagged so they show up in "Tags that don't add up".
+async function checkPhotos() {
+  let n = 0;
+  for (const it of S.items) { try { if (!(it.img instanceof Blob) || !it.img.size) throw 0; (await createImageBitmap(it.img)).close?.(); } catch { it.broken = true; n++; } }
+  if (n && S.view === 'closet') render();
+}
 async function backfillAccents() {
   let n = 0;
   for (const it of S.items.filter(i => !i.accents)) {
@@ -1690,8 +1984,14 @@ async function backfillAccents() {
 }
 
 render();
-backfillAccents().then(backfillOrient);
+backfillAccents().then(backfillOrient).then(checkPhotos);
 navigator.serviceWorker?.register('sw.js').catch(e => console.warn(e)); // opens with no signal once installed (sw.js)
+// "New version" banner: version.txt is the live version; if it differs from this page, offer a reload. Checked on open and on every return to the app.
+async function checkUpdate() {
+  try { const v = (await (await fetch('version.txt', { cache: 'no-store' })).text()).trim();
+    if (v && v !== VERSION && !document.querySelector('.update')) document.body.insertAdjacentHTML('beforeend', `<div class="update" role="status"><span>New version ready</span><button onclick="location.reload()">Reload</button></div>`); } catch {}
+}
+checkUpdate(); document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
 </script>
 </body>
 </html>
