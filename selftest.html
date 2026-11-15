@@ -33,6 +33,16 @@ if (tap('.item[data-open]')) { await wait(500); log(!!d().querySelector('#sheet 
 tap('nav [data-go="build"]'); await wait(900); log(!!d().querySelector('.bstack'), 'Builder shows its slots'); fits('Builder');
 if (tap('[data-swap]')) { await wait(500); fits('Pick list'); await close(); }
 for (const t of ['Calendar', 'Week']) { tap('nav [data-go="outfits"]'); await wait(700); const b = [...d().querySelectorAll('.subnav button')].find(x => x.textContent === t); b?.click(); await wait(500); fits(`Favorites tab · ${t}`); }
+// deeper flows: select mode, long-press, capsule editing, piece Adjust, pattern review, build possibilities
+tap('nav [data-go="closet"]'); await wait(900);
+if (tap('[data-action="selmode"]')) { await wait(300); tap('[data-selitem]'); await wait(300); fits('Select mode'); tap('[data-action="selmode"]'); await wait(300); }
+{ const it = d().querySelector('.item[data-open]'); if (it) { it.dispatchEvent(new w.PointerEvent('pointerdown', { bubbles: true, clientX: 60, clientY: 400 })); await wait(650); it.dispatchEvent(new w.PointerEvent('pointerup', { bubbles: true })); await wait(300); log(!!d().querySelector('#sheet .quick'), 'Long-press opens quick actions'); await close(); } }
+if (tap('[data-action="capsules"]')) { await wait(400); if (d().querySelector('[data-capedit]')) { tap('[data-capedit]'); await wait(400); log(!!d().querySelector('#sheet .pickgrid'), 'Capsule pieces picker opens'); fits('Capsule picker'); } await close(); }
+if (tap('.item[data-open]')) { await wait(500); if (tap('[data-edit]')) { await wait(600); log(!!d().getElementById('ec'), 'Adjust photo opens'); } await close(); }
+if (d().querySelector('[data-action="patreview"]')) { tap('[data-action="patreview"]'); await wait(400); log(!!d().querySelector('[data-patset]'), 'Pattern review opens'); fits('Pattern review'); await close(); }
+tap('nav [data-go="build"]'); await wait(900); if (!d().querySelector('.bc:not(.empty)')) { tap('.starters [data-buildkey]'); await wait(800); }
+if (tap('[data-action="possible"]')) { await wait(1500); fits('Outfit possibilities'); await close(); }
+tap('nav [data-go="me"]'); await wait(800); log(!!d().querySelector('[data-go="inspo"]'), 'Me links to Inspo'); fits('Me');
 log(!errors.length, errors.length ? `errors: ${errors.join(' | ')}` : 'no errors');
 document.getElementById('sum').textContent = fails ? `${fails} problem${fails > 1 ? 's' : ''}` : 'All good';
 document.title = fails ? `✕ ${fails}` : '✓ all good';

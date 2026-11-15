@@ -10,541 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Closet">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Closet</title>
-<style>
-  /* Fashion house: warm stone neutrals, Helvetica, uppercase tracking, square corners, no shadows. The clothes are the only color. */
-  :root {
-    --bg: #ebe7e0; --s1: #f4f1ec; --tile: #e0dbd2; --ink: #1d1a17; --muted: #655e55; /* 5.2:1 on bg, 4.6:1 on tiles — WCAG AA */ --hair: rgb(29 26 23 / .12);
-    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif; --r: 2px;
-    color-scheme: light;
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  [hidden] { display: none !important; }
-  body { margin: 0; min-height: 100dvh; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
-  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; } /* no double-tap zoom when tapping buttons fast */
-  button, input, select { font: inherit; color: inherit; }
-  button { cursor: pointer; border: 0; background: none; padding: 0; border-radius: 0; transition: opacity .2s; }
-  button:active { opacity: .6; }
-  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; } input:focus-visible, select:focus-visible { outline: 0; border-bottom-color: var(--ink) !important; box-shadow: 0 1px 0 var(--ink); }
-  main { max-width: 820px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 28px) 18px 120px; }
-  header { display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-bottom: 22px; }
-  header .right { display: flex; gap: 14px; align-items: center; }
-  h1 { font-size: 30px; letter-spacing: -.01em; margin: 4px 0 0; font-weight: 700; line-height: 1; text-transform: uppercase; }
-  h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; margin: 38px 0 14px; display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--hair); }
-  .sub { color: var(--muted); font-size: 13px; margin: -4px 0 16px; max-width: 46ch; }
-  .eyebrow, .mono { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
-  .glass { background: var(--s1); border-radius: var(--r); }
-  .spot { background: var(--tile); border-radius: var(--r); }
-
-  .chips { display: flex; gap: 20px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; margin: 0 -18px 22px; padding: 0 18px; border-bottom: 1px solid var(--hair); }
-  .chip { flex: none; min-height: 44px; display: inline-flex; align-items: flex-end; padding: 0 0 10px; margin-bottom: -1px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); border-bottom: 1px solid transparent; }
-  .chip.on { color: var(--ink); border-color: var(--ink); }
-  .chip small { font-size: 11px; font-weight: 400; margin-left: 4px; }
-
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 26px 10px; }
-  .item { text-align: left; align-self: start; }
-  .item .ph { aspect-ratio: 3 / 4; display: grid; place-items: center; padding: 16%; position: relative; }
-  .item .ph i { position: absolute; right: 10px; top: 10px; width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .1); }
-  .item img { width: 100%; height: 100%; min-height: 0; object-fit: contain; } /* min-height: tall photos must not stretch the 3:4 tile */
-  .item b { display: block; margin-top: 10px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
-  .item span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-  .pending .ph { overflow: hidden; }
-  .pending img { opacity: .35; filter: grayscale(1); }
-  .pending .ph::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 35%, rgb(255 255 255 / .45) 50%, transparent 65%); animation: sh 1.6s infinite; }
-  @keyframes sh { from { transform: translateX(-100%) } to { transform: translateX(100%) } }
-
-  .empty { text-align: center; padding: 70px 20px; color: var(--muted); }
-  .empty h2 { color: var(--ink); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; margin: 0 0 10px; }
-  .empty p { max-width: 36ch; margin: 0 auto 20px; }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 26px; border-radius: var(--r); background: var(--ink); color: var(--bg); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .16em; }
-  .btn.ghost, .btn.danger { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
-  .btn.go { background: var(--ink); color: var(--bg); }
-  .btn.done { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--hair); }
-  .btn.sm { height: 44px; padding: 0 18px; }
-  .btn.wide { width: 100%; margin-top: 22px; }
-  .btn.danger { color: #9b3b2e; box-shadow: inset 0 0 0 1px rgb(155 59 46 / .4); }
-
-  .seg { display: inline-flex; gap: 16px; }
-  .seg button { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); padding-bottom: 3px; border-bottom: 1px solid transparent; }
-  .seg button.on { color: var(--ink); border-color: var(--ink); }
-  .seg.subnav { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0; margin: -6px 0 18px; box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); }
-  .seg.subnav button { height: 44px; padding: 0 4px; border: 0; } .seg.subnav button.on { background: var(--ink); color: var(--bg); }
-  .backup { display: flex; justify-content: center; gap: 24px; margin-top: 48px; } .empty .backup { margin-top: 22px; }
-  .blurb .row2, .wx .row2 { display: flex; gap: 6px; flex: none; }
-  .blurb { color: var(--muted); margin: -8px 0 18px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  .anchor { display: inline-flex; align-items: center; gap: 10px; padding: 4px 12px 4px 4px; background: var(--s1); margin-bottom: 16px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
-  .anchor img { width: 34px; height: 34px; object-fit: contain; background: var(--tile); padding: 3px; }
-
-  .streak { display: inline-flex; align-items: baseline; gap: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); padding: 7px 9px; box-shadow: inset 0 0 0 1px var(--hair); }
-  .streak b { font-size: 13px; letter-spacing: 0; color: var(--ink); }
-  .streak.lit { background: var(--ink); color: var(--bg); box-shadow: none; } .streak.lit b { color: var(--bg); }
-
-  /* ghost = a piece you don't own yet: a flat in its color */
-  .gh { display: grid; place-items: center; }
-  .gh svg { width: 100%; height: 100%; fill: var(--c); stroke: rgb(0 0 0 / .18); stroke-width: .3; }
-  .meta { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
-  .swatches { display: flex; gap: 3px; }
-  .swatches i { width: 12px; height: 12px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .1); }
-  .meta p { flex: 1; margin: 0 0 0 4px; font-size: 11px; line-height: 1.35; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .why { display: flex; gap: 6px; align-items: center; font-size: 12px; margin-top: 6px; color: var(--muted); }
-  .why svg { width: 14px; height: 14px; flex: none; }
-  .icon { width: 44px; height: 44px; display: grid; place-items: center; flex: none; }
-  .icon svg { width: 19px; height: 19px; }
-  .icon.on svg { fill: var(--ink); }
-  .actions { display: flex; gap: 8px; margin-top: 12px; }
-  .actions .btn { flex: 1; }
-
-  /* list + suggestions */
-  .nudge { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 10px 12px; margin-bottom: 16px; text-align: left; }
-  .nudge .gh { width: 54px; height: 54px; flex: none; background: var(--tile); padding: 6px; }
-  .nudge div { flex: 1; min-width: 0; } .nudge b { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
-  .plus { flex: none; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
-  .gaps { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
-  .gap { padding: 14px; }
-  .gap-top { display: flex; align-items: center; gap: 12px; }
-  .gap-top .gh { width: 52px; height: 52px; flex: none; background: var(--tile); padding: 6px; }
-  .gap-top div { flex: 1; min-width: 0; } .gap-top b { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 3px; }
-  .minis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 14px 0 12px; }
-  .scan { display: grid; place-items: center; gap: 16px; padding: 90px 20px; }
-  .scan i { width: 40px; height: 1px; background: var(--ink); animation: load 1s ease-in-out infinite alternate; transform-origin: left; }
-  @keyframes load { from { transform: scaleX(.1) } to { transform: scaleX(1) } }
-  .wishform { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; margin-bottom: 8px; } .wishform > * { min-width: 0; width: 100%; }
-  .wishform input[name=name] { grid-column: 1 / -1; }
-  .wishform input[name=link] { grid-column: 1 / 3; } .wishform input[name=price] { grid-column: 3; width: 88px; }
-  .wishform input:not([type=color]), .wishform select { height: 46px; border: 0; border-bottom: 1px solid var(--ink); background: none; padding: 0 2px; font-size: 16px; outline: 0; border-radius: 0; appearance: none; } /* <16px makes iOS zoom on focus */
-  .wishform select { padding-right: 18px; border-bottom-color: var(--hair);
-    background: linear-gradient(45deg, transparent 50%, var(--ink) 50%) right 4px center / 5px 5px no-repeat, linear-gradient(-45deg, transparent 50%, var(--ink) 50%) right 0 center / 5px 5px no-repeat; }
-  .wish { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--hair); }
-  .wish .gh { width: 64px; height: 80px; flex: none; background: var(--tile); padding: 10px; }
-  .wish div { flex: 1; min-width: 0; } .wish b { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
-  .wish.got { opacity: .45; } .wish.got b { text-decoration: line-through; }
-  .check { width: 44px; height: 44px; display: grid; place-items: center; flex: none; } /* 44px to tap, 26px to see */
-  .check svg { width: 26px; height: 26px; padding: 6px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ink); stroke: transparent; } .got .check svg { background: var(--ink); stroke: var(--bg); }
-  .x { color: var(--muted); font-size: 20px; width: 44px; height: 44px; flex: none; }
-
-  /* progress */
-  .hud { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; padding: 22px 20px; gap: 10px; }
-  .hud .big { font-size: 112px; line-height: .82; font-weight: 700; letter-spacing: -.05em; }
-  .hud .stats { display: grid; gap: 14px; text-align: right; }
-  .hud .stats b { display: block; font-size: 22px; font-weight: 700; margin-top: 2px; }
-  .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }
-  .week div { display: grid; justify-items: center; gap: 8px; padding: 12px 0; background: var(--s1); }
-  .week i { width: 14px; height: 14px; box-shadow: inset 0 0 0 1px var(--hair); }
-  .week .on i { background: var(--ink); box-shadow: none; }
-  .week .now span { color: var(--ink); }
-  .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 4px; }
-  .badge { display: grid; align-content: start; justify-items: center; text-align: center; gap: 8px; padding: 18px 8px 16px; }
-  .medal { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--hair); color: var(--muted); }
-  .medal svg { width: 20px; height: 20px; stroke-width: 1.3; }
-  .badge.done { background: var(--ink); color: var(--bg); } .badge.done .medal { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3); color: var(--bg); }
-  .badge b { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
-  .badge:not(.done) b { color: var(--muted); }
-  .badge small { font-size: 11px; color: var(--muted); line-height: 1.3; }
-  .badge.done small, .badge.done .mono { color: rgb(255 255 255 / .55); }
-  .bar { width: 60%; height: 1px; background: var(--hair); }
-  .bar i { display: block; height: 100%; background: var(--ink); }
-
-  /* color wheel */
-  .wheel { position: relative; width: min(300px, 80vw); aspect-ratio: 1; margin: 6px auto 20px; border-radius: 50%; touch-action: none; cursor: crosshair;
-    background: radial-gradient(closest-side, #fff, rgb(255 255 255 / 0)), conic-gradient(hsl(0 100% 50%), hsl(60 100% 50%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 50%), hsl(300 100% 50%), hsl(360 100% 50%)); }
-  .wheel svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-  .wheel .h { position: absolute; width: 24px; height: 24px; margin: -12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgb(0 0 0 / .2); pointer-events: none; }
-  .wheel .h.base { width: 34px; height: 34px; margin: -17px; }
-  input[type=range] { width: 100%; height: 44px; accent-color: var(--ink); }
-  .light { display: flex; align-items: center; gap: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
-  .pal { display: flex; gap: 4px; margin: 20px 0 0; }
-  .pal div { flex: 1; height: 120px; display: flex; flex-direction: column; justify-content: end; padding: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
-  .match { display: flex; align-items: center; gap: 10px; padding: 10px; margin-bottom: 4px; }
-  .match > i { width: 30px; height: 30px; border-radius: 50%; flex: none; }
-  .match .thumbs { display: flex; gap: 4px; overflow-x: auto; flex: 1; scrollbar-width: none; }
-  .match .thumbs button img { width: 52px; height: 64px; object-fit: contain; background: var(--tile); padding: 4px; display: block; }
-  .match em { color: var(--muted); font-size: 12px; font-style: normal; }
-
-  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: stretch; background: rgb(235 231 224 / .92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--hair); padding-bottom: env(safe-area-inset-bottom); }
-  nav .tabs { flex: 1; display: flex; max-width: 820px; margin: 0 auto; }
-  nav .tabs button { flex: 1; min-width: 0; height: 58px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); position: relative; }
-  nav .tabs button.on { color: var(--ink); }
-  nav .tabs button.on::after { content: ''; position: absolute; left: 50%; bottom: 14px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--ink); }
-  nav .add { width: 52px; flex: none; display: grid; place-items: center; background: var(--ink); color: var(--bg); }
-  svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
-
-  /* sheet */
-  dialog.sheet { margin: auto auto 0; width: 100%; max-width: 560px; max-height: 92dvh; border: 0; padding: 0; border-radius: 0; background: var(--bg); color: var(--ink); }
-  dialog.sheet[open] { animation: up .45s cubic-bezier(.2, .9, .25, 1); }
-  @keyframes up { from { transform: translateY(100%) } }
-  dialog::backdrop { background: rgb(29 26 23 / .35); }
-  .sheet .hero { height: 280px; display: grid; place-items: center; padding: 40px; position: relative; border-radius: 0; }
-  .sheet .hero img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
-  .sheet .close { position: absolute; top: 12px; right: 12px; }
-  .sheet form { padding: 20px 18px calc(env(safe-area-inset-bottom) + 22px); display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .incoll > .vibes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; } .vibes .pill { width: 100%; }
-  .dayrow { justify-content: flex-start; gap: 10px; } .dayrow > span:first-child { flex: 1; text-align: left; } .dthumb { width: 30px; flex: none; }
-  .pieceacts { display: grid; gap: 8px; } .acchint { flex: 1; text-align: right; }
-  .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
-  .group { border-top: 1px solid var(--hair); }
-  .cell { display: flex; align-items: center; gap: 12px; min-height: 52px; border-bottom: 1px solid var(--hair); }
-  .cell > span:first-child { flex: none; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; }
-  .cell input:not([type]), .cell select { flex: 1; min-width: 0; border: 0; background: none; text-align: right; text-align-last: right; color: var(--ink); appearance: none; font-size: 16px; height: 52px; outline: 0; border-radius: 0; }
-  .cell select { padding-right: 16px; background: linear-gradient(45deg, transparent 50%, var(--muted) 50%) right 4px center / 5px 5px no-repeat, linear-gradient(-45deg, transparent 50%, var(--muted) 50%) right 0 center / 5px 5px no-repeat; }
-  .cell .cname { flex: 1; text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
-  .cpick { display: flex; overflow-x: auto; scrollbar-width: none; margin: 0 -6px; padding: 4px 0 8px; border-bottom: 1px solid var(--hair); }
-  .cpick button, .cpick label { flex: none; width: 44px; height: 44px; display: grid; place-items: center; position: relative; }
-  .cpick i { width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
-  .cpick .on i { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--ink); }
-  .cpick label i { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); } /* rainbow = pick any color */
-  .cpick input[type=color] { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; }
-  .cell .cdot { width: 26px; height: 26px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
-  .switch { appearance: none; margin: 0 0 0 auto; width: 44px; height: 24px; border-radius: 99px; box-shadow: inset 0 0 0 1px var(--ink); position: relative; flex: none; cursor: pointer; transition: background .2s; }
-  .switch::after { content: ''; position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); transition: transform .25s cubic-bezier(.3, .7, .4, 1), background .2s; }
-  .switch:checked { background: var(--ink); } .switch:checked::after { transform: translateX(20px); background: var(--bg); }
-
-  #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 14px); transform: translate(-50%, -180%); background: var(--ink); color: var(--bg); padding: 13px 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; transition: transform .35s cubic-bezier(.2, .9, .3, 1); z-index: 9; max-width: 92vw; white-space: nowrap; }
-  #toast.show { transform: translate(-50%, 0); }
-
-  /* flat-lay outfit: pieces laid out at real-world scale, never overlapping (flatLayout in match.js) */
-  .flat { position: relative; aspect-ratio: 4 / 5; background: var(--tile); overflow: hidden; border-radius: var(--r); }
-  .flat > img, .flat > .gh { position: absolute; object-fit: contain; min-height: 0; }
-  .feed > .outfit:first-child { grid-column: 1 / -1; } .feed > .outfit:first-child .flat { max-width: 520px; margin: 0 auto; } /* lead idea big enough to see the cap and chain */
-  .flatbtn { display: block; width: 100%; }
-  .feed { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 22px 10px; }
-  .outfit .meta { margin-top: 8px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 0 2px; } .outfit .meta p { grid-row: 2; grid-column: 1 / -1; margin: 0; } /* swatches + not-for-me + heart on one row, the reason under them, so narrow cards never spill */
-  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 3px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12); }
-  button:disabled { opacity: .3; pointer-events: none; }
-
-  /* builder: one card per slot */
-  .bgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; max-width: 520px; margin: 0 auto; }
-  .bcard { display: flex; flex-direction: column; background: var(--s1); border-radius: var(--r); padding: 10px 10px 4px; min-width: 0; }
-  .bcard .lab { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
-  .bcard .pic { display: block; width: 100%; height: 124px; padding: 6px; } .bcard .pic img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
-  .bcard .nm { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bcard .ops { display: flex; justify-content: space-between; margin: auto -6px 0; } .bcard .ops button { height: 44px; padding: 0 8px; font-size: 12px; } .bcard .ops button:last-child { color: var(--muted); }
-  .bcard.add { justify-content: center; align-items: center; gap: 2px; min-height: 210px; background: none; box-shadow: inset 0 0 0 1px var(--hair); font-size: 13px; }
-  .bcard.add b { font-size: 26px; font-weight: 300; line-height: 1; } .bcard.add small { font-size: 11px; color: var(--muted); }
-  .bgrid.small .bcard .pic { height: 84px; }
-  /* swipe a slot: one option per snap, what you wear first */
-  .carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; height: 124px; margin: 6px 0; overscroll-behavior-x: contain; } .carousel::-webkit-scrollbar { display: none; }
-  .carousel img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: contain; scroll-snap-align: center; scroll-snap-stop: always; padding: 0 6px; }
-  .bgrid.small .carousel { height: 84px; } .bcard .lab { display: flex; justify-content: space-between; } .bcard .lab em { font-style: normal; font-weight: 500; letter-spacing: .04em; }
-  .ctools { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; margin: 0 0 14px; } .ctools input, .ctools select { height: 44px; border: 1px solid var(--hair); border-radius: var(--r); background: var(--s1); color: var(--ink); padding: 0 12px; min-width: 0; }
-  .laundry { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 13px; color: var(--muted); }
-  .ph.dirty img { opacity: .35; } .issue { display: grid; gap: 8px; padding: 12px; margin: 0 0 12px; border-radius: var(--r); background: var(--s1); font-size: 13px; } .issue .row { display: flex; gap: 6px; }
-  .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 0 0 14px; } .cal > b { font-size: 11px; text-align: center; color: var(--muted); font-weight: 600; padding: 4px 0; }
-  .cday { position: relative; aspect-ratio: 4 / 5; border-radius: 6px; background: var(--s1); overflow: hidden; } .cday span { position: absolute; left: 4px; top: 3px; font-size: 11px; z-index: 1; }
-  .cday.today { box-shadow: inset 0 0 0 1.5px var(--ink); } .cday.future { background: none; box-shadow: inset 0 0 0 1px var(--hair); } .cday .flat { position: absolute; inset: 0; }
-  .cday .dotp { position: absolute; left: 50%; bottom: 8px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--muted); }
-  .item.picked .ph { box-shadow: inset 0 0 0 2px var(--ink); } .item.picked b::before { content: '✓ '; }
-  .selbar { position: sticky; top: 48px; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; background: var(--bg); font-size: 13px; } .selbar .row2 { display: flex; gap: 6px; } .selbar select { height: 36px; border: 1px solid var(--hair); border-radius: var(--r); background: var(--s1); max-width: 120px; }
-  .occ { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; margin: -6px -18px 12px; padding: 0 18px; } .occ .pill { flex: none; }
-  .why-list > div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--hair); font-size: 13px; } .why-list b.neg { color: #9b3b2e; } .why-list .tot { border: 0; font-weight: 600; }
-  .pickgrid small.why.neg { color: var(--bad); } .pickgrid small.why { display: block; font-size: 11px; color: var(--muted); line-height: 1.3; margin-top: 2px; }
-  .cpref { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; } .cpref button { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 8px; border-radius: var(--r); font-size: 11px; box-shadow: inset 0 0 0 1px var(--hair); }
-  .cpref i { width: 14px; height: 14px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); } .cpref .good { box-shadow: inset 0 0 0 2px var(--ink); } .cpref .avoid { opacity: .45; text-decoration: line-through; }
-  .day .dl em { display: block; font-style: normal; font-size: 11px; color: var(--muted); } .dest input { width: 100%; height: 44px; margin: 0 0 10px; padding: 0 12px; border: 1px solid var(--hair); border-radius: var(--r); background: var(--s1); }
-  .deck { display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; margin: 0 -18px; padding: 0 18px; scroll-padding: 0 18px; }
-  .deck::-webkit-scrollbar { display: none; } .dcard { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
-  .dcard .flatbtn { display: block; width: min(100%, calc(40dvh * .8)); margin: 0 auto; } /* card + its buttons fit on an iPhone screen under the menus */ .dmeta { padding: 10px 0 0; } .dmeta p { margin: 4px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-  .wxline { font-size: 13px; font-weight: 600; } .dacts { display: flex; align-items: center; gap: 4px; } .dacts .mono { flex: 1; } .sub.center { text-align: center; margin: 12px auto 0; }
-  .hexin { display: flex; align-items: center; gap: 10px; margin: 0 auto 16px; max-width: 300px; } .hexin i { width: 28px; height: 28px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
-  .hexin input { flex: 1; height: 44px; padding: 0 12px; border: 1px solid var(--hair); border-radius: var(--r); background: var(--s1); color: var(--ink); font-family: ui-monospace, monospace; text-transform: uppercase; }
-  .copybox { width: 100%; height: 50dvh; font: 12px/1.4 ui-monospace, monospace; } .version { margin: 28px 0 0; text-align: center; }
-  .bcard.more { gap: 6px; justify-content: center; background: none; box-shadow: inset 0 0 0 1px var(--hair); padding: 10px; } .bcard.more .pill { width: 100%; color: var(--ink); }
-  .addrow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; max-width: 520px; margin-inline: auto; } .addrow .pill { color: var(--ink); }
-  .pickh { padding: 0 18px; margin: 4px 0 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
-  .actions .icon.on svg { fill: var(--bg); }
-  .looks { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 2px; }
-  .looks .look { flex: 0 0 92px; position: relative; } .looks .look > button:first-child { display: block; width: 100%; }
-  .looks .look .icon { position: absolute; right: 0; bottom: 0; width: 40px; height: 40px; } .looks .look .icon svg { width: 15px; height: 15px; }
-  .looks-h { display: flex; justify-content: space-between; margin: 26px 0 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; } .looks-h span:last-child { color: var(--muted); font-weight: 500; }
-  .accs { display: flex; margin-left: auto; } .accs button { width: 40px; height: 44px; display: grid; place-items: center; }
-  .accs i { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); display: grid; place-items: center; font-style: normal; font-size: 13px; color: #fff; text-shadow: 0 0 2px rgb(0 0 0 / .6); }
-  /* week planner */
-  .weekbar { display: flex; justify-content: space-between; align-items: center; margin: 0 0 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
-  .days { display: grid; gap: 6px; }
-  .day { display: grid; grid-template-columns: 44px 110px minmax(0, 1fr); gap: 12px; align-items: center; padding: 8px 10px 8px 12px; background: var(--s1); border-radius: var(--r); }
-  .day.today { box-shadow: inset 0 0 0 1.5px var(--ink); } .day.past { opacity: .5; }
-  .day.open { grid-template-columns: 44px minmax(0, 1fr); padding-block: 4px; } .day.open .plus { width: 100%; aspect-ratio: auto; height: 44px; justify-content: start; padding: 0 14px; display: flex; align-items: center; }
-  .day .dl b { display: block; font-size: 11px; letter-spacing: .14em; } .day .dl span { font-size: 22px; font-weight: 700; }
-  .day .slotbtn { display: block; width: 110px; } .day .plus { width: 110px; aspect-ratio: 4 / 5; display: grid; place-items: center; box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
-  .day .acts { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: center; } .day .acts .mono { width: 100%; text-align: right; }
-  .picklooks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; } .picklooks button { display: block; }
-  .chk { display: flex; gap: 12px; align-items: center; min-height: 44px; font-size: 13px; } .chk input { width: 22px; height: 22px; margin: 0; accent-color: var(--ink); }
-  /* shop the look + packing */
-  .lookrow { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 4px 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hair); }
-  .lookrow .gh { width: 44px; height: 44px; } .lookrow img { width: 44px; height: 44px; object-fit: contain; background: var(--tile); border-radius: var(--r); }
-  .lookrow b { display: block; font-size: 13px; } .lookrow .acts { grid-column: 2 / -1; display: flex; gap: 6px; align-items: center; } .lookrow .acts:empty { display: none; }
-
-  .packdays { display: flex; align-items: center; gap: 14px; justify-content: center; } .packdays .btn { width: 52px; padding: 0; font-size: 22px; font-weight: 400; } .packdays b { font-size: 34px; min-width: 2ch; text-align: center; }
-  .packfits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; } .packfits span { display: block; margin-top: 4px; } .packfits button, .picklooks button { display: block; width: 100%; }
-  .packlist button { display: grid; grid-template-columns: 22px 44px minmax(0, 1fr); gap: 12px; align-items: center; width: 100%; padding: 6px 0; text-align: left; font-size: 13px; }
-  .packlist i { width: 20px; height: 20px; box-shadow: inset 0 0 0 1.5px var(--ink); border-radius: 3px; display: grid; place-items: center; font-style: normal; font-size: 12px; }
-  .packlist button.on i { background: var(--ink); color: var(--bg); } .packlist button.on span { text-decoration: line-through; color: var(--muted); }
-  .packlist img { width: 44px; height: 44px; object-fit: contain; background: var(--tile); border-radius: var(--r); }
-  /* builder */
-  .build .flat { max-width: 440px; margin: 0 auto; }
-  .verdict { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: -10px auto 14px; max-width: 520px; color: var(--ink); }
-  .verdict svg { width: 14px; height: 14px; flex: none; } .verdict.bad { color: #9b3b2e; } .verdict.hint { color: var(--muted); margin-top: -8px; }
-  .build .actions { max-width: 520px; margin: 14px auto 0; position: sticky; bottom: calc(env(safe-area-inset-bottom) + 59px); z-index: 4; background: var(--bg); padding: 8px 0; box-shadow: 0 -1px 0 var(--hair); } /* always reachable, sits above the menu */ .build .actions [data-action=planthis] { flex: 0 0 auto; padding: 0 16px; }
-  .hint { text-align: center; margin: 18px auto 4px; font-size: 12px; }
-  .strip { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 2px; }
-  .strip button { flex: none; width: 76px; height: 96px; background: var(--tile); padding: 7px; position: relative; border-radius: var(--r); }
-  .strip button.on { box-shadow: inset 0 0 0 2px var(--ink); }
-  .strip img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
-  .strip .none { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
-  .strip em { position: absolute; right: 4px; bottom: 3px; font-style: normal; font-size: 11px; font-weight: 700; }
-
-  /* collections */
-  .colls { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; margin: 0 -18px 16px; padding: 0 18px; }
-  .pill { flex: none; height: 44px; padding: 0 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); white-space: nowrap; }
-  .pill.on { background: var(--ink); color: var(--bg); box-shadow: none; }
-  .pill small { font-size: 11px; font-weight: 400; margin-left: 6px; opacity: .7; }
-  .pill.add { color: var(--ink); }
-  /* Mobile: the page behind a sheet stays put, and scrolling inside a sheet never drags the page. Inputs at 16px so iOS doesn't zoom on focus. */
-  html:has(dialog[open]) { overflow: hidden; } dialog.sheet { overscroll-behavior: contain; } input, select, textarea { font-size: 16px; }
-  .collsel { position: relative; margin: 0 0 14px; } .collsel select { width: 100%; height: 48px; padding: 0 40px 0 14px; appearance: none; -webkit-appearance: none; border: 1px solid var(--hair); border-radius: var(--r); background: var(--s1); color: var(--ink); font-weight: 600; }
-  .collsel::after { content: '▾'; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted); }
-  .chips.sticky { position: sticky; top: 0; z-index: 5; background: var(--bg); }
-  .sec { display: flex; justify-content: space-between; align-items: baseline; margin: 30px 0 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; scroll-margin-top: 56px; } .sec small { color: var(--muted); font-weight: 500; }
-  .wx { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -8px 0 16px; font-size: 13px; color: var(--muted); } .wx b { color: var(--ink); font-size: 15px; }
-  .made .look { flex-basis: 132px; } .made .look p { margin: 6px 0 0; font-size: 11px; color: var(--muted); line-height: 1.35; }
-  .bhead { display: flex; gap: 6px; margin: 0 0 14px; } .bhead .btn { flex: 1; }
-  .pickbest { margin: 0 0 12px; font-size: 13px; } .pickbest b { display: block; }
-  .collbar { display: flex; gap: 6px; margin: 0 0 18px; } .collbar .btn { flex: 1; padding: 0 10px; }
-  .btn.armed { background: #9b3b2e; color: #fff; box-shadow: none; }
-  .chips.wrap { flex-wrap: wrap; row-gap: 12px; overflow: visible; }
-  .chips:not(.wrap) { mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent); } /* says "scroll for more" instead of clipping a word */
-  .touch { padding: 18px 18px calc(env(safe-area-inset-bottom) + 22px); display: grid; gap: 14px; }
-  .touch canvas { width: 100%; max-height: 62dvh; object-fit: contain; touch-action: none; background: repeating-conic-gradient(var(--s1) 0 25%, var(--bg) 0 50%) 0 0 / 16px 16px; border-radius: var(--r); }
-  .touch .row3 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
-  .incoll { display: grid; gap: 10px; } .incoll > div { display: flex; flex-wrap: wrap; gap: 6px; }
-  .pickhead { display: flex; justify-content: space-between; align-items: center; padding: 20px 18px 14px; position: sticky; top: 0; background: var(--bg); z-index: 2; }
-  .pad .pickhead { padding: 0; }
-  .pickhead h2 { margin: 2px 0 0; font-size: 22px; text-transform: uppercase; }
-  .pickgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0 18px 30px; }
-  .pickgrid button { min-width: 0; background: var(--tile); aspect-ratio: 3 / 4; padding: 10px 8px 22px; position: relative; border-radius: var(--r); }
-  .pickgrid img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
-  .pickgrid span { position: absolute; left: 6px; right: 6px; bottom: 5px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .pickgrid button.on { box-shadow: inset 0 0 0 2px var(--ink); }
-  .pickgrid button.on::after { content: '✓'; position: absolute; top: 5px; right: 6px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: var(--bg); font-size: 11px; display: grid; place-items: center; }
-  .newcoll { display: grid; gap: 14px; padding: 0 0 calc(env(safe-area-inset-bottom) + 22px); }
-  .newcoll > input { margin: 0 18px; height: 50px; border: 0; border-bottom: 1px solid var(--ink); background: none; font-size: 18px; outline: 0; border-radius: 0; }
-  .newcoll .sugg { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 18px; } .newcoll .btn { margin: 8px 18px 0; width: auto; }
-
-  /* inspo */
-  .board { columns: 2; column-gap: 10px; }
-  .board button { display: block; width: 100%; margin-bottom: 10px; break-inside: avoid; }
-  .board img { width: 100%; display: block; border-radius: var(--r); }
-  .pals { display: flex; align-items: center; gap: 4px; margin-top: 6px; text-align: left; } .pals i { width: 12px; height: 12px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12); } .pals span { margin-left: 4px; }
-  .inspohero { height: auto; max-height: 56dvh; padding: 0; } .inspohero img { max-height: 56dvh; }
-  .pad { padding: 18px 18px calc(env(safe-area-inset-bottom) + 24px); display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; } /* minmax: wide thumb rows must scroll, not stretch the sheet */
-  .palrow { display: flex; gap: 4px; } .palrow button { flex: 1; height: 64px; display: flex; align-items: end; padding: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
-  .palrow button.off { opacity: .2; }
-
-  /* me */
-  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
-  .tiles > * { padding: 16px; background: var(--s1); text-align: left; border-radius: var(--r); }
-  .tiles small { display: block; margin-top: 4px; font-size: 11px; }
-  .tiles b { display: block; font-size: 34px; font-weight: 700; letter-spacing: -.02em; margin-top: 6px; }
-  .bars { display: grid; gap: 8px; } .bars div { display: grid; grid-template-columns: 96px minmax(0, 1fr) 28px; align-items: center; gap: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
-  .bars i { height: 8px; background: var(--s1); } .bars i b { display: block; height: 100%; background: var(--ink); } .bars em { font-style: normal; text-align: right; }
-  .colorbar { display: flex; height: 44px; border-radius: var(--r); overflow: hidden; box-shadow: inset 0 0 0 1px var(--hair); }
-  .legend { margin-top: 10px; line-height: 1.7; }
-  #measure .cell input { text-align: right; }
-  details.sizes summary { list-style: none; cursor: pointer; } details.sizes summary::-webkit-details-marker { display: none; } details.sizes summary h3 span:last-child::after { content: ' +'; } details.sizes[open] summary h3 span:last-child::after { content: ' −'; }
-
-  /* item sheet tools + wishlist extras */
-  .btn.full { width: 100%; } .tip { text-align: center; margin-top: 10px; } .hud .mono { display: block; margin-top: 14px; }
-  .sheet .tools button.hl { background: var(--ink); color: var(--bg); }
-  .sheet .tools { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 10px 18px; border-bottom: 1px solid var(--hair); }
-  .sheet .tools button { flex: none; height: 44px; padding: 0 12px; background: var(--s1); box-shadow: inset 0 0 0 1px var(--hair); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; border-radius: var(--r); }
-  .shop { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--ink); }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-
-  /* ============ V3 · STREETWEAR ARCHIVE ============
-     Heavy condensed display (Anton, iPhone's condensed black as fallback), hard edges, near-black on off-white,
-     monospace sticker tags for labels, one safety-orange accent for "live" things. Body copy stays readable sentence case. */
-  :root { --bg: #f0efeb; --s1: #fafaf7; --tile: #e2e1dc; --ink: #0c0c0c; --muted: #55554f; --hair: rgb(12 12 12 / .14); --accent: #ff4d00; --bad: #c2341b;
-    --display: Anton, "HelveticaNeue-CondensedBlack", "Arial Narrow", Impact, sans-serif; --mono: ui-monospace, "SF Mono", Menlo, monospace; --r: 0px;
-    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    --shadow: drop-shadow(0 5px 6px rgb(0 0 0 / .2)); color-scheme: light; } /* light only: the user turned dark mode off */
-  
-  body { font-size: 15px; }
-  h1, .display { font-family: var(--display); font-weight: 400; text-transform: uppercase; letter-spacing: .005em; line-height: .92; }
-  h1 { font-size: 46px; } .pickhead h2 { font-family: var(--display); font-weight: 400; font-size: 30px; letter-spacing: .01em; }
-  .eyebrow, .mono, .tag, .chip, .pill, .btn, .seg button, nav .tabs button, .lab, .sec, .looks-h, h3, .weekbar, .cell > span:first-child, .plus { font-family: var(--mono); letter-spacing: .06em; }
-  /* sticker tags: the archive label */
-  .tag { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 7px; font-size: 11px; font-weight: 600; text-transform: uppercase; background: var(--ink); color: var(--bg); white-space: nowrap; }
-  .tag.o { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); } .tag.hot { background: var(--accent); color: #fff; }
-  button.tag { height: 32px; padding: 0 10px; } .tags { display: flex; flex-wrap: wrap; gap: 5px; }
-  /* buttons: hard, chunky */
-  .btn { height: 50px; font-size: 12px; font-weight: 700; box-shadow: none; } .btn.ghost, .btn.danger { box-shadow: inset 0 0 0 2px var(--ink); } .btn.go { background: var(--accent); color: #fff; }
-  .btn.danger { color: var(--bad); box-shadow: inset 0 0 0 2px var(--bad); } .btn.armed { background: var(--bad); }
-  .pill { box-shadow: inset 0 0 0 1.5px var(--hair); color: var(--ink); } .pill.on { background: var(--ink); color: var(--bg); }
-  .chip { color: var(--muted); } .chip.on { color: var(--ink); border-bottom-width: 3px; }
-  .seg.subnav { box-shadow: inset 0 0 0 2px var(--ink); } .seg.subnav button.on { background: var(--ink); color: var(--bg); }
-  /* readable copy: sentence case for reasons and captions */
-  .meta p, .dmeta p, .made .look p, .sub, .verdict, .why, .pickbest, .issue, .laundry { text-transform: none; letter-spacing: 0; font-family: inherit; font-size: 13px; }
-  .item b { font-family: var(--display); font-weight: 400; font-size: 17px; letter-spacing: .01em; line-height: 1.05; margin-top: 8px; }
-  .item span { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; }
-  /* clothes are the hero: grain surface + a soft shadow under every cutout */
-  .flat, .item .ph, .spot, .pickgrid button, .carousel, .strip button, .cday, .looks .look { background-color: var(--tile); background-image: var(--grain); }
-  .flat > img, .item .ph img, .pickgrid img, .carousel img, .strip img, .sheet .hero img, .cv img { filter: var(--shadow); }
-  .flat { background-color: color-mix(in srgb, var(--tint, var(--tile)) 16%, var(--tile)); }
-  /* nav: black bar, orange dot */
-  nav { background: var(--ink); border-top: 0; } nav .tabs button { color: rgb(255 255 255 / .55); font-size: 11px; } nav .tabs button.on { color: #fff; } nav .tabs button.on::after { background: var(--accent); width: 6px; height: 6px; margin-left: -3px; border-radius: 0; }
-  
-  nav .add { background: var(--accent); color: #fff; }
-      
-  
-  #toast { font-family: var(--mono); display: flex; align-items: center; gap: 14px; white-space: nowrap; } #toast button { color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 0 2px; height: 28px; }
-  /* Today */
-  .thead { margin-bottom: 12px; } .tbar { display: flex; gap: 5px; align-items: center; margin: 0 0 14px; } .tbar .sp { flex: 1; } .tbar svg { width: 16px; height: 16px; }
-  .stack { position: relative; display: grid; } .stack > * { grid-area: 1 / 1; }
-  .dcard { background: var(--s1); padding: 12px 12px 14px; box-shadow: inset 0 0 0 2px var(--ink); transition: transform .25s cubic-bezier(.2, .9, .3, 1), opacity .2s; touch-action: none; user-select: none; -webkit-user-select: none; position: relative; }
-  .dcard.under { transform: translate(6px, 6px); pointer-events: none; } .dcard.under > * { opacity: .25; } .dcard.end { touch-action: auto; text-align: center; padding: 40px 16px; }
-  .dtop { display: flex; justify-content: space-between; align-items: center; min-height: 24px; } .dtitle { font-size: clamp(34px, 11vw, 52px); margin: 6px 0 10px; overflow-wrap: anywhere; }
-  .flatwrap { width: min(100%, calc(36dvh * .8)); margin: 0 auto 10px; } .flatwrap .flat { pointer-events: none; }
-  .dcard .hint::after { position: absolute; top: 18px; font-family: var(--display); font-size: 34px; padding: 2px 10px; transform: rotate(-8deg); opacity: 0; transition: opacity .1s; }
-  .dcard[data-hint=next] .hint::after { content: 'NEXT'; right: 16px; opacity: 1; color: var(--ink); box-shadow: inset 0 0 0 3px var(--ink); }
-  .dcard[data-hint=save] .hint::after { content: 'SAVE'; left: 16px; opacity: 1; color: var(--accent); box-shadow: inset 0 0 0 3px var(--accent); transform: rotate(8deg); }
-  .dcard[data-hint=wear] .hint::after { content: 'WEAR'; left: 50%; margin-left: -48px; opacity: 1; background: var(--accent); color: #fff; }
-  .dbtns { display: grid; grid-template-columns: 54px 54px minmax(0, 1fr); gap: 8px; margin-top: 12px; } .round { height: 54px; display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--ink); } .round.on svg { fill: var(--accent); stroke: var(--accent); }
-  .dbtns .btn { height: 54px; } .swipehint { text-align: center; margin: 10px 0 0; font-size: 11px; }
-  .filters .tags { margin-bottom: 6px; }
-  /* Build canvas */
-  .build .canvas { max-width: 420px; margin: 0 auto; } .cvs { position: absolute; } .cvs .carousel { height: 100%; margin: 0; background: none; } .cvs .carousel button { flex: 0 0 100%; height: 100%; scroll-snap-align: center; scroll-snap-stop: always; }
-  .cvs .carousel img { width: 100%; height: 100%; object-fit: contain; padding: 0; filter: var(--shadow); } .cvs.empty { display: grid; place-items: center; box-shadow: inset 0 0 0 2px var(--ink); background: rgb(255 255 255 / .35); }
-  .cvs.empty span { font-family: var(--mono); font-size: 11px; font-weight: 700; text-transform: uppercase; color: #0c0c0c; } .slab { position: absolute; left: 0; bottom: 0; display: flex; gap: 3px; align-items: center; font: 600 10px/1 var(--mono); padding: 3px 4px; background: rgb(12 12 12 / .75); color: #fff; pointer-events: none; } .slab svg { width: 10px; height: 10px; }
-  .cvs.drop { animation: drop .45s cubic-bezier(.2, 1.4, .4, 1); } @keyframes drop { from { transform: translateY(-14px) scale(1.06); opacity: .4 } }
-  .ring { width: 64px; height: 64px; border-radius: 50%; display: grid; place-content: center; text-align: center; background: radial-gradient(closest-side, var(--bg) 78%, transparent 80%), conic-gradient(var(--accent) calc(var(--p) * 1%), var(--hair) 0); }
-  .ring b { font-family: var(--display); font-weight: 400; font-size: 24px; line-height: .9; } .ring span { font: 600 9px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); } .ring.bad b { color: var(--bad); }
-  .build .verdict { margin: 0 auto 10px; max-width: 420px; } .whytags, .build .tools { max-width: 420px; margin: 10px auto 0; display: flex; flex-wrap: wrap; gap: 5px; } .build .tools svg { width: 14px; height: 14px; }
-  .tag.bad { background: transparent; color: var(--bad); box-shadow: inset 0 0 0 1.5px var(--bad); } .slotops { padding: 0 18px 12px; }
-  .build .actions { max-width: 420px; }
-  /* piece page */
-  .phead { display: grid; gap: 8px; } .pname { font-size: 34px; margin: 0; overflow-wrap: anywhere; }
-  .review { display: grid; gap: 8px; padding: 12px; box-shadow: inset 0 0 0 2px var(--accent); } .review p { margin: 0; font-size: 14px; }
-  details.more { border-top: 2px solid var(--ink); } details.more > summary { list-style: none; display: flex; justify-content: space-between; align-items: baseline; padding: 14px 0; cursor: pointer; font-family: var(--display); font-size: 22px; text-transform: uppercase; }
-  details.more > summary::-webkit-details-marker { display: none; } details.more > summary::after { content: '+'; font-family: var(--mono); font-size: 20px; } details.more[open] > summary::after { content: '−'; } details.more > summary .mono { flex: 1; margin-left: 10px; font-size: 11px; }
-  details.more > :not(summary) { margin-bottom: 14px; } .sheet .hero { position: relative; } .sheet .hero .grab { position: absolute; top: 0; left: 50%; margin-left: -22px; }
-  /* closet */
-  .ph { position: relative; } .tag.corner { position: absolute; left: 6px; top: 6px; height: 20px; font-size: 10px; padding: 0 5px; } .tag.o.corner { background: var(--s1); }
-  .ctags { margin: 0 0 12px; } .ctags .sp { flex: 1; } .ctags .tag { height: 30px; }
-  .shelf { display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 4px; scroll-padding: 0 18px; scroll-snap-type: x proximity; } .shelf::-webkit-scrollbar { display: none; }
-  .shelf .item { flex: 0 0 132px; scroll-snap-align: start; } .shelf .item b { font-size: 15px; } .shelf .item span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .quick { display: grid; gap: 8px; } .item { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
-  /* capsules */
-  .capbtn svg { width: 14px; height: 14px; } .capbtn { max-width: 60%; } .capbtn { overflow: hidden; text-overflow: ellipsis; }
-  .capbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: -4px 0 12px; padding: 8px 10px; background: var(--accent); color: #fff; font-size: 13px; }
-  .capbar button { color: #fff; font: 700 11px/1 var(--mono); text-transform: uppercase; text-decoration: underline; flex: none; min-height: 32px; }
-  .caprow { display: flex; align-items: center; border-bottom: 1px solid var(--hair); } .capsel { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 64px; text-align: left; }
-  .capsel i { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--ink); display: grid; place-items: center; flex: none; } .capsel i svg { width: 15px; height: 15px; opacity: 0; }
-  .caprow.on .capsel i { background: var(--accent); box-shadow: none; } .caprow.on .capsel i svg { opacity: 1; stroke: #fff; }
-  .capsel b { display: block; font-family: var(--display); font-weight: 400; font-size: 22px; text-transform: uppercase; line-height: 1; } .capsel small { color: var(--muted); font-size: 13px; }
-  .capacts { display: flex; } .capacts .icon { width: 40px; } .capacts .icon svg { width: 18px; height: 18px; } .capacts .armed svg { stroke: var(--bad); }
-  .caps > .mono { margin-top: 14px; }
-  .recap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 0 0 14px; } .recap > div { background: var(--ink); color: var(--bg); padding: 10px; min-width: 0; }
-  .recap .mono { color: rgb(255 255 255 / .6); font-size: 10px; } 
-  .recap b { display: block; font-family: var(--display); font-weight: 400; font-size: 18px; line-height: 1; margin-top: 4px; text-transform: uppercase; overflow-wrap: anywhere; } .recap small { font-size: 11px; }
-  .cday .selfie { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; } .dayview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; } .dayview:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
-  .selfie.big { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; } .wxcopy { margin: -6px 0 12px; font-size: 13px; color: var(--muted); }
-  .selbar select { max-width: 104px; }
-  .bootfail { position: fixed; left: 16px; right: 16px; top: 40%; z-index: 99; display: grid; gap: 8px; padding: 20px; background: #fff; box-shadow: 0 10px 40px rgb(0 0 0 / .18), inset 0 0 0 1px rgb(0 0 0 / .1); font: 15px/1.4 "Helvetica Neue", Helvetica, Arial, sans-serif; }
-  .bootfail span { color: #66665f; } .bootfail button { height: 48px; background: #141414; color: #fff; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; font-size: 12px; }
-  .help { margin: 4px 0 10px; font-size: 13px; color: var(--muted); }
-  .accs button { position: relative; } .accs b { position: absolute; right: 2px; top: 4px; width: 16px; height: 16px; border-radius: 50%; background: #fff; color: var(--ink); font-size: 12px; line-height: 16px; box-shadow: 0 0 0 1px var(--hair); }
-  .accs i { font-size: 0; } .accadd { width: 44px; height: 44px; font-size: 22px; color: var(--ink); box-shadow: inset 0 0 0 1px var(--hair); border-radius: 50%; margin-left: 4px; }
-  /* Today carousel */
-  .deck { display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; margin: 0 -18px; padding: 0 18px; scroll-padding: 0 18px; }
-  .deck::-webkit-scrollbar { display: none; } .dcard.slide { flex: 0 0 88%; min-width: 0; scroll-snap-align: start; touch-action: auto; user-select: auto; }
-  .dcard .flatwrap { display: block; width: 100%; margin: 0 0 10px; } .dcard .flatwrap .flat { pointer-events: none; }
-  .dbtns { grid-template-columns: 48px 48px minmax(0, 1fr) 48px; } .dbtns .round { height: 48px; } .dbtns .btn { height: 48px; }
-  .tbar svg { width: 20px; height: 20px; stroke-width: 1.5; } .capbtn svg { width: 16px; height: 16px; }
-  /* Build: stacked hat → shoes, tap a piece to change it */
-  .bstack { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; max-width: 520px; margin: 0 auto; }
-  .bc { display: flex; flex-direction: column; min-width: 0; padding: 10px 10px 4px; background: var(--tile); } .bc.wide { grid-column: 1 / -1; }
-  .bc .lab { font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-  .bc .pic { display: block; height: 200px; padding: 6px 0; } .bc.small .pic { height: 110px; } .bc.wide .pic { height: 260px; } .bc.wide.short .pic { height: 130px; }
-  .bc .pic img { width: 100%; height: 100%; object-fit: contain; filter: var(--shadow); } .bc .nm { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bc .ops { display: flex; align-items: center; margin: 2px -6px 0; } .bc .ops .mono { flex: 1; text-align: center; font-size: 11px; }
-  .bc .ops button { width: 44px; height: 44px; display: grid; place-items: center; } .bc .ops svg { width: 18px; height: 18px; }
-  .bc.empty { align-items: center; justify-content: center; gap: 2px; min-height: 150px; background: transparent; box-shadow: inset 0 0 0 1px rgb(20 20 20 / .25); color: var(--ink); }
-  .bc.empty.small { min-height: 110px; } .bc.empty.wide { min-height: 120px; } .bc.empty b { font-size: 24px; font-weight: 300; } .bc.empty span { font-size: 13px; } .bc.empty small { font-size: 11px; color: var(--muted); }
-  .bc.drop { animation: drop .4s cubic-bezier(.2, 1.4, .4, 1); } .starters { margin: 0 -18px 12px; } .resume { margin: 0 0 12px; }
-  /* closet: more room for the clothes */
-  .item .ph { padding: 7%; } .shelf .item { flex-basis: 150px; }
-  /* favorites */
-  .favbtn { display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 10px; box-shadow: inset 0 0 0 2px var(--ink); font: 700 13px/1 var(--mono); } .favbtn svg { width: 16px; height: 16px; fill: var(--accent); stroke: var(--accent); }
-  .feed.favs .outfit { background: var(--s1); padding: 8px; box-shadow: inset 0 0 0 2px var(--ink); } .ftitle { font-size: 20px; margin: 8px 0 6px; border: 0; padding: 0; letter-spacing: .01em; font-family: var(--display); font-weight: 400; }
-  .facts { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 4px; align-items: center; } .facts .btn { height: 40px; padding: 0 8px; } .facts .icon.on svg { fill: var(--accent); stroke: var(--accent); }
-  .feed.favs > .outfit:first-child { grid-column: auto; } .feed.favs > .outfit:first-child .flat { max-width: none; }
-  .seeall { font: 600 11px/1 var(--mono); text-transform: uppercase; color: var(--accent); min-height: 32px; }
-  /* update banner */
-  .update { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 70px); z-index: 8; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; background: var(--accent); color: #fff; font-family: var(--mono); font-size: 12px; font-weight: 700; text-transform: uppercase; }
-  .update button { color: #fff; box-shadow: inset 0 0 0 2px #fff; height: 36px; padding: 0 12px; font-weight: 700; }
-  /* sheets: a grab bar you can drag down */
-  .grab { display: block; width: 44px; height: 5px; margin: 8px auto 0; background: var(--hair); } dialog.sheet { transition: transform .25s cubic-bezier(.2, .9, .3, 1); }
-  @media (prefers-reduced-motion: reduce) { .dcard.live { transition: none !important; } }
-
-  /* ============ PRODUCT FIRST (replaces the streetwear look) ============
-     Creative direction: the clothes are the only thing with weight or color. White page, one consistent soft-grey studio
-     surface under every piece, small precise grotesk type, black text only, hairlines instead of boxes, no black panels.
-     Black appears only as text and as the one primary button per screen. Taps stay 44px+, text 11px+. */
-  :root { --bg: #ffffff; --s1: #f7f7f5; --tile: #f0efec; --ink: #141414; --muted: #66665f; --hair: rgb(20 20 20 / .1); --accent: #141414; --bad: #a8321d;
-    --display: "Helvetica Neue", Helvetica, Arial, sans-serif; --mono: "Helvetica Neue", Helvetica, Arial, sans-serif; --grain: none; --shadow: drop-shadow(0 6px 10px rgb(0 0 0 / .12)); }
-  body { background: var(--bg); font-size: 15px; }
-  h1, .display { font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; line-height: 1.05; }
-  h1 { font-size: 26px; } .pickhead h2 { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .03em; }
-  .eyebrow, .mono, .chip, .pill, .seg button, nav .tabs button, .lab, .sec, .looks-h, h3, .weekbar, .cell > span:first-child, .plus { font-family: var(--mono); letter-spacing: .08em; }
-  /* tags: quiet outlines, never filled black; selected = soft grey fill */
-  .tag, .tag.o, .tag.hot { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--hair); font-family: var(--mono); font-weight: 500; font-size: 11px; letter-spacing: .06em; height: 28px; }
-  .tag:not(.o):not(.bad) { background: var(--s1); box-shadow: inset 0 0 0 1px rgb(20 20 20 / .22); } .tag.hot { background: var(--tile); }
-  button.tag { min-height: 44px; height: auto; padding: 0 12px; } .tbar button.tag, .ctags button.tag { min-height: 44px; }
-  .tag.bad { color: var(--bad); box-shadow: inset 0 0 0 1px rgb(168 50 29 / .4); background: transparent; }
-  /* buttons: one solid primary, everything else outline */
-  .btn { height: 48px; font-size: 12px; font-weight: 600; letter-spacing: .1em; border-radius: 0; background: var(--ink); color: #fff; box-shadow: none; }
-  .btn.go { background: var(--ink); color: #fff; } .btn.ghost, .btn.danger { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px rgb(20 20 20 / .3); } .btn.danger { color: var(--bad); box-shadow: inset 0 0 0 1px rgb(168 50 29 / .4); }
-  .btn.done { background: var(--s1); color: var(--muted); box-shadow: none; } .pill { box-shadow: inset 0 0 0 1px var(--hair); } .pill.on { background: var(--ink); color: #fff; }
-  .seg.subnav { box-shadow: none; border-bottom: 1px solid var(--hair); } .seg.subnav button { border-bottom: 2px solid transparent; margin-bottom: -1px; } .seg.subnav button.on { background: transparent; color: var(--ink); border-bottom-color: var(--ink); }
-  .chip.on { border-bottom-width: 2px; }
-  /* the clothes: one soft studio surface everywhere, no tint, no grain */
-  .flat, .item .ph, .spot, .pickgrid button, .carousel, .strip button, .cday, .looks .look, .flat { background-color: var(--tile); background-image: none; }
-  .cvs .carousel { background: none; }
-  /* menu: white, hairline, the active tab underlined */
-  nav { background: rgb(255 255 255 / .94); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--hair); }
-  nav .tabs button { color: var(--muted); } nav .tabs button.on { color: var(--ink); } nav .tabs button.on::after { background: var(--ink); width: 18px; height: 2px; margin-left: -9px; bottom: 12px; }
-  nav .add { background: transparent; color: var(--ink); box-shadow: inset 1px 0 0 var(--hair); }
-  /* Today: the card is just the look, no frame */
-  .dcard { background: transparent; box-shadow: none; padding: 0; } .dcard.under { display: none; } .dcard.end { box-shadow: inset 0 0 0 1px var(--hair); padding: 40px 16px; }
-  .dtitle { font-size: 24px; font-weight: 500; text-transform: none; letter-spacing: 0; margin: 4px 0 10px; } .dtitle::first-letter { text-transform: uppercase; }
-  .flatwrap { width: min(100%, calc(42dvh * .8)); }
-  .dcard[data-hint=save] .hint::after { color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); } .dcard[data-hint=wear] .hint::after { background: var(--ink); color: #fff; }
-  .dcard .hint::after { font-family: var(--display); font-weight: 700; font-size: 22px; background: #fff; }
-  .round { box-shadow: inset 0 0 0 1px rgb(20 20 20 / .3); } .round.on svg { fill: var(--ink); stroke: var(--ink); }
-  .capbar { background: var(--s1); color: var(--ink); box-shadow: inset 0 0 0 1px var(--hair); } .capbar button { color: var(--ink); }
-  .favbtn { box-shadow: inset 0 0 0 1px var(--hair); height: 44px; font-family: var(--mono); } .favbtn svg { fill: var(--ink); stroke: var(--ink); }
-  .streak { box-shadow: inset 0 0 0 1px var(--hair); min-height: 44px; display: inline-flex; align-items: center; } .streak.lit { background: var(--s1); color: var(--ink); } .streak.lit b { color: var(--ink); }
-  .seeall { color: var(--ink); text-decoration: underline; min-height: 44px; }
-  /* builder */
-  .ring { background: radial-gradient(closest-side, var(--bg) 82%, transparent 84%), conic-gradient(var(--ink) calc(var(--p) * 1%), var(--hair) 0); } .ring b { font-family: var(--display); font-weight: 600; font-size: 20px; } .ring span { font-size: 11px; }
-  .slab { background: rgb(255 255 255 / .9); color: var(--ink); font-size: 11px; font-family: var(--mono); box-shadow: inset 0 0 0 1px var(--hair); }
-  .cvs.empty { box-shadow: inset 0 0 0 1px rgb(20 20 20 / .3); background: rgb(255 255 255 / .5); } .cvs.empty span { font-family: var(--mono); }
-  .pickgrid small.why.neg { color: var(--bad); }
-  /* closet */
-  .item b { font-family: var(--display); font-weight: 500; font-size: 13px; letter-spacing: 0; text-transform: none; line-height: 1.3; margin-top: 8px; }
-  .item span { font-family: var(--mono); font-size: 11px; color: var(--muted); } .item .tag.corner { color: var(--ink); background: rgb(255 255 255 / .92); box-shadow: inset 0 0 0 1px var(--hair); font-size: 11px; height: 22px; }
-  .sec small, .chip small { font-size: 11px; }
-  .selbar { flex-wrap: wrap; row-gap: 6px; } .selbar .row2 { flex-wrap: wrap; } .selbar select { min-height: 44px; }
-  .capacts .icon { width: 44px; } .thead .eyebrow { white-space: nowrap; } .capbtn svg { width: 16px; height: 16px; } details.sizes summary { min-height: 44px; }
-  /* piece page, calendar, me */
-  .pname { font-size: 24px; font-weight: 600; } .review { box-shadow: inset 0 0 0 1px rgb(20 20 20 / .3); }
-  details.more { border-top: 1px solid var(--hair); } details.more > summary { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .06em; }
-  .recap > div { background: var(--s1); color: var(--ink); box-shadow: inset 0 0 0 1px var(--hair); } .recap .mono { color: var(--muted); font-size: 11px; } .recap b { font-family: var(--display); font-weight: 600; font-size: 15px; }
-  .tiles > * { background: var(--s1); } .tiles b { font-family: var(--display); font-weight: 600; font-size: 30px; letter-spacing: 0; }
-  .cday.today { box-shadow: inset 0 0 0 1.5px var(--ink); } .day.today { box-shadow: inset 0 0 0 1.5px var(--ink); }
-  .feed.favs .outfit { background: transparent; padding: 0; box-shadow: none; } .ftitle { font-family: var(--display); font-weight: 500; font-size: 15px; text-transform: none; } .ftitle::first-letter { text-transform: uppercase; }
-  .facts .icon.on svg { fill: var(--ink); stroke: var(--ink); }
-  .update { background: var(--ink); } .cpref .good { box-shadow: inset 0 0 0 2px var(--ink); }
-  .caprow.on .capsel i { background: var(--ink); } .capsel b { font-family: var(--display); font-weight: 600; font-size: 16px; letter-spacing: .02em; }
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <main id="app"></main>
@@ -565,16 +31,17 @@
 <script>
 // Safety net: if the app code fails to start (a half-updated download, a bad file), say so and offer a clean reload instead of a blank screen.
 setTimeout(() => { if (window.__appReady) return; const d = document.createElement('div'); d.className = 'bootfail';
+  d.style.cssText = 'position:fixed;left:16px;right:16px;top:40%;z-index:99;display:grid;gap:8px;padding:20px;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgb(0 0 0/.18);font:15px/1.4 Helvetica,Arial,sans-serif'; // styled inline: the stylesheet may be what failed
   d.innerHTML = '<b>Couldn\'t load the latest version.</b><span>Your clothes are safe on this phone.</span><button>Reload</button>';
   d.querySelector('button').onclick = async () => { try { for (const k of await caches.keys()) await caches.delete(k); for (const r of await navigator.serviceWorker?.getRegistrations?.() ?? []) await r.update(); } catch {} location.reload(); };
   document.body.append(d); }, 6000);
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges } from './progress.js';
-import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
-import { cleanAlpha, floodOut, keyOut, orient } from './cutout.js';
+import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
+import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.15 · v3.4'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v4.0'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -589,7 +56,7 @@ const store = (name, mode, fn) => new Promise((res, rej) => {
 });
 // Photos are saved as raw bytes (ArrayBuffer), not Blob objects: iPhone Safari can lose Blobs kept in IndexedDB
 // ("images not loading"), bytes it keeps. In memory they're Blobs as usual; old Blob records still load and convert on their next save.
-const BLOBS = { items: ['img', 'photo'], inspo: ['img'], log: ['selfie'] };
+const BLOBS = { items: ['img', 'photo', 'thumb'], inspo: ['img'], log: ['selfie'] };
 const pack = async (name, v) => { const o = { ...v };
   for (const k of BLOBS[name] ?? []) if (o[k] instanceof Blob) try { o[k] = { bytes: await o[k].arrayBuffer(), type: o[k].type || 'image/png' }; } catch { /* unreadable: keep as is, the photo check flags it */ }
   return o; };
@@ -597,7 +64,8 @@ const pack = async (name, v) => { const o = { ...v };
 const isBytes = x => x != null && !(x instanceof Blob) && x.bytes instanceof ArrayBuffer;
 const unpack = (name, v) => { for (const k of BLOBS[name] ?? []) if (isBytes(v?.[k])) v[k] = new Blob([v[k].bytes], { type: v[k].type }); return v; };
 const all = name => store(name, 'readonly', s => s.getAll()).then(list => list.map(v => unpack(name, v)));
-const put = async (name, v) => { const o = await pack(name, v); return store(name, 'readwrite', s => s.put(o)); };
+const put = async (name, v) => { if (name === 'items') v.updatedAt = Date.now(); return putQuiet(name, v); }; // updatedAt: small "changes only" backups
+const putQuiet = async (name, v) => { const o = await pack(name, v); return store(name, 'readwrite', s => s.put(o)); }; // housekeeping saves (previews, format) aren't "changes"
 const del = (name, k) => store(name, 'readwrite', s => s.delete(k));
 
 // ---------- state ----------
@@ -624,8 +92,30 @@ for (const it of S.items) if (it.accents?.some(a => isShade(a, it.color))) { it.
 let kept = false; navigator.storage?.persist?.().then(v => { kept = v; }).catch(() => {});
 
 const urls = new Map();
-const src = it => urls.get(it.id) ?? urls.set(it.id, URL.createObjectURL(it.img)).get(it.id); // items and inspo pics
-const resetSrc = it => { URL.revokeObjectURL(urls.get(it.id)); urls.delete(it.id); };
+const objUrl = (k, b) => urls.get(k) ?? urls.set(k, URL.createObjectURL(b)).get(k);
+// Grids use a small preview copy (360px, trimmed to the piece with even margins); the piece page uses the full photo.
+// A piece without a preview shows the full photo once and gets its preview made in the background.
+const src = it => it.thumb instanceof Blob ? objUrl(it.id + ':t', it.thumb) : (it.cat && queueThumb(it), objUrl(it.id, it.img));
+const srcFull = it => objUrl(it.id, it.img);
+const resetSrc = it => { for (const k of [it.id, it.id + ':t']) { URL.revokeObjectURL(urls.get(k)); urls.delete(k); } delete it.thumb; };
+const thumbQ = new Set(); let thumbBusy = false;
+function queueThumb(it) { if (thumbQ.has(it)) return; thumbQ.add(it); if (!thumbBusy) setTimeout(makeThumbs, 300); }
+async function makeThumbs() {
+  thumbBusy = true;
+  for (const it of [...thumbQ]) { thumbQ.delete(it); try { it.thumb = await thumbOf(it.img); await putQuiet('items', it); } catch (e) { console.warn(e); } }
+  thumbBusy = false;
+}
+async function thumbOf(blob) {
+  const b = await createImageBitmap(blob), k0 = Math.min(1, 480 / Math.max(b.width, b.height)), w = Math.round(b.width * k0), h = Math.round(b.height * k0);
+  const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), x = c.getContext('2d'); x.drawImage(b, 0, 0, w, h);
+  const d = x.getImageData(0, 0, w, h).data; let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let xx = 0; xx < w; xx++) if (d[(y * w + xx) * 4 + 3] > 24) { x0 = Math.min(x0, xx); x1 = Math.max(x1, xx); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (x1 < 0) { x0 = 0; y0 = 0; x1 = w - 1; y1 = h - 1; }
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1, pad = Math.round(Math.max(bw, bh) * 0.04), k = Math.min(1, 360 / (Math.max(bw, bh) + pad * 2));
+  const o = Object.assign(document.createElement('canvas'), { width: Math.round((bw + pad * 2) * k), height: Math.round((bh + pad * 2) * k) });
+  o.getContext('2d').drawImage(c, x0, y0, bw, bh, pad * k, pad * k, bw * k, bh * k);
+  return new Promise(r => o.toBlob(r, 'image/webp', 0.85)); // Safari makes a PNG, fine
+}
 const byId = id => S.items.find(i => i.id === id);
 const collById = id => S.colls.find(c => c.id === id) ?? (id?.startsWith('smart:') && SMART[id.slice(6)] ? { id, name: SMART[id.slice(6)][0], ids: [], smart: true } : undefined);
 // Smart collections fill themselves (pick them in the closet dropdown). Values: smart:<key>.
@@ -646,6 +136,7 @@ const guessKind = it => Object.keys(KINDS).filter(k => KINDS[k] === it.cat).find
 // Tags that contradict each other (AI guesses): a "denim jacket" filed under Tops, Air Force 1s called sleek. "It's right" silences it.
 const issueOf = it => { if (it.review) return null;
   if ((patternOf(it) === 'graphic' || patternOf(it) === 'allover') && !it.accents?.length && !it.tagOk) return { text: 'Tagged as a print, but no print colors were found. Plain?', fix: 'pattern:solid', label: 'Mark as solid' };
+  if (it.person && !it.tagOk) return { text: 'A person is in this photo, so their legs, arms or shoes come along. Erase them, or use a photo of just the piece.', fix: 'touch:1', label: 'Touch up' };
   if (it.broken) return { text: "This photo didn't load", fix: 'photo:1', label: 'Replace photo' };
   if (it.turnHint) return { text: 'This may be lying sideways', fix: `turn:${it.turnHint}`, label: 'Turn it upright' };
   if (it.tagOk) return null;
@@ -703,7 +194,7 @@ const MEASURE = [['height', 'Height', `5'10"`], ['weight', 'Weight', '170 lb'], 
   ['hat', 'Hat size', '7 3/8'], ['notes', 'Fit notes', 'Size up in tees']];
 
 const progressCtx = () => ({ items: S.items, log: S.log, saved: S.saved });
-const streakChip = () => { if (!streaks(S.log).cur) return ''; /* no big zero */ const st = streaks(S.log); return `<button class="streak ${st.today ? 'lit' : ''}" data-go="progress" aria-label="${st.cur} day streak">Streak <b>${st.cur}</b></button>`; };
+const streakChip = () => { if (!streaks(S.log).cur) return ''; /* no big zero */ const st = streaks(S.log); return `<button class="tag ${st.today ? '' : 'o'} streaktag" data-go="progress" aria-label="${st.cur} day streak">${st.cur} day streak</button>`; };
 const head = (eyebrow, title, right = '') => `<header><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1></div><div class="right">${right}${streakChip()}</div></header>`;
 const subnav = (key, tabs) => `<div class="seg subnav">${tabs.map(([k, label]) => `<button class="${S[key] === k ? 'on' : ''}" data-sub="${key}:${k}">${label}</button>`).join('')}</div>`;
 // ---------- weather (Open-Meteo: free, no key). Only after you tap "Use weather"; location rounded to ~10 km, kept on this phone. ----------
@@ -730,7 +221,7 @@ function askWeather() {
 // one line per kind of weather, shown under Today's stickers
 const wxLine = w => RAINY(w.code) ? 'Rain day: boots or dark sneakers, a shell on top, no suede.' : w.code >= 71 && w.code <= 77 ? 'Snow: boots, a real coat, layers you can peel.' : w.t >= 28 ? 'Hot: short sleeves, light colors, nothing heavy.' : w.t < 5 ? 'Cold: a coat over a knit, closed shoes.' : w.t < 12 ? 'Crisp: one good layer does it.' : w.lo != null && w.lo < w.t - 6 ? 'Mild now, cooler later: bring a layer.' : 'Mild: anything goes.';
 const RAINY = c => (c >= 51 && c <= 67) || (c >= 80 && c <= 99);
-const todayPicks = (items, t) => today(items, { t, rain: RAINY(S.profile?.wx?.code ?? 0), occasion: S.occ, n: 12, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
+const todayPicks = (items, t) => today(items, { t, like: S.like?.map(byId).filter(Boolean), rain: RAINY(S.profile?.wx?.code ?? 0), occasion: S.occ, n: 12, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
 
 // Gaps are slow-ish to compute, so cache until something about the closet changes.
 const sig = () => S.items.map(i => [i.id, i.cat, i.color, i.fit, i.vibe, i.patterned, i.name, i.kind].join()).join('|');
@@ -779,12 +270,13 @@ async function tag(dataUrl) {
   const vibe = vs[1].score > vs[0].score * 0.6 ? [vk(vs[0].label), vk(vs[1].label)] : vk(vs[0].label); // close call: both, you untick the wrong one
   const PAT = { 'plain solid-color clothing with no print': 'solid', 'plain clothing with a small chest logo': 'logo', 'clothing with a large graphic print on it': 'graphic', 'clothing with an all-over pattern like stripes, camo or plaid': 'allover' };
   const pat = PAT[await top(Object.keys(PAT), 'a photo of {}')];
+  const person = (await top(['a product photo of clothing on its own', 'a photo of a person wearing clothes'], '{}')).includes('person'); // store photo on a model: the legs and shoes come along
   const fp = (FIT_PROMPTS[cat] ?? FIT_PROMPTS.default).map(p => `${p} ${kind}`);
   const fit = cat === 'Accessories' ? 1 : fp.indexOf(await top(fp, 'a photo of {}'));
   const material = /denim|jean/.test(kind) ? 'denim' : cat === 'Accessories' ? undefined : await top(MATERIALS.map(m => `${m} ${kind}`), 'a close-up photo of a {}').then(l => l.split(' ')[0]);
   return {
     kind, cat, fit, name: kind[0].toUpperCase() + kind.slice(1),
-    vibe, pattern: pat, patterned: pat === 'graphic' || pat === 'allover', ...(material ? { material } : {}),
+    vibe, pattern: pat, patterned: pat === 'graphic' || pat === 'allover', ...(person ? { person: true } : {}), ...(material ? { material } : {}),
   };
 }
 
@@ -813,7 +305,7 @@ async function prep(blob, raw = false, tags = null) {
       for (let p = 3; p < d.length; p += 4) d[p] = 255;
       keyOut(d, w, h);
       const k2 = cleanAlpha(d, w, h, { pieces, fill: !open });
-      if (k2 < min || k2 > 0.9) was.forEach((a, i) => { d[i * 4 + 3] = a; }); else { kept = k2; hard = true; } // the fill ate the piece, or found no floor: keep the model's cut
+      if (k2 < min || k2 > 0.9) was.forEach((a, i) => { d[i * 4 + 3] = a; }); else { kept = k2; hard = true; smoothEdges(d, w, h); } // the fill ate the piece, or found no floor: keep the model's cut. A colour-keyed edge gets softened
     }
     if (kept < min) return null;
     turn = orient(d, w, h, tags?.cat); // a hint only ("may be lying sideways"): shape can't be sure, so you confirm the turn
@@ -959,7 +451,7 @@ function closetView() {
     <button class="btn" data-action="add">Add clothes</button><div class="seg backup"><button data-action="import">Restore a backup</button></div></div>`;
   const c = S.coll && collById(S.coll), inColl = owned();
   const kindAt = i => { const n = Object.keys(KINDS).indexOf(i.kind); return n < 0 ? 99 : n; };
-  const words = S.q.toLowerCase().split(/\s+/).filter(Boolean), hit = i => words.every(w => `${i.name} ${i.brand ?? ''} ${i.kind} ${colorName(i.color)} ${[].concat(i.vibe ?? []).join(' ')}`.toLowerCase().includes(w));
+  const words = S.q.toLowerCase().split(/\s+/).filter(Boolean), hit = i => words.every(w => `${i.name} ${i.brand ?? ''} ${(i.tags ?? []).join(' ')} ${i.from ?? ''} ${i.kind} ${colorName(i.color)} ${[].concat(i.vibe ?? []).join(' ')}`.toLowerCase().includes(w));
   const SORTS = { type: (a, b) => kindAt(a) - kindAt(b) || hexToHsl(a.color).l - hexToHsl(b.color).l, new: (a, b) => b.createdAt - a.createdAt, old: (a, b) => a.createdAt - b.createdAt,
     stale: (a, b) => (a.lastWorn ?? 0) - (b.lastWorn ?? 0) || a.createdAt - b.createdAt, worn: (a, b) => (b.wears || 0) - (a.wears || 0), never: (a, b) => (a.wears || 0) - (b.wears || 0) || (a.lastWorn ?? 0) - (b.lastWorn ?? 0) };
   const vib = i => !S.vibeF || [].concat(i.vibe ?? []).includes(S.vibeF);
@@ -970,14 +462,15 @@ function closetView() {
   const best = !c && !toReview && !S.pending.length && S.items.length >= 3 && getGaps()?.find(g => !isNeutral(g.ghost.color));
   return head(`${S.items.length} pieces`, 'Closet') + `
     ${[toReview && `<button class="nudge glass" data-action="review"><div><span class="mono">AI guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>`,
+    S.items.some(i => !i.pattern) && `<button class="nudge glass" data-action="patreview"><div><span class="mono">Quick check · makes print warnings accurate</span><b>Is it plain or printed? ${S.items.filter(i => !i.pattern).length} pieces</b></div><span class="plus">Start →</span></button>`,
     issues && `<button class="nudge glass" data-action="fixtags"><div><span class="mono">Tags that don't add up</span><b>Check ${issues} piece${issues > 1 ? 's' : ''}</b></div><span class="plus">Fix →</span></button>`,
-    !c && S.items.length >= 5 && Date.now() - (S.profile?.lastBackup ?? 0) > 7 * 864e5 && `<button class="nudge glass" data-action="export"><div><span class="mono">${S.profile?.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up'}</span><b>Save a backup of ${S.items.length} pieces</b></div><span class="plus">Export →</span></button>`,
+    false && `<button class="nudge glass" data-action="export"><div><span class="mono">${S.profile?.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up'}</span><b>Save a backup of ${S.items.length} pieces</b></div><span class="plus">Export →</span></button>`,
     best && `<button class="nudge glass" data-go="list" data-listtab="ideas">${ghostEl(best.ghost)}<div><span class="mono">Next best add</span><b>${esc(best.ghost.name)}</b></div><span class="plus">+${best.count} outfits</span></button>`].find(Boolean) || '' /* one banner at a time, so the clothes stay up top */}
     <div class="tbar">${capBtn()}<span class="sp"></span>${c && !c.smart ? `<button class="tag o" data-action="collpick">${ic('plus')} Pieces</button><button class="tag o" data-action="pack">Pack</button>` : ''}</div>
     ${capBar()}
     ${false ? `<div class="collbar"><button class="btn sm" data-action="collpick">Add pieces</button><button class="btn ghost sm" data-action="collfits">Outfits</button><button class="btn ghost sm" data-action="pack">Pack</button><button class="btn ghost sm" data-action="colldel">Delete</button></div>` : ''}
     <div class="ctools"><button class="btn ghost sm" data-action="selmode">${S.sel ? 'Done' : 'Select'}</button><input type="search" data-q placeholder="Search: black tee, baggy, streetwear" value="${esc(S.q)}" aria-label="Search your closet"><select data-sort aria-label="Sort">${[['type', 'Sort: by type'], ['new', 'Sort: newest'], ['old', 'Sort: oldest'], ['stale', "Sort: haven't worn lately"], ['worn', 'Sort: most worn']].map(([k, l]) => `<option value="${k}" ${S.sort === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-    <div class="tags ctags">${Object.keys(VIBES).map(v => `<button class="tag ${S.vibeF === v ? '' : 'o'}" data-vibef="${v}">${v}</button>`).join('')}<span class="sp"></span><button class="tag o" data-action="closetview" aria-label="Switch to ${shelf ? 'grid' : 'shelves'}">${shelf ? 'Grid' : 'Shelves'}</button></div>
+    <div class="tbar ctbar"><button class="tag o" data-action="closetfilter" aria-label="Filter">${ic('filter')}${S.vibeF ? ` ${S.vibeF}` : ' Filter'}</button><span class="sp"></span><button class="tag o" data-action="closetview">${shelf ? 'Grid' : 'Shelves'}</button></div>
     ${dirty ? `<div class="laundry"><span>${dirty} in the laundry · left out of outfits</span><button class="btn ghost sm" data-action="allclean">All clean</button></div>` : ''}
     ${stored ? `<div class="laundry"><span>${stored} stored away for the season · left out of outfits</span></div>` : ''}
     ${S.q && !groups.length ? `<p class="sub">Nothing matches "${esc(S.q)}".</p>` : ''}
@@ -990,7 +483,7 @@ function closetView() {
 
 function outfitsView() {
   const items = pool(), c = S.coll && collById(S.coll);
-  if (S.tab === 'ideas' || S.tab === 'history') { S.tab = 'saved'; if (render.ideas !== false) { S.view = 'today'; return todayView(); } } // old "ideas" links (collection outfits, color wheel, inspo) open Today
+  if (S.tab === 'ideas' || S.tab === 'history') { S.tab = 'saved'; S.view = 'today'; return todayView(); } // old "ideas" links (collection outfits, color wheel, inspo) open Today
   const top = head(S.tab === 'saved' ? `${S.saved.length} saved` : `${S.log.length} days logged`, S.tab === 'saved' ? 'Favorites' : 'Calendar') + subnav('tab', [['saved', 'Favorites'], ['cal', 'Calendar'], ['week', 'Week']])
     + (c && S.tab === 'saved' ? capBar() : '');
   if (S.tab === 'week') return top + weekView();
@@ -1002,8 +495,12 @@ function outfitsView() {
   }
   if (S.tab === 'saved') {
     const inC = o => !c || o.items.every(p => c.ids.includes(p.id)); // in a collection: only favorites made entirely from it
-    const list = S.saved.map(s => ({ key: s.key, items: s.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items) && inC(o)); // a piece was deleted or re-tagged
-    return top + (list.length ? `<p class="sub">${list.length} saved look${list.length > 1 ? 's' : ''}${c ? ` from ${esc(c.name)}` : ''}. Tap one to open it in the builder.</p><div class="feed favs">${list.map(o => favCard(o)).join('')}</div>`
+    const fq = (S.favQ ?? '').toLowerCase(), wornN = k => S.log.filter(l => l.key === k).length, lastW = k => Math.max(0, ...S.log.filter(l => l.key === k).map(l => l.at ?? 0));
+    const FS = { new: (a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0), worn: (a, b) => wornN(b.key) - wornN(a.key), stale: (a, b) => lastW(a.key) - lastW(b.key) };
+    const list = S.saved.map(s => ({ key: s.key, savedAt: s.savedAt, mode: s.mode, items: s.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items) && inC(o)) // a piece was deleted or re-tagged
+      .filter(o => !fq || o.items.some(p => `${p.name} ${p.kind} ${colorName(p.color)} ${p.brand ?? ''}`.toLowerCase().includes(fq)) || (vibeOf(o)[0] ?? '').toLowerCase().includes(fq)).sort(FS[S.favSort ?? 'new']);
+    return top + (S.saved.length ? `<div class="ctools favtools"><input type="search" data-favq placeholder="Search favorites: black, cargo, sleek" value="${esc(S.favQ ?? '')}" aria-label="Search favorites"><select data-favsort aria-label="Sort favorites">${[['new', 'Sort: newest'], ['worn', 'Sort: most worn'], ['stale', "Sort: haven't worn lately"]].map(([k, l]) => `<option value="${k}" ${(S.favSort ?? 'new') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : '')
+      + (list.length ? `<p class="sub">${list.length} saved look${list.length > 1 ? 's' : ''}${c ? ` from ${esc(c.name)}` : ''}. Tap one to open it in the builder.</p><div class="feed favs">${list.map(o => favCard(o)).join('')}</div>`
       : `<div class="empty"><h2>No favorites ${c ? `in ${esc(c.name)} ` : ''}yet</h2><p>Swipe right on a look in Today, or tap Save in the builder. Your keepers land here.</p><button class="btn" data-go="today">Go to Today</button></div>`);
   }
   if (!complete(items)) return top + `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs at least a top, bottoms and shoes.` : 'Add at least one top, one bottom and one pair of shoes to start getting outfits.'}</p>
@@ -1033,13 +530,34 @@ async function useCapsule(id) {
   S.coll = id || null; S.ideas = null; S.deck = null; S.cs = {};
   S.profile = { k: 'me', ...S.profile, capsule: S.coll }; await put('profile', S.profile);
 }
+// Suggested capsules from the closet: a work week (dressier pieces), a weekend (relaxed), a 5-day trip (packed by the app).
+function suggestCaps() {
+  const have = new Set(S.colls.map(c => c.name.toLowerCase())), all = S.items.filter(i => !i.stored), out = [];
+  const work = all.filter(i => dress(i) >= 1 && !/sweat|jogger|track|hoodie|slide|basketball/i.test(`${i.kind} ${i.name}`) && (i.cat !== 'Accessories' || /belt|watch|bag/i.test(i.kind)));
+  const weekend = all.filter(i => dress(i) <= 1);
+  if (!have.has('work week') && complete(work)) out.push(['Work week', work.map(i => i.id)]);
+  if (!have.has('weekend') && complete(weekend)) out.push(['Weekend', weekend.map(i => i.id)]);
+  if (!have.has('trip · 5 days') && complete(all)) { const r = packTrip(all, 5); if (r.pieces.length) out.push(['Trip · 5 days', r.pieces.map(i => i.id)]); }
+  return suggestCaps.list = out;
+}
+async function shareCapsule(c) {
+  const ps = c.ids.map(byId).filter(Boolean), cols = 4, cell = 270, rows = Math.ceil(ps.length / cols), W = cols * cell, H = rows * cell + 140;
+  const cv = Object.assign(document.createElement('canvas'), { width: W, height: H }), x = cv.getContext('2d'); x.fillStyle = '#faf8f5'; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#141414'; x.font = '500 56px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText(c.name.toLowerCase(), 40, 86); x.fillStyle = '#66665f'; x.font = '26px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText(`${ps.length} pieces`, 40, 122);
+  for (const [k, p] of ps.entries()) { const b = await createImageBitmap(p.thumb instanceof Blob ? p.thumb : p.img), cx = (k % cols) * cell, cy = 140 + Math.floor(k / cols) * cell, sc = Math.min((cell - 40) / b.width, (cell - 40) / b.height);
+    x.fillStyle = '#efebe5'; x.fillRect(cx + 8, cy + 8, cell - 16, cell - 16); x.drawImage(b, cx + (cell - b.width * sc) / 2, cy + (cell - b.height * sc) / 2, b.width * sc, b.height * sc); }
+  const f = new File([await new Promise(r => cv.toBlob(r, 'image/png'))], `${c.name.replace(/\W+/g, '-').toLowerCase()}.png`, { type: 'image/png' });
+  if (navigator.canShare?.({ files: [f] })) { try { await navigator.share({ files: [f], text: `${c.name}: ${ps.map(p => p.name).join(', ')}` }); } catch {} } else download(f);
+}
 function openCapsules() {
-  const row = (id, name, n, own) => `<div class="caprow ${(S.coll ?? '') === id ? 'on' : ''}"><button class="capsel" data-capsel="${id}" aria-pressed="${(S.coll ?? '') === id}"><i>${ic('check')}</i><span><b>${esc(name)}</b><small>${n} piece${n === 1 ? '' : 's'}</small></span></button>
-    ${own ? `<span class="capacts"><button class="icon" data-capedit="${id}" aria-label="Choose pieces for ${esc(name)}">${ic('plus')}</button><button class="icon" data-capren="${id}" aria-label="Rename ${esc(name)}">${ic('edit')}</button><button class="icon" data-capdup="${id}" aria-label="Duplicate ${esc(name)}">${ic('copy')}</button><button class="icon" data-capdel="${id}" aria-label="Delete ${esc(name)}">${ic('trash')}</button></span>` : ''}</div>`;
+  const cover = id => { const ps = id ? (id.startsWith('smart:') ? SMART[id.slice(6)][1](S.items) : collById(id)?.ids.map(byId).filter(Boolean) ?? []) : S.items; return `<span class="capcover">${ps.slice(0, 3).map(p => `<img src="${src(p)}" alt="">`).join('')}</span>`; };
+  const row = (id, name, n, own) => `<div class="caprow ${(S.coll ?? '') === id ? 'on' : ''}"><button class="capsel" data-capsel="${id}" aria-pressed="${(S.coll ?? '') === id}"><i>${ic('check')}</i>${cover(id)}<span><b>${esc(name)}</b><small>${n} piece${n === 1 ? '' : 's'}</small></span></button>
+    ${own ? `<span class="capacts"><button class="icon" data-capshare="${id}" aria-label="Share ${esc(name)}">${ic('share')}</button><button class="icon" data-capedit="${id}" aria-label="Choose pieces for ${esc(name)}">${ic('plus')}</button><button class="icon" data-capren="${id}" aria-label="Rename ${esc(name)}">${ic('edit')}</button><button class="icon" data-capdup="${id}" aria-label="Duplicate ${esc(name)}">${ic('copy')}</button><button class="icon" data-capdel="${id}" aria-label="Delete ${esc(name)}">${ic('trash')}</button></span>` : ''}</div>`;
   showSheet(`<div class="pad caps"><div class="pickhead"><div><div class="eyebrow">Today, the builder and packing only use the one you pick</div><h2>Your capsules</h2></div>${closeBtn}</div>
     ${row('', 'All clothes', S.items.length, false)}
     ${S.colls.map(c => row(c.id, c.name, c.ids.filter(byId).length, true)).join('')}
     ${S.colls.length ? '' : '<p class="sub">Make one for a trip, the club, work or the gym: pick its pieces once, and every look comes only from them.</p>'}
+    ${suggestCaps().length ? `<span class="mono">Suggested · tap to keep</span>${suggestCaps().map(([n, ids]) => `<div class="caprow"><button class="capsel" data-capsugg="${esc(n)}"><i>${ic('plus')}</i><span class="capcover">${ids.slice(0, 3).map(id => `<img src="${src(byId(id))}" alt="">`).join('')}</span><span><b>${esc(n)}</b><small>${ids.length} pieces · made from your closet</small></span></button></div>`).join('')}` : ''}
     <span class="mono">Automatic</span>${Object.entries(SMART).map(([k, [n, f]]) => row('smart:' + k, n, f(S.items).length, false)).join('')}
     <button class="btn wide" data-action="newcoll">${ic('plus')} Create capsule</button></div>`);
 }
@@ -1048,7 +566,7 @@ function openCapsules() {
 // The deck is saved per day + filters + weather band, so leaving and coming back shows the same looks. Shuffle makes a new one.
 const greet = () => { const h = new Date().getHours(); return h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
 const band = w => w ? (w.t < 12 ? 'cold' : w.t >= 24 ? 'hot' : 'mild') + (RAINY(w.code) ? '-rain' : '') : 'none';
-const deckSig = () => [dayKey(), S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
+const deckSig = () => [dayKey(), S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
 function getDeck(items) {
   if (S.deck?.sig === deckSig()) return S.deck;
   const w = weatherNow(), list = S.mode === 'today' || !MODES[S.mode] ? todayPicks(items, w?.t) : generate(items, S.mode, { n: 12, palette: S.palette, inspo: S.inspoColors });
@@ -1059,15 +577,16 @@ const pad2 = n => String(n).padStart(2, '0');
 const tintOf = ps => colored(ps)[0]?.color ?? 'var(--tile)';
 const colored = ps => ps.filter(p => p.cat !== 'Accessories' && !isNeutral(p.color));
 // The card's headline is its vibe ("unapologetic"), from your style notes when a combo hits, else the style rule.
-const vibeOf = o => { const c = combo(o.items); return c ? [c.label, c.text] : [MODES[o.mode]?.label ?? 'Your pick', null]; };
-function deckCard(o, i, n, cls) {
-  const [title, cmb] = vibeOf(o), w = weatherNow(), worn = S.log.find(l => l.day === dayKey())?.key === o.key;
-  const tags = [cmb && `<span class="tag">${esc(cmb)}</span>`, w && `<span class="tag o">${esc(wxWhy(o).split(' · ')[1] ?? '')}</span>`, `<span class="tag o">${o.items.length} pcs</span>`, MODES[o.mode] && `<span class="tag o">${MODES[o.mode].label}</span>`].filter(Boolean).join('');
+const vibeOf = (o, used) => { const c = combo(o.items), opts = [c?.label, MODES[o.mode]?.label, c?.text, `${colorName(o.items.find(p => p.cat === 'Tops')?.color ?? '#808080')} ${o.items.find(p => p.cat === 'Bottoms')?.kind ?? 'fit'}`].filter(Boolean);
+  const t = (used && opts.find(x => !used.has(x.toLowerCase()))) ?? opts[0] ?? 'Your pick'; used?.add(t.toLowerCase()); return [t, c?.text ?? null]; }; // a deck never says "Mellow" twice
+function deckCard(o, i, n, cls, used) {
+  const [title, cmb] = vibeOf(o, used), w = weatherNow(), worn = S.log.find(l => l.day === dayKey())?.key === o.key;
+  const tags = [cmb && `<span class="tag">${esc(cmb)}</span>`, w && `<span class="tag o">${esc(wxWhy(o).split(' · ')[1] ?? '')}</span>`, ].filter(Boolean).join(''); // short: the colors and why it fits today; the title already names the vibe
   return `<article class="dcard ${cls}" data-key="${o.key}" style="--tint:${tintOf(o.items)}" aria-label="Look ${i + 1} of ${n}: ${esc(o.items.map(p => `${colorName(p.color)} ${p.kind || p.cat}`).join(', '))}">
     <div class="dtop"><span class="mono">${pad2(i + 1)} / ${pad2(n)}</span>${worn ? '<span class="tag hot">Worn today</span>' : isFav(o.key) ? '<span class="tag">Saved</span>' : ''}</div>
     <h2 class="display dtitle">${esc(title)}</h2>
     <button class="flatwrap" data-buildkey="${o.key}" aria-label="Open this look in the builder">${flat(o.items)}</button>
-    <div class="tags">${tags}</div><i class="hint" aria-hidden="true"></i></article>`;
+    <div class="tags">${tags}<button class="tag o morelike" data-like="${o.key}">More like this</button></div></article>`;
 }
 function todayView() {
   const items = pool(), w = weatherNow(), c = S.coll && collById(S.coll);
@@ -1078,15 +597,17 @@ function todayView() {
   const date = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const nf = (S.mode !== 'today' ? 1 : 0) + (S.occ ? 1 : 0);
   const top = `<header class="thead"><div><div class="eyebrow">${greet()} · ${date}</div><h1>Today</h1></div><div class="right">${`<button class="favbtn" data-favs aria-label="Favorites, ${S.saved.length} saved">${heart}<b>${S.saved.length}</b></button>`}</div></header>
-    <div class="tbar">${capBtn()}${w ? `<span class="tag" title="${esc(wxLine(w))}">${tempText(w.t)} ${esc(WX[w.code] ?? '')}</span>${w.lo != null && w.lo < w.t - 6 ? `<span class="tag o">${tempText(w.lo)} later</span>` : ''}` : `<button class="tag o" data-action="weather">+ Weather</button>`}
+    ${w ? `<div class="wxcard"><span class="wxi">${svg(RAINY(w.code) ? 'M7 15a4 4 0 1 1 .8-7.9A5 5 0 0 1 17.5 9 3.5 3.5 0 0 1 17 16H7zM9 19l-1 2M13 19l-1 2M17 19l-1 2' : w.code >= 2 ? 'M7 18a4 4 0 1 1 .8-7.9A5 5 0 0 1 17.5 11 3.5 3.5 0 0 1 17 18z' : 'M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z')}</span>
+      <span class="wxt"><b>${tempText(w.t)}</b>${w.hi != null && w.lo != null ? `<small>${tempText(w.hi)} / ${tempText(w.lo)}</small>` : ''}</span><span class="wxl">${esc(wxLine(w))}</span></div>` : ''}
+    <div class="tbar">${capBtn()}${w ? `<span class="tag" hidden title="${esc(wxLine(w))}">${tempText(w.t)} ${esc(WX[w.code] ?? '')}</span>${w.lo != null && w.lo < w.t - 6 ? `<span class="tag o">${tempText(w.lo)} later</span>` : ''}` : `<button class="tag o" data-action="weather">+ Weather</button>`}
       <span class="sp"></span><button class="tag o" data-action="filters" aria-label="Filter">${ic('filter')}${nf ? ` ${nf}` : ''}</button><button class="tag o" data-action="shuffle" aria-label="Shuffle">${ic('shuffle')}</button></div>`;
   if (!complete(items)) return top + `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs at least a top, bottoms and shoes.` : 'Add at least one top, one bottom and one pair of shoes. Then this is where your looks land every morning.'}</p>
     <button class="btn" data-action="${c ? 'collpick' : 'add'}">${c ? 'Add pieces' : 'Add clothes'}</button></div>`;
   const d = getDeck(items), looks = d.looks.map(l => ({ ...l, items: l.ids.map(byId).filter(Boolean) })).filter(l => complete(l.items)), at = Math.min(d.at, looks.length);
   if (!looks.length) return top + `<div class="empty"><h2>No ${MODES[S.mode]?.label ?? ''} matches</h2><p>${d.blocked ? `Most combos break a proportion rule: <b>${esc(d.blocked.toLowerCase())}</b>. If a fit tag is wrong, fix it on the piece.` : 'Your closet needs more colors for this rule. Try another filter.'}</p><button class="btn" data-action="filters">Change filter</button></div>`;
   const cur = looks[Math.min(at, looks.length - 1)];
-  return top + capBar() + (w ? `<p class="wxcopy">${esc(wxLine(w))}</p>` : '')
-    + `<div class="deck" aria-label="Today's looks, slide for more">${looks.map((o, k) => deckCard(o, k, looks.length, 'slide')).join('')}</div>
+  return top + capBar()
+    + `<div class="deck" aria-label="Today's looks, slide for more">${(used => looks.map((o, k) => deckCard(o, k, looks.length, 'slide', used)).join(''))(new Set())}</div>
     <div class="dbtns"><button class="round" data-deck="prev" aria-label="Previous look">${svg('M15 5l-7 7 7 7')}</button><button class="round ${isFav(cur.key) ? 'on' : ''}" data-deck="fav" aria-label="Save look">${heart}</button><button class="btn go" data-deck="wear">Wear this ${ic('arrow')}</button><button class="round" data-deck="next" aria-label="Next look">${svg('M9 5l7 7-7 7')}</button></div>
     <p class="mono swipehint">Slide for more · tap a look to open it</p>`;
 }
@@ -1100,6 +621,7 @@ async function deckAct(act) {
   if (act === 'fav' && isFav(l.key)) { await del('outfits', l.key); S.saved = S.saved.filter(x => x.key !== l.key); syncTaste(); toast('Removed from favorites'); return render(); }
   if (act === 'fav' && !isFav(l.key)) { const rec = { key: l.key, ids: l.ids, mode: l.mode, savedAt: Date.now() }; await put('outfits', rec); S.saved.unshift(rec); syncTaste(); toast('Saved', { label: 'Undo', fn: async () => { await del('outfits', rec.key); S.saved = S.saved.filter(x => x.key !== rec.key); syncTaste(); render(); } }); }
   if (act === 'wear') { const prev = S.log.find(x => x.day === dayKey()); await logDay(dayKey(), o, true);
+    setTimeout(() => toast('Plan tomorrow too?', { label: 'Plan', fn: () => openPlanPicker(dayAdd(dayKey(), 1)) }), 5200); // after the Undo window
     toast(`Logged · day ${streaks(S.log).cur}`, { label: 'Undo', fn: async () => { await unlogDay(dayKey()); if (prev) await logDay(dayKey(), { key: prev.key, items: prev.ids.map(byId).filter(Boolean) }, true); render(); } });
     render(); return; } // the worn card keeps its "Worn today" sticker
   render(); // saved: the heart fills, the card stays where it is
@@ -1121,13 +643,6 @@ const wxWhy = o => { const w = weatherNow(); if (!w) return '';
   const rain = RAINY(w.code), why = w.t < 12 ? (o.items.some(p => p.cat === 'Layers') ? 'layered up' : 'warmest pieces') : w.t >= 24 ? 'light, nothing heavy' : 'mild, anything goes';
   const later = w.lo != null && w.lo < w.t - 6 && w.t >= 12 ? ', bring a layer for later' : '';
   return `${tempText(w.t)}${rain ? ' and rain' : ''} · ${why}${rain ? ', no suede' : ''}${later}`; };
-const deckHtml = list => `<div class="deck">${list.map((o, i) => `<article class="dcard"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in builder">${flat(o.items)}</button>
-    <div class="dmeta">${wxWhy(o) ? `<span class="wxline">${wxWhy(o)}</span>` : ''}<p>${esc(o.note ?? '')}</p>
-      <div class="dacts"><span class="mono">${i + 1} / ${list.length}</span><button class="icon" data-nope="${o.key}" aria-label="Not for me">${svg('M7 14V4M7 14l4 6c1.2 0 2-1 1.7-2.2L12 14h5.5a2 2 0 0 0 2-2.3l-1-6A2 2 0 0 0 16.5 4H7M7 14H4V4h3')}</button><button class="icon ${isFav(o.key) ? 'on' : ''}" data-save="${o.key}" aria-label="Favorite">${heart}</button><button class="btn sm go" data-wear="${o.key}">Wear today</button></div></div></article>`).join('')}</div>
-  <p class="sub center">Swipe for the next look · ${list.length} for today</p>`;
-const verdictHtml = o => { if (!complete(o)) return `<p class="verdict" id="verdict">${svg('M12 5v14M5 12h14')}${o.length ? 'Add the rest. Best matches show first' : 'Start with any piece. Best matches show first'}</p>`;
-  const v = bestMode(o);
-  return `<p class="verdict ${v?.score == null ? 'bad' : ''}" id="verdict">${v?.score == null ? svg('M12 4 2.5 20h19L12 4zM12 10v4M12 17v.5') : svg('M5 12l5 5 9-10')}${v?.score == null ? `Doesn't work · ${esc(v?.note ?? 'needs a top, bottoms and shoes')}` : `Works as ${MODES[v.mode].label} · ${esc(v.note)}`}</p>${v?.score != null && fixTip(o) ? `<p class="verdict hint">${svg('M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z')}${esc(fixTip(o))}</p>` : ''}`; };
 const actionsHtml = o => { const k = keyOf(o), worn = S.log.find(l => l.day === dayKey())?.key === k, off = complete(o) ? '' : 'disabled';
   return `<div class="actions" id="bactions"><button class="btn ${isFav(k) ? '' : 'ghost'} sm" data-save="${k}" ${off}>${heart} ${isFav(k) ? 'Saved' : 'Save'}</button><button class="btn ghost sm" data-action="planthis" ${off}>Plan</button><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${k}" ${off}>${worn ? 'Logged today ✓' : 'Wear today'}</button></div>`; };
 const mini = (r, on) => { const items = r.ids.map(byId).filter(Boolean);
@@ -1163,10 +678,11 @@ function buildView() {
       ${!o.length ? `<p class="sub">Pick the pieces you're wearing, or start from a look you saved or wore.</p>
         ${starters.length ? `<div class="looks starters">${starters.map(r => mini(r, isFav(r.key))).join('')}</div>` : ''}
         ${S.draft?.length ? `<button class="tag o resume" data-action="resumebuild">Resume your last look · ${S.draft.length} pieces</button>` : ''}` : ''}
+      ${o.length >= 2 ? `<div class="bprev">${flat(o)}</div>` : ''}
       <div class="bstack">${card('Hat', 'small')}${card('Accessory', 'small')}${card('Layers')}${card('Tops')}${card('Bottoms', 'wide')}${card('Shoes', 'wide short')}</div>
       ${ok ? `<p class="verdict ${v.score == null ? 'bad' : ''}">${v.score == null ? `Doesn't work · ${esc(v.note ?? '')}` : `Works as ${MODES[v.mode].label} · ${esc(v.note)}`}</p>` : o.length ? '<p class="verdict">Add a top, bottoms and shoes. Best matches show first in each list.</p>' : ''}
       ${tags || tip ? `<div class="tags whytags">${tags}${tip ? `<span class="tag bad">${esc(tip)}</span>` : ''}</div>` : ''}
-      ${o.length ? `<div class="tools">${S.past.length ? `<button class="tag o" data-action="undobuild">Undo</button>` : ''}${o.length && !ok ? `<button class="tag" data-action="fillbuild">Fill the rest</button>` : ''}${ok ? `<button class="tag o" data-action="shufflebuild">${ic('shuffle')} Shuffle</button><button class="tag o" data-action="recolor">Recolor</button><button class="tag o" data-action="sharelook">${ic('share')} Share</button>` : ''}</div>` : `<div class="tools"><button class="tag o" data-go="inspo">Start from a pic</button></div>`}
+      ${o.length ? `<div class="tools">${S.past.length ? `<button class="tag o" data-action="undobuild">Undo</button>` : ''}${o.length && !ok ? `<button class="tag" data-action="fillbuild">Fill the rest</button>` : ''}${o.length ? `<button class="tag" data-action="possible">See outfit possibilities</button>` : ''}${ok ? `<button class="tag o" data-action="shufflebuild">${ic('shuffle')} Shuffle</button><button class="tag o" data-action="recolor">Recolor</button><button class="tag o" data-action="sharelook">${ic('share')} Share</button>` : ''}</div>` : `<div class="tools"><button class="tag o" data-go="inspo">Start from a pic</button></div>`}
       ${actionsHtml(o)}
       ${o.length ? recentHtml() : ''}
     </div>`;
@@ -1209,6 +725,14 @@ async function shareLook(ps) {
   const f = new File([await new Promise(r => c.toBlob(r, 'image/png'))], 'look.png', { type: 'image/png' });
   if (navigator.canShare?.({ files: [f] })) { try { await navigator.share({ files: [f] }); } catch {} } else download(f);
 }
+// Pattern review: one piece at a time, four big answers, next. Only pieces from before patterns had four kinds.
+function patReview() {
+  const it = S.items.find(i => !i.pattern); if (!it) { sheet.close(); return toast('All patterns checked'); }
+  const left = S.items.filter(i => !i.pattern).length;
+  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${left} left · tap the one that fits</div><h2>Plain or printed?</h2></div>${closeBtn}</div>
+    <div class="revimg"><img src="${srcFull(it)}" alt="${esc(it.name)}"></div><b class="revname">${esc(it.name)}</b>
+    <div class="quick">${[['solid', 'Solid (plain)'], ['logo', 'Small logo'], ['graphic', 'Big graphic'], ['allover', 'All-over pattern (stripes, camo, plaid)']].map(([v, l]) => `<button class="btn ${v === patternOf(it) ? '' : 'ghost'}" data-patset="${it.id}|${v}">${l}</button>`).join('')}</div></div>`);
+}
 function openWhy() {
   const e = explain(S.build); if (!e) return toast("No style rule takes this one");
   showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">Works as ${MODES[e.mode].label}</div><h2>Why it works</h2></div>${closeBtn}</div>
@@ -1250,9 +774,9 @@ function weekView() {
     const p = plannedFor(k), items = p?.ids.map(byId).filter(Boolean) ?? [], ok = complete(items), worn = S.log.find(l => l.day === k);
     const past = k < today;
     const f = !past && S.profile?.wx?.daily?.[k];
-    return `<div class="day ${k === today ? 'today' : ''} ${past ? 'past' : ''} ${ok || p ? '' : 'open'}"><div class="dl"><b>${DOW[dowOf(k)]}</b><span>${+k.slice(8)}</span>${f ? `<em>${tempText(f.t)}${RAINY(f.code) ? ' · rain' : ''}</em>` : ''}</div>
-      ${ok ? `<button class="slotbtn" data-buildkey="${p.key}" aria-label="Open look">${flat(items)}</button>` : past ? '<span class="mono">Nothing planned</span>' : `<button class="plus" data-plan="${k}">+ Plan</button>`}
-      <div class="acts">${p && !ok ? '<span class="mono">A piece in this look was deleted. Plan it again</span>' : ''}${ok ? `<span class="mono">${p.weekly ? `Every ${DOW[dowOf(k)]}` : worn?.key === p.key ? 'Worn ✓' : ''}</span>
+    return `<div class="day ${k === today ? 'today' : ''} ${past && !worn ? 'past' : ''} ${ok || p || (past && worn) ? '' : 'open'}"><div class="dl"><b>${DOW[dowOf(k)]}</b><span>${+k.slice(8)}</span>${f ? `<em>${tempText(f.t)}${RAINY(f.code) ? ' · rain' : ''}</em>` : ''}</div>
+      ${ok ? `<button class="slotbtn" data-buildkey="${p.key}" aria-label="Open look">${flat(items)}</button>` : past && worn && complete(worn.ids.map(byId).filter(Boolean)) ? `<button class="slotbtn" data-calday="${k}" aria-label="What you wore">${flat(worn.ids.map(byId).filter(Boolean))}</button>` : past ? `<button class="plus" data-calday="${k}">Log what you wore</button>` : `<button class="plus" data-plan="${k}">+ Plan</button>`}
+      <div class="acts">${!ok && past && worn ? '<span class="mono">Worn ✓</span>' : ''}${p && !ok ? '<span class="mono">A piece in this look was deleted. Plan it again</span>' : ''}${ok ? `<span class="mono">${p.weekly ? `Every ${DOW[dowOf(k)]}` : worn?.key === p.key ? 'Worn ✓' : ''}</span>
         ${k === today && worn?.key !== p.key ? `<button class="btn sm go" data-wear="${p.key}">Wear it</button>` : ''}
         ${past ? '' : `<button class="btn ghost sm" data-plan="${k}">Change</button><button class="btn ghost sm" data-unplan="${k}" aria-label="Clear ${DOW[dowOf(k)]} ${+k.slice(8)}">✕</button>`}` : ''}</div></div>`;
   };
@@ -1372,8 +896,8 @@ function listView() {
 
 function myList() {
   const ready = S.items.length >= 3;
-  const row = w => { const n = ready && !w.got ? tryPiece(S.items, wishPiece(w)).count : 0; // ~1ms each
-    return `<div class="wish ${w.got ? 'got' : ''}">${ghostEl(w)}<div><b>${esc(w.name)}</b><span class="mono">${w.cat} · ${colorName(w.color)}${w.price ? ` · ${money(w.price)}` : ''}${n ? ` · +${n} outfits` : ''}</span>
+  const row = w => { const r = ready && !w.got ? tryPiece(S.items, wishPiece(w)) : null, n = r?.count ?? 0, pairs = r?.examples[0]?.items.filter(p => !p.ghost && p.cat !== 'Accessories').slice(0, 2).map(p => p.name) ?? []; // ~1ms each
+    return `<div class="wish ${w.got ? 'got' : ''}">${ghostEl(w)}<div><b>${esc(w.name)}</b><span class="mono">${w.cat} · ${colorName(w.color)}${w.price ? ` · ${money(w.price)}` : ''}${n ? ` · +${n} outfits` : ''}${pairs.length ? ` · with ${esc(pairs.join(' + '))}` : ''}</span>
       ${w.link ? `<a class="shop" href="${esc(w.link)}" target="_blank" rel="noopener">Shop ↗</a>` : ''}</div>
       <button class="check" data-wishgot="${w.id}" aria-label="Got it">${svg('M5 12l5 5 9-10')}</button><button class="x" data-wishdel="${w.id}" aria-label="Remove">×</button></div>`; };
   const want = S.wish.filter(w => !w.got).sort((a, b) => b.at - a.at), got = S.wish.filter(w => w.got);
@@ -1419,6 +943,19 @@ function inspoView() {
 }
 
 navigator.storage?.estimate?.().then(e => { S.storage = e.usage > 0 ? `${Math.round(e.usage / 1e6)} MB${e.quota ? ` of ${Math.round(e.quota / 1e9 * 10) / 10} GB` : ''}` : null; }).catch(() => {});
+// This month at a glance + what you could sell (6 months unworn, with what you paid), on Me.
+function styleReport() {
+  const ym = dayKey().slice(0, 7), mlog = S.log.filter(l => l.day.startsWith(ym)), cols = {}, combos = {};
+  for (const l of mlog) { const ps = l.ids.map(byId).filter(Boolean);
+    for (const p of ps) if (p.cat !== 'Accessories') cols[colorName(p.color)] = (cols[colorName(p.color)] ?? 0) + 1;
+    const f = ['Tops', 'Bottoms', 'Shoes'].map(c => ps.find(p => p.cat === c)?.kind).filter(Boolean).join(' + '); if (f) combos[f] = (combos[f] ?? 0) + 1; }
+  const topC = Object.entries(cols).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n), formula = Object.entries(combos).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const sell = S.items.filter(i => !i.stored && Date.now() - Math.max(i.lastWorn ?? 0, i.createdAt ?? 0) > 180 * 864e5);
+  return `<h3><span>This month</span><span>${mlog.length} day${mlog.length === 1 ? '' : 's'} logged</span></h3>
+    ${mlog.length ? `<div class="report"><div><span class="mono">Your colors</span><b>${topC.join(' · ')}</b></div><div><span class="mono">Go-to formula</span><b>${esc(formula ?? 'not yet')}</b></div></div>` : '<p class="sub">Log a few outfits and your colors and go-to formula show up here.</p>'}
+    <h3><span>Could sell</span><span>${sell.length} unworn 6+ months</span></h3>
+    ${sell.length ? `<div class="strip">${sell.slice(0, 20).map(i => `<button data-open="${i.id}"><img src="${src(i)}" alt="${esc(i.name)}">${i.price ? `<em>${money(i.price)}</em>` : ''}</button>`).join('')}</div><button class="btn ghost sm" data-action="selllist">Copy a listing for all ${sell.length}</button>` : '<p class="sub">Nothing sitting unworn for 6 months. Nice.</p>'}`;
+}
 function meView() {
   const st = streaks(S.log), items = S.items, p = S.profile ?? {}, m = p.measure ?? {};
   const priced = items.filter(i => i.price > 0), value = priced.reduce((t, i) => t + i.price, 0);
@@ -1428,9 +965,10 @@ function meView() {
   const colors = Object.entries(items.reduce((t, i) => { const n = colorName(i.color); (t[n] ??= { n: 0, hex: i.color }).n++; return t; }, {})).sort((a, b) => b[1].n - a[1].n);
   const strip = list => `<div class="strip">${list.map(i => `<button data-open="${i.id}"><img src="${src(i)}" alt="${esc(i.name)}">${i.wears ? `<em>${i.wears}×</em>` : ''}</button>`).join('')}</div>`;
   return `<header><div><div class="eyebrow">${items.length} pieces</div><h1>Me</h1></div><div class="right">${streakChip()}</div></header>
-    <div class="tiles"><div><span class="mono">Pieces</span><b>${items.length}</b></div><button data-favs><span class="mono">Favorites ›</span><b>${S.saved.length}</b></button>
-      <div><span class="mono">Outfits worn</span><b>${S.log.length}</b></div><button data-go="progress"><span class="mono">Streak &amp; badges ›</span><b>${st.cur}</b></button>
-      <button data-go="list"><span class="mono">Shopping list ›</span><b>${S.wish.filter(w => !w.got).length}</b></button></div>
+    <div class="tiles"><button data-go="closet"><span class="mono">Pieces ›</span><b>${items.length}</b></button><button data-favs><span class="mono">Favorites ›</span><b>${S.saved.length}</b></button>
+      <button data-go="outfits" data-tabto="cal"><span class="mono">Outfits worn ›</span><b>${S.log.length}</b></button><button data-go="progress"><span class="mono">Streak &amp; badges ›</span><b>${st.cur}</b></button>
+      <button data-go="list"><span class="mono">Shopping list ›</span><b>${S.wish.filter(w => !w.got).length}</b></button><button data-go="inspo"><span class="mono">Inspo ›</span><b>${S.inspo.length}</b></button></div>
+    ${styleReport()}
     <h3><span>Closet value</span><span>${priced.length} of ${items.length} priced</span></h3>
     ${priced.length ? `<div class="tiles"><div><span class="mono">Total</span><b>${money(value)}</b></div><div><span class="mono">Cost per wear</span><b>${pricedWears ? money(value / pricedWears) : '$0'}</b>${pricedWears ? '' : '<small class="sub">Log a wear to see it</small>'}</div></div>`
       : `<p class="sub">Tap a piece and add what you paid to see what your closet is worth and your cost per wear.</p>`}
@@ -1447,6 +985,7 @@ function meView() {
     <form id="measure" class="group">${MEASURE.map(([k, label, ph]) => `<label class="cell"><span>${label}</span><input name="${k}" value="${esc(m[k] ?? '')}" placeholder="${ph}"></label>`).join('')}</form></details>
     <h3><span>Backup</span><span>${p.lastBackup ? `last ${ago(p.lastBackup)}` : 'never'}</span></h3>
     <p class="sub">${kept ? 'This browser has agreed to keep your closet.' : 'Your closet lives only in this browser and can be cleared. Safari wipes sites you skip for 7 days, so add the app to your Home Screen and export a backup now and then.'}</p>
+    ${p.lastBackup ? `<button class="btn ghost sm" data-action="exportnew">Save changes only · ${S.items.filter(i => (i.updatedAt ?? i.createdAt ?? 0) > p.lastBackup).length} pieces</button>` : ''}
     <label class="chk"><input type="checkbox" data-action="fullbackup" ${p.fullBackup ? 'checked' : ''}> Include original photos (bigger file, better Re-cut after a restore)</label>
     <div class="row"><button class="btn ghost sm" data-action="export">Save backup</button><button class="btn ghost sm" data-action="import">Restore backup</button></div>
     <h3><span>Your hair</span><span>outfits play off it near your face</span></h3>
@@ -1542,10 +1081,13 @@ const accHtml = it => { const acc = (it.accents ?? []).filter(a => !isShade(a, i
 function openSheet(id) {
   const it = byId(id), left = S.items.filter(i => i.review).length;
   const cpw = it.price > 0 && it.wears ? ` · ${money(it.price / it.wears)}/wear` : '', n = S.items.filter(i => i.review).indexOf(it) + 1;
-  showSheet(`<div class="hero spot"><i class="grab" aria-hidden="true"></i><img src="${src(it)}" alt="">${closeBtn}</div>
+  showSheet(`<div class="hero spot"><i class="grab" aria-hidden="true"></i><img src="${srcFull(it)}" alt="">${closeBtn}</div>
   <form>
     <div class="phead"><h2 class="display pname">${esc(it.name)}</h2>
-      <div class="tags">${it.review ? `<span class="tag hot">New${left > 1 ? ` · ${n} of ${left}` : ''}</span>` : ''}${it.dirty ? '<span class="tag hot">In the laundry</span>' : ''}<span class="tag o">${colorName(it.color)}</span>${it.cat === 'Accessories' ? '' : `<span class="tag o">${(FITS[it.cat] ?? FITS.default)[it.fit ?? 1]}</span>`}${it.kind ? `<span class="tag o">${esc(it.kind)}</span>` : ''}<span class="tag o">${it.wears ? `Worn ${it.wears}×${cpw}` : 'Never worn'}</span></div></div>
+      <div class="sees" aria-label="What your stylist sees">${[['color', `<i style="background:${it.color}"></i>${colorName(it.color)}`], ['material', it.material ?? 'material?'],
+        ['pattern', { solid: 'solid', logo: 'small logo', graphic: 'big graphic', allover: 'all-over pattern' }[patternOf(it)]], ...(it.cat === 'Accessories' ? [] : [['fit', (FITS[it.cat] ?? FITS.default)[it.fit ?? 1].toLowerCase()], ['dress', ['sporty', 'everyday', 'dressy'][dress(it)]]]), ['kind', it.kind || 'type?']]
+        .map(([f, l]) => `<button type="button" class="see" data-field="${f}">${l}</button>`).join('')}</div>
+      <div class="tags">${it.review ? `<span class="tag hot">New${left > 1 ? ` · ${n} of ${left}` : ''}</span>` : ''}${it.dirty ? '<span class="tag hot">In the laundry</span>' : ''}<span class="tag o">${colorName(it.color)}</span>${it.cat === 'Accessories' ? '' : `<span class="tag o">${(FITS[it.cat] ?? FITS.default)[it.fit ?? 1]}</span>`}${it.kind ? `<span class="tag o">${esc(it.kind)}</span>` : ''}<span class="tag o">${it.wears ? `Worn ${it.wears}×${cpw}` : 'Never worn'}</span>${it.bought ? `<span class="tag o">Bought ${ago(new Date(it.bought).getTime())}${it.from ? ` · ${esc(it.from)}` : ''}</span>` : ''}${(it.tags ?? []).map(t => `<span class="tag o">#${esc(t)}</span>`).join('')}</div></div>
     ${it.review ? `<div class="review"><p>The AI tagged it as above. Right?</p><div class="row"><button type="button" class="btn go" data-confirm="${it.id}">Looks right${left > 1 ? ' · next' : ''}</button><button type="button" class="btn ghost" data-action="opendetails">Fix tags</button></div></div>` : ''}
     ${issueOf(it) ? `<div class="issue"><span>${esc(issueOf(it).text)}</span><span class="row"><button type="button" class="btn sm" data-fixtag="${it.id}|${issueOf(it).fix}">${issueOf(it).label}</button><button type="button" class="btn ghost sm" data-tagok="${it.id}">It's right</button></span></div>` : ''}
     <div class="pieceacts"><button type="button" class="btn full" data-made="${it.id}">See what you can make with this</button>
@@ -1553,7 +1095,7 @@ function openSheet(id) {
     <div id="made"></div>
     ${looksWith(it)}
     <details class="more" ${it.review ? 'open' : ''}><summary><span>Details &amp; tags</span><span class="mono">photo, type, fit, color, vibe</span></summary>
-    <div class="tools"><button type="button" data-rotate="${it.id}" class="${it.review && ['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? 'hl' : ''}">${ic('rotate')} Rotate</button><button type="button" data-recut="${it.id}">Remove background</button><button type="button" data-touchup="${it.id}">Touch up</button><button type="button" data-replace="${it.id}">Replace photo</button></div>
+    <div class="tools"><button type="button" data-rotate="${it.id}" class="${it.review && ['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? 'hl' : ''}">${ic('rotate')} Rotate</button><button type="button" data-recut="${it.id}">Remove background</button><button type="button" data-touchup="${it.id}">Touch up</button><button type="button" data-edit="${it.id}">Adjust</button><button type="button" data-replace="${it.id}">Replace photo</button></div>
     <div class="group">
       <label class="cell"><span>Name</span><input name="name" value="${esc(it.name)}"></label>
       <label class="cell"><span>Brand</span><input name="brand" value="${esc(it.brand ?? '')}" placeholder="Add brand" autocomplete="off"></label>
@@ -1573,6 +1115,9 @@ function openSheet(id) {
       <label class="cell"><span>Pattern</span><select name="pattern">${[['solid', 'Solid (plain)'], ['logo', 'Small logo'], ['graphic', 'Big graphic'], ['allover', 'All-over pattern']].map(([v, l]) => `<option value="${v}" ${patternOf(it) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="cell"><span>In the laundry</span><input type="checkbox" class="switch" name="dirty" ${it.dirty ? 'checked' : ''}></label>
       <label class="cell"><span>Stored away (off season)</span><input type="checkbox" class="switch" name="stored" ${it.stored ? 'checked' : ''}></label>
+      <label class="cell"><span>Bought</span><input type="date" name="bought" value="${it.bought ?? ''}"></label>
+      <label class="cell"><span>From</span><input name="from" value="${esc(it.from ?? '')}" placeholder="store or site" autocomplete="off" maxlength="40"></label>
+      <label class="cell"><span>Your tags</span><input name="tags" value="${esc((it.tags ?? []).join(', '))}" placeholder="work, travel, gift" autocomplete="off"></label>
       <label class="cell"><span>Price paid</span><input name="price" inputmode="decimal" placeholder="Add price" value="${it.price ?? ''}"></label>
     </div>
     ${S.colls.length ? `<div class="incoll"><span class="mono">In capsules</span><div>${S.colls.map(c => `<button type="button" class="pill ${c.ids.includes(it.id) ? 'on' : ''}" data-collitem="${it.id}" data-collid="${c.id}">${esc(c.name)}</button>`).join('')}</div></div>` : ''}
@@ -1591,6 +1136,9 @@ function openSheet(id) {
     if (f.stored.checked) it.stored = true; else delete it.stored;
     if (f.material.value) it.material = f.material.value; else delete it.material;
     if (f.brand.value.trim()) it.brand = f.brand.value.trim().slice(0, 40); else delete it.brand;
+    if (f.bought.value) it.bought = f.bought.value; else delete it.bought;
+    if (f.from.value.trim()) it.from = f.from.value.trim().slice(0, 40); else delete it.from;
+    const tg = f.tags.value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean).slice(0, 8); if (tg.length) it.tags = tg; else delete it.tags;
     if (e.target.name === 'dress') it.dress = +f.dress.value;
     if (e.target.name === 'cat') { f.fit.innerHTML = fitOptions(it); f.fit.closest('label').hidden = it.cat === 'Accessories'; f.kind.innerHTML = kindOptions(it); }
     if (e.target.name === 'color' && it.accents) { it.accents = it.accents.filter(a => colorDist(a, it.color) > 90 && !isShade(a, it.color)); sheet.querySelector('#accbox').innerHTML = accHtml(it); }
@@ -1672,6 +1220,21 @@ function openInspo(id) {
 
 // ---------- touch up: erase what the cutout kept by mistake (a ruler edge, a tag, a bag) ----------
 let touch = null;
+// Adjust: brightness, contrast and a small straighten, previewed live; Save trims to the piece.
+async function editPhoto(it) {
+  showSheet(`<div class="touch"><div class="pickhead"><div><div class="eyebrow">${esc(it.name)}</div><h2>Adjust</h2></div>${closeBtn}</div>
+    <canvas id="ec"></canvas>
+    <label class="light">Light<input id="eb" type="range" min="70" max="140" value="100"></label>
+    <label class="light">Contrast<input id="ek" type="range" min="70" max="140" value="100"></label>
+    <label class="light">Straighten<input id="er" type="range" min="-15" max="15" step="0.5" value="0"></label>
+    <div class="row"><button class="btn ghost" data-action="close">Cancel</button><button class="btn" data-action="editsave">Save</button></div></div>`);
+  const b = await createImageBitmap(it.img), c = document.getElementById('ec'), diag = Math.ceil(Math.hypot(b.width, b.height));
+  Object.assign(c, { width: diag, height: diag });
+  const draw = () => { const x = c.getContext('2d'), v = id => +document.getElementById(id).value; x.clearRect(0, 0, diag, diag); x.save();
+    x.filter = `brightness(${v('eb')}%) contrast(${v('ek')}%)`; x.translate(diag / 2, diag / 2); x.rotate(v('er') * Math.PI / 180); x.drawImage(b, -b.width / 2, -b.height / 2); x.restore(); };
+  draw(); for (const id of ['eb', 'ek', 'er']) document.getElementById(id).oninput = draw;
+  editPhoto.cur = { it, c };
+}
 async function touchUp(it) {
   showSheet(`<div class="touch"><div class="pickhead"><div><div class="eyebrow">${esc(it.name)}</div><h2>Touch up</h2></div>${closeBtn}</div>
     <canvas id="tc"></canvas><p class="sub">Tap the background to erase that whole area. Drag to erase by hand.</p>
@@ -1710,11 +1273,11 @@ async function touchAct(a) {
 const toDataUrl = b => new Promise((res, rej) => { const f = new FileReader(); f.onload = () => res(f.result); f.onerror = () => rej(f.error); f.readAsDataURL(b); });
 async function exportBackup() {
   const full = S.profile?.fullBackup; // originals (for Re-cut) only when asked: they ~triple the file
-  const items = await Promise.all(S.items.map(async ({ photo, ...i }) => ({ ...i, img: await toDataUrl(i.img), ...(full && photo ? { photo: await toDataUrl(photo) } : {}) })));
+  const items = await Promise.all(S.items.filter(i => !S.backupSince || (i.updatedAt ?? i.createdAt ?? 0) > S.backupSince).map(async ({ photo, thumb, ...i }) => ({ ...i, img: await toDataUrl(i.img), ...(full && photo ? { photo: await toDataUrl(photo) } : {}) })));
   const inspo = await Promise.all(S.inspo.map(async i => ({ ...i, img: await toDataUrl(i.img) })));
   const log = await Promise.all(S.log.map(async l => hasPic(l) ? { ...l, selfie: await toDataUrl(l.selfie) } : (({ selfie, ...r }) => r)(l)));
   const blob = new Blob([JSON.stringify({ app: 'closet', v: 3, items, outfits: S.saved, log, wish: S.wish, colls: S.colls, inspo, profile: S.profile, history: S.history, plan: S.plan })], { type: 'application/json' });
-  S.backupFile = new File([blob], `closet-backup-${dayKey()}.json`, { type: 'application/json' });
+  S.backupFile = new File([blob], `closet-backup-${dayKey()}${S.backupSince ? '-changes' : ''}.json`, { type: 'application/json' });
   // iPhone: the share sheet's "Save to Files" puts it straight in iCloud Drive (where Claude's closet connector looks). It needs a fresh tap, so ask.
   if (navigator.canShare?.({ files: [S.backupFile] })) return showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${items.length} pieces ready</div><h2>Save backup</h2></div>${closeBtn}</div>
     <p class="sub">Tap Save, then pick <b>Save to Files › iCloud Drive</b>. It's safe there if this phone loses the app, and Claude can read it.</p>
@@ -1850,7 +1413,9 @@ document.addEventListener('submit', async e => {
 });
 
 document.addEventListener('submit', e => { if (e.target.matches('[data-destform]')) { e.preventDefault(); sheet.querySelector('[data-action="packgo"]')?.click(); } });
-document.addEventListener('input', e => { if (!e.target.matches('[data-q]')) return; S.q = e.target.value; render.qFocus = true; render(); });
+document.addEventListener('input', e => {
+  if (e.target.matches('[data-favq]')) { S.favQ = e.target.value; render(); const q = document.querySelector('[data-favq]'); q?.focus(); q?.setSelectionRange(q.value.length, q.value.length); return; }
+  if (!e.target.matches('[data-q]')) return; S.q = e.target.value; render.qFocus = true; render(); });
 // Drag a sheet down by its top (photo, title, grab bar) to close it.
 let pull = null;
 sheet.addEventListener('pointerdown', e => { if (sheet.scrollTop > 0 || !e.target.closest('.hero, .pickhead, .grab') || e.target.closest('button, input')) return; pull = { y: e.clientY, dy: 0 }; sheet.style.transition = 'none'; });
@@ -1863,7 +1428,7 @@ let press = null;
 document.addEventListener('pointerdown', e => { const b = e.target.closest('.item[data-open]'); if (!b) return;
   press = { b, x: e.clientX, y: e.clientY, t: setTimeout(() => { press.fired = true; quickSheet(b.dataset.open); }, 480) }; });
 document.addEventListener('pointermove', e => { if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) { clearTimeout(press.t); press = null; } });
-document.addEventListener('pointerup', () => { if (press) clearTimeout(press.t); });
+document.addEventListener('pointerup', () => { if (!press) return; clearTimeout(press.t); if (press.fired) { const p0 = press; setTimeout(() => { if (press === p0) press = null; }, 450); } else press = null; }); // a long-press's own click gets eaten, never the next tap
 document.addEventListener('click', e => { if (press?.fired && e.target.closest('.item')) { e.stopImmediatePropagation(); e.preventDefault(); press = null; } }, true);
 document.addEventListener('contextmenu', e => { if (e.target.closest('.item')) e.preventDefault(); });
 function quickSheet(id) { const it = byId(id);
@@ -1892,17 +1457,15 @@ document.addEventListener('scroll', e => {
 }, true);
 document.addEventListener('change', async e => {
   if (e.target.matches('[data-sort]')) { S.sort = e.target.value; render(); return; }
+  if (e.target.matches('[data-favsort]')) { S.favSort = e.target.value; render(); return; }
   if (e.target.matches('[data-action="fullbackup"]')) { S.profile = { k: 'me', ...S.profile, fullBackup: e.target.checked }; await put('profile', S.profile); return; }
   if (e.target.matches('[data-selmat]') && e.target.value) { for (const id of S.sel) { const it = byId(id); it.material = e.target.value; await put('items', it); } toast(`${S.sel.size} set to ${e.target.value}`); S.sel = null; S.ideas = null; render(); return; }
   if (e.target.matches('[data-selcoll]') && e.target.value) { const c = collById(e.target.value); c.ids = [...new Set([...c.ids, ...S.sel])]; await put('colls', c); toast(`Added ${S.sel.size} to ${c.name}`); S.sel = null; render(); return; }
-  const sel = e.target.closest('[data-collsel]'); if (!sel) return;
-  if (sel.value === '__new') { sel.value = S.coll ?? ''; openNewColl(); return; }
-  S.coll = sel.value || null; S.ideas = null; render();
 });
 document.addEventListener('click', async e => {
   const t = e.target.closest('button'); if (!t) return;
   const ds = t.dataset;
-  if (ds.go) { const go = () => { S.view = ds.go; if (ds.go === 'build') S.build ??= []; if (ds.listtab) S.listTab = ds.listtab; render(); scrollTo(0, 0); };
+  if (ds.go) { if (ds.tabto) S.tab = ds.tabto; const go = () => { S.view = ds.go; if (ds.go === 'build') S.build ??= []; if (ds.listtab) S.listTab = ds.listtab; render(); scrollTo(0, 0); };
     if (sheet.open) { sheet.onclose = null; sheet.close(); } // a tap on the menu while a sheet is open: close it without a second render racing this one
     const moved = ds.go !== S.view; go(); // the screen changes now; the motion is decoration on top (fade + rise), skipped with Reduce Motion
     if (moved && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.getElementById('app').animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.2, .9, .3, 1)' }); }
@@ -1931,10 +1494,12 @@ document.addEventListener('click', async e => {
   }
   else if (ds.action === 'shuffle') { S.ideas = null; S.deck = null; render(); }
   else if (ds.action === 'filters') openFilters();
+  else if (ds.like) { S.like = outfitByKey(ds.like)?.items.map(p => p.id) ?? null; S.deck = null; render(); toast('More looks like that', { label: 'Back to mixed', fn: () => { S.like = null; S.deck = null; render(); } }); }
   else if (ds.deck === 'back') { S.deck.at = 0; put('profile', S.deck); render(); }
   else if (ds.deck) deckAct(ds.deck === 'next' ? 'next' : ds.deck);
   else if (ds.action === 'unanchor') { S.anchor = null; S.ideas = null; render(); }
   else if (ds.action === 'close') sheet.close();
+  else if (ds.field) { const d = sheet.querySelector('details.more'); d.open = true; const el = ds.field === 'color' ? sheet.querySelector('#cpick') : sheet.querySelector(`[name=${ds.field}]`); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => el?.focus?.(), 350); }
   else if (ds.action === 'opendetails') { const d = sheet.querySelector('details.more'); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   else if (ds.action === 'build') startBuild();
   else if (ds.action === 'clearbuild') setBuild([]);
@@ -1949,6 +1514,7 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'allclean') { for (const it of S.items.filter(i => i.dirty)) { delete it.dirty; await put('items', it); } S.ideas = null; toast('All clean'); render(); }
   else if (ds.action === 'fixtags') { const n = S.items.find(issueOf); if (n) openSheet(n.id); }
   else if (ds.fixtag) { const [id, kv] = ds.fixtag.split('|'), it = byId(id), [k, v] = kv.split(':');
+    if (k === 'touch') { delete it.person; await put('items', it); return touchUp(it); }
     if (k === 'pattern') { it.pattern = v; it.patterned = v === 'graphic' || v === 'allover'; await put('items', it); S.ideas = null; S.deck = null; const n = S.items.find(issueOf); if (n) openSheet(n.id); else sheet.close(); return toast('Marked as solid'); }
     if (k === 'photo') { replacing = id; sheet.close(); return replaceInput.click(); }
     if (k === 'dup') { const gone = it; await del('items', id); S.items = S.items.filter(i => i.id !== id); sheet.close(); render(); return toast('Deleted the duplicate', { label: 'Undo', fn: async () => { await put('items', gone); S.items.push(gone); render(); } }); }
@@ -1960,14 +1526,24 @@ document.addEventListener('click', async e => {
   else if (ds.calday) openDay(ds.calday);
   else if (ds.selfie) { const i = selfieIn(); i.day = ds.selfie; i.click(); }
   else if (ds.hair) { S.profile = { k: 'me', ...S.profile, hair: S.profile?.hair === ds.hair ? null : ds.hair }; await put('profile', S.profile); syncTaste(); S.deck = null; render(); }
-  else if (ds.vibef) { S.vibeF = S.vibeF === ds.vibef ? null : ds.vibef; render(); }
+  else if ('vibef' in ds) { S.vibeF = !ds.vibef || S.vibeF === ds.vibef ? null : ds.vibef; if (sheet.open) { sheet.onclose = null; sheet.close(); } render(); }
+  else if (ds.action === 'closetfilter') showSheet(`<div class="pad filters"><div class="pickhead"><div><div class="eyebrow">Closet</div><h2>Filter</h2></div>${closeBtn}</div>
+    <span class="mono">Vibe</span><div class="tags"><button class="tag ${S.vibeF ? 'o' : ''}" data-vibef="">Any</button>${Object.keys(VIBES).map(v => `<button class="tag ${S.vibeF === v ? '' : 'o'}" data-vibef="${v}">${v}</button>`).join('')}</div>
+    <span class="mono">Your tags</span><div class="tags">${[...new Set(S.items.flatMap(i => i.tags ?? []))].map(t => `<button class="tag o" data-tagq="${esc(t)}">#${esc(t)}</button>`).join('') || '<span class="sub">Add tags on a piece (Details) to filter by them.</span>'}</div>
+    <button class="btn wide" data-action="close">Show</button></div>`);
+  else if (ds.tagq) { S.q = ds.tagq; sheet.close(); render(); }
   else if (ds.action === 'closetview') { S.closetView = (S.closetView ?? 'shelf') === 'shelf' ? 'grid' : 'shelf'; S.profile = { k: 'me', ...S.profile, closetView: S.closetView }; put('profile', S.profile); render(); }
   else if (ds.quick) quickAct(...ds.quick.split('|'));
   else if ('occ' in ds) { S.occ = ds.occ || null; S.ideas = null; render(); if (sheet.querySelector('.filters')) openFilters(); }
   else if (ds.lock) { S.locks.has(ds.lock) ? S.locks.delete(ds.lock) : S.locks.add(ds.lock); if (sheet.open) openSwap(ds.lock); else render(); }
   else if (ds.action === 'shufflebuild') shuffleBuild();
   else if (ds.action === 'why') openWhy();
+  else if (ds.action === 'patreview') patReview();
+  else if (ds.patset) { const [id, v] = ds.patset.split('|'), it = byId(id); it.pattern = v; it.patterned = v === 'graphic' || v === 'allover'; await put('items', it); S.ideas = null; S.deck = null; patReview(); }
   else if (ds.action === 'recolor') recolor();
+  else if (ds.action === 'possible') { S.made = possibilities(buildItems(), S.build, 6);
+    showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">Keeps your ${S.build.length} piece${S.build.length > 1 ? 's' : ''}</div><h2>Outfit possibilities</h2></div>${closeBtn}</div>
+      ${S.made.length ? `<div class="picklooks big">${S.made.map(m => `<button data-buildkey="${m.key}" aria-label="Use this look">${flat(m.items)}<span class="sub">${esc(m.note.replace(/ · .*/, ''))}</span></button>`).join('')}</div>` : '<p class="sub">Nothing complete works with those pieces yet. Swap one, or add more clothes.</p>'}</div>`); }
   else if (ds.action === 'sharelook') shareLook(S.build);
   else if (ds.action === 'selmode') { S.sel = S.sel ? null : new Set(); render(); }
   else if (ds.selitem) { S.sel.has(ds.selitem) ? S.sel.delete(ds.selitem) : S.sel.add(ds.selitem); render(); }
@@ -1986,7 +1562,11 @@ document.addEventListener('click', async e => {
   else if (ds.logpick) { const [k, key] = ds.logpick.split('|'), r = openDay.list?.find(x => x.key === key); if (r) { await logDay(k, { key, items: r.ids.map(byId).filter(Boolean) }); sheet.close(); render(); } }
   else if (ds.unlog) { await unlogDay(ds.unlog); sheet.close(); render(); toast('Removed'); }
   else if (ds.action === 'sharebackup') shareBackup();
+  else if (ds.action === 'exportnew') { S.backupSince = S.profile.lastBackup; try { await exportBackup(); } finally { S.backupSince = null; } }
   else if (ds.action === 'copyclaude') copyForClaude();
+  else if (ds.action === 'selllist') { const sell = S.items.filter(i => !i.stored && Date.now() - Math.max(i.lastWorn ?? 0, i.createdAt ?? 0) > 180 * 864e5);
+    const text = sell.map(i => `${i.brand ? i.brand + ' ' : ''}${i.name} · ${colorName(i.color)} ${i.kind || i.cat}${i.fit != null && i.cat !== 'Accessories' ? ` · ${(FITS[i.cat] ?? FITS.default)[i.fit ?? 1].toLowerCase()} fit` : ''}${i.price ? ` · paid ${money(i.price)}` : ''}`).join('\n');
+    try { await navigator.clipboard.writeText(text); toast(`Copied ${sell.length} listings`); } catch { showSheet(`<div class="pad"><div class="pickhead"><h2>Copy this</h2>${closeBtn}</div><textarea class="copybox" readonly>${esc(text)}</textarea></div>`); } }
   else if (ds.action === 'fillbuild') fillBuild();
   else if (ds.action === 'weather') askWeather();
   else if (ds.made) showMade(byId(ds.made));
@@ -1996,6 +1576,8 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'newcoll') openNewColl();
   else if (ds.action === 'capsules') openCapsules();
   else if ('capsel' in ds) { await useCapsule(ds.capsel); if (sheet.open) { sheet.onclose = null; sheet.close(); } render(); toast(S.coll ? `Using ${capName()} · only its pieces` : 'Using all clothes'); }
+  else if (ds.capshare) shareCapsule(collById(ds.capshare));
+  else if (ds.capsugg) { const sg = suggestCaps.list?.find(([n]) => n === ds.capsugg); if (!sg) return; const c = { id: uid(), name: sg[0], ids: sg[1], at: Date.now() }; await put('colls', c); S.colls.push(c); openCapsules(); toast(`Kept ${c.name} · ${c.ids.length} pieces`); }
   else if (ds.capedit) { await useCapsule(ds.capedit); openPicker(); }
   else if (ds.capren) { const c = collById(ds.capren); showSheet(`<form class="newcoll" id="renform" data-id="${c.id}"><div class="pickhead"><div><div class="eyebrow">Rename</div><h2>${esc(c.name)}</h2></div>${closeBtn}</div><input name="name" value="${esc(c.name)}" maxlength="40" required autocomplete="off"><button class="btn wide">Save</button></form>`); }
   else if (ds.capdup) { const c = collById(ds.capdup), d = { ...c, id: uid(), name: `${c.name} copy`.slice(0, 40), ids: [...c.ids], at: Date.now(), packed: [], trip: undefined }; await put('colls', d); S.colls.push(d); openCapsules(); toast('Duplicated'); }
@@ -2038,6 +1620,8 @@ document.addEventListener('click', async e => {
     catch (e) { console.warn(e); t.disabled = false; toast("Couldn't remove it — check your connection and try again"); }
   }
   else if (ds.touchup) touchUp(byId(ds.touchup));
+  else if (ds.edit) editPhoto(byId(ds.edit));
+  else if (ds.action === 'editsave') { const { it, c } = editPhoto.cur; it.img = await new Promise(r => crop(c).toBlob(r, 'image/png')); resetSrc(it); await put('items', it); S.ideas = null; openSheet(it.id); toast('Saved'); }
   else if (ds.touch) touchAct(ds.touch);
   else if (ds.style) { S.anchor = ds.style; S.ideas = null; S.view = 'outfits'; S.tab = 'ideas'; sheet.close(); render(); scrollTo(0, 0); }
   else if (ds.wheel) {
@@ -2153,7 +1737,7 @@ async function backfillOrient() {
 async function checkPhotos() {
   let n = 0;
   const convert = !S.profile?.bytesStored2;
-  for (const it of S.items) { try { if (!(it.img instanceof Blob) || !it.img.size) throw 0; (await createImageBitmap(it.img)).close?.(); if (convert) await put('items', it); } catch { it.broken = true; n++; } }
+  for (const it of S.items) { try { if (!(it.img instanceof Blob) || !it.img.size) throw 0; (await createImageBitmap(it.img)).close?.(); if (convert) await putQuiet('items', it); } catch { it.broken = true; n++; } }
   if (convert && S.profile && !n) { S.profile.bytesStored2 = true; await put('profile', S.profile); } // every photo now saved as bytes; any failure retries next time
   if (n && S.view === 'closet') render();
 }

@@ -72,10 +72,12 @@ const compOff = hs => Math.min(Infinity, ...pairs(hs).map(([a, b]) => Math.abs(h
 // ---------- proportions ----------
 // fit: 0 slim / 1 regular / 2 baggy, named per category. Missing = regular. 3 = cropped (tops and layers): regular width, short length.
 // Index = stored fit value. 0/1/2 drive the proportion rules (slim/regular/wide); 3 and 4 are named variants that score like 1.
-export const FITS = { Tops: ['Fitted', 'Regular', 'Oversized', 'Cropped'], Layers: ['Fitted', 'Regular', 'Oversized', 'Cropped'], Bottoms: ['Slim', 'Straight', 'Wide / baggy', 'Relaxed (loose straight)', 'Flared'],
+export const FITS = { Tops: ['Fitted', 'Regular', 'Oversized', 'Cropped', 'Boxy', 'Relaxed'], Layers: ['Fitted', 'Regular', 'Oversized', 'Cropped', 'Boxy', 'Relaxed'], Bottoms: ['Slim', 'Straight', 'Wide / baggy', 'Relaxed (loose straight)', 'Flared'],
   Shoes: ['Sleek (low profile)', 'Regular', 'Chunky (thick sole)'], default: ['Slim', 'Regular', 'Baggy'] };
-export const FIT_ORDER = { Bottoms: [0, 1, 3, 2, 4] }; // how the picker lists them: slim → wide, then flared
-const fit = p => p?.fit === 3 || p?.fit === 4 ? 1 : p?.fit ?? 1, cropped = p => p?.fit === 3 && (p.cat === 'Tops' || p.cat === 'Layers');
+export const FIT_ORDER = { Bottoms: [0, 1, 3, 2, 4], Tops: [0, 1, 5, 2, 4, 3], Layers: [0, 1, 5, 2, 4, 3] }; // how the picker lists them: slim → wide, then the special cuts
+// Rule value: cropped / relaxed / flared score like regular; boxy tops score like oversized (wide).
+const fit = p => { const f = p?.fit ?? 1; return f === 3 || f === 5 ? 1 : f === 4 ? (p.cat === 'Tops' || p.cat === 'Layers' ? 2 : 1) : f; };
+const cropped = p => p?.fit === 3 && (p.cat === 'Tops' || p.cat === 'Layers');
 
 // Layering ladder (style notes): tank < tee/polo/shirt < knit/hoodie < jacket/overshirt < coat. Order matters: "flannel overshirt" is a jacket, not a shirt.
 const LEVELS = [[/coat|puffer|parka|trench/i, 4], [/jacket|blazer|overshirt|flannel|vest|bomber|windbreaker|cardigan/i, 3], [/sweater|hoodie|knit|crewneck|sweatshirt|zip/i, 2], [/tank/i, 0]];
@@ -442,15 +444,16 @@ export function extractPalette(px, k = 5, min = 0.06) {
 }
 
 // ponytail: random sampling, not exhaustive search. Fine for a few hundred items; enumerate if results get repetitive.
-export function generate(items, mode, { anchor, palette, inspo, n = 12, tries = 1500, rand = Math.random, layerOdds = 0.5 } = {}) {
+export function generate(items, mode, { anchor, fixed = [], palette, inspo, n = 12, tries = 1500, rand = Math.random, layerOdds = 0.5 } = {}) {
   const by = Object.fromEntries(Object.keys(SLOTS).map(s => [s, items.filter(SLOTS[s])]));
-  if (anchor) by[slotOf(anchor)] = [anchor];
+  const pinned = [anchor, ...fixed].filter(Boolean), forced = new Set(pinned.map(slotOf));
+  for (const p of pinned) by[slotOf(p)] = [p];
   if (!by.Tops.length || !by.Bottoms.length || !by.Shoes.length) return [];
   const pick = a => a[Math.floor(rand() * a.length)], opts = { palette, inspo };
   const seen = new Map(), blocked = new Map();
   for (let t = 0; t < tries; t++) {
     const ps = [pick(by.Tops), pick(by.Bottoms), pick(by.Shoes)];
-    const add = (slot, odds) => { if (by[slot].length && (anchor && slotOf(anchor) === slot || rand() < odds)) ps.push(pick(by[slot])); };
+    const add = (slot, odds) => { if (by[slot].length && (forced.has(slot) || rand() < odds)) ps.push(pick(by[slot])); };
     add('Layers', layerOdds); add('Hat', 0.8); add('Accessory', 0.5); // hats + chains/bags in most fits, not all
     const key = ps.map(p => p.id).sort().join();
     if (seen.has(key)) continue;
@@ -500,6 +503,8 @@ const collect = (items, opts, modes = VISIBLE(), per = 10) => {
   return [...best.values()];
 };
 export const madeWith = (items, anchor, n = 5) => varied(collect(items, { anchor }), n);
+// Builder's "see outfit possibilities": complete looks that keep every piece you've already picked.
+export const possibilities = (items, picked, n = 6) => varied(collect(items, { fixed: picked }).map(o => ({ ...o, anchor: null })), n, { Tops: 2, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 });
 
 // What the weather rules out. t = feels-like °C, null = unknown (nothing ruled out). rain: no suede.
 export function forWeather(items, t, rain = false) {
@@ -515,12 +520,14 @@ export function forWeather(items, t, rain = false) {
 export const OCCASIONS = { work: { label: 'Work', dress: 2 }, date: { label: 'Date', dress: 1.5 }, club: { label: 'Club', dress: 1, vibe: 'streetwear' }, errands: { label: 'Errands', dress: 0.8 }, gym: { label: 'Gym', dress: 0, vibe: 'athletic' } };
 export const occasionFit = (ps, occ) => { const o = OCCASIONS[occ]; if (!o) return 0; const cl = ps.filter(p => CLOTHES.includes(p.cat)), avg = cl.reduce((t, p) => t + dress(p), 0) / cl.length;
   return -Math.abs(avg - o.dress) * 1.5 + (o.vibe ? vibe(ps, o.vibe) * 0.3 : 0); };
-export function today(items, { t = null, rain = false, occasion = null, n = 5, rand = Math.random, skip = [] } = {}) {
+const likeness = (ps, like) => { if (!like?.length) return 0; const cn = p => colorName(p.color), lc = new Set(like.filter(p => p.cat !== 'Accessories').map(cn)), lk = new Set(like.map(p => p.kind));
+  return Math.min(1.2, ps.filter(p => p.cat !== 'Accessories' && lc.has(cn(p))).length * 0.25 + ps.filter(p => lk.has(p.kind)).length * 0.15); };
+export function today(items, { t = null, rain = false, occasion = null, n = 5, rand = Math.random, skip = [], like = null } = {}) {
   // skip: what you wore yesterday. Tops and layers rest a day; pants and shoes can repeat.
   const pool = forWeather(items, t, rain).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
   const list = collect(pool, { rand, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
   // a new top every card, pants and shoes at most twice, the same cap or chain at most twice. Jackets may repeat: you wear the same coat all week.
-  return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + rand() * 1.5 })), n, { Tops: 1, Layers: n, Bottoms: 2, Shoes: 2, Accessories: 2 });
+  return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + rand() * 1.5 })), n, { Tops: 1, Layers: n, Bottoms: 2, Shoes: 2, Accessories: 2 });
 }
 
 // Every rule that scored a look, biggest first: the builder's "Why?". null = no style rule takes it.

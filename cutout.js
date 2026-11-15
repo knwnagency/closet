@@ -132,3 +132,16 @@ export function orient(d, w, h, cat) {
   }
   return 0;
 }
+
+// Soften a ragged edge (after a color-keyed cut): average the alpha over 3×3, edge pixels only, `passes` times.
+// Interior and empty pixels stay exactly as they are, so the piece never goes see-through.
+export function smoothEdges(d, w, h, passes = 2) {
+  for (let k = 0; k < passes; k++) {
+    const a = new Uint8ClampedArray(w * h); for (let p = 0; p < w * h; p++) a[p] = d[p * 4 + 3];
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const p = y * w + x; let s = 0, lo = 255, hi = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const v = a[p + dy * w + dx]; s += v; lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      if (hi - lo > 64) d[p * 4 + 3] = Math.round(s / 9);
+    }
+  }
+}

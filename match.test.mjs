@@ -353,4 +353,16 @@ console.log('variety ok');
   assert.equal(m.FITS.Bottoms[3], 'Relaxed (loose straight)'); assert.equal(m.patternOf({ patterned: true }), 'graphic'); assert.equal(m.patternOf({ pattern: 'logo', patterned: false }), 'logo');
   const it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, ...x });
   assert.ok(m.bestMode([it('t', 'Tops', '#151515', { pattern: 'logo' }), it('b', 'Bottoms', '#f6f5f1', { pattern: 'logo' }), it('s', 'Shoes', '#151515', { kind: 'sneakers' })]).score != null, 'black and white with small logos is not a clash'); }
+{ const m = await import('./match.js'), it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, ...x });
+  assert.equal(m.FITS.Tops[4], 'Boxy'); assert.equal(m.FIT_ORDER.Tops[2], 5, 'relaxed sits between regular and oversized');
+  const boxy = it('bx', 'Tops', '#f6f5f1', { fit: 4, kind: 't-shirt' }), wide = it('w', 'Bottoms', '#151515', { fit: 2, kind: 'jeans' }), chunky = it('c', 'Shoes', '#f6f5f1', { fit: 2, kind: 'sneakers' });
+  assert.match(m.proportion([boxy, wide, chunky]).note, /oversized|chunky/i, 'boxy reads as a wide top');
+  const closet = [boxy, it('t2', 'Tops', '#7d7b78', { kind: 't-shirt' }), wide, it('p2', 'Bottoms', '#1e2a45', { kind: 'jeans' }), chunky, it('k2', 'Shoes', '#151515', { kind: 'boots' })];
+  const pos = m.possibilities(closet, [wide, chunky]); assert.ok(pos.length >= 1 && pos.every(o => o.items.includes(wide) && o.items.includes(chunky)), 'possibilities keep every picked piece');
+  const liked = m.today(closet, { n: 3, like: [boxy, wide] }); assert.ok(liked.length, 'today with more-like-this'); }
 console.log('v3 rules ok');
+{ const c = await import('./cutout.js'), w = 10, h = 10, d = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) d[(y * w + x) * 4 + 3] = x < 5 ? 255 : 0;
+  c.smoothEdges(d, w, h, 1); assert.equal(d[(5 * w + 1) * 4 + 3], 255, 'inside stays solid'); assert.equal(d[(5 * w + 8) * 4 + 3], 0, 'outside stays clear');
+  assert.ok(d[(5 * w + 4) * 4 + 3] < 255 && d[(5 * w + 5) * 4 + 3] > 0, 'the edge softens'); }
+console.log('edges ok');
