@@ -6,9 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#f0efeb">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-title" content="Closet">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Closet</title>
@@ -461,6 +459,67 @@
   /* sheets: a grab bar you can drag down */
   .grab { display: block; width: 44px; height: 5px; margin: 8px auto 0; background: var(--hair); } dialog.sheet { transition: transform .25s cubic-bezier(.2, .9, .3, 1); }
   @media (prefers-reduced-motion: reduce) { .dcard.live { transition: none !important; } }
+
+  /* ============ PRODUCT FIRST (replaces the streetwear look) ============
+     Creative direction: the clothes are the only thing with weight or color. White page, one consistent soft-grey studio
+     surface under every piece, small precise grotesk type, black text only, hairlines instead of boxes, no black panels.
+     Black appears only as text and as the one primary button per screen. Taps stay 44px+, text 11px+. */
+  :root { --bg: #ffffff; --s1: #f7f7f5; --tile: #f0efec; --ink: #141414; --muted: #66665f; --hair: rgb(20 20 20 / .1); --accent: #141414; --bad: #a8321d;
+    --display: "Helvetica Neue", Helvetica, Arial, sans-serif; --mono: "Helvetica Neue", Helvetica, Arial, sans-serif; --grain: none; --shadow: drop-shadow(0 6px 10px rgb(0 0 0 / .12)); }
+  body { background: var(--bg); font-size: 15px; }
+  h1, .display { font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; line-height: 1.05; }
+  h1 { font-size: 26px; } .pickhead h2 { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .03em; }
+  .eyebrow, .mono, .chip, .pill, .seg button, nav .tabs button, .lab, .sec, .looks-h, h3, .weekbar, .cell > span:first-child, .plus { font-family: var(--mono); letter-spacing: .08em; }
+  /* tags: quiet outlines, never filled black; selected = soft grey fill */
+  .tag, .tag.o, .tag.hot { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--hair); font-family: var(--mono); font-weight: 500; font-size: 11px; letter-spacing: .06em; height: 28px; }
+  .tag:not(.o):not(.bad) { background: var(--s1); box-shadow: inset 0 0 0 1px rgb(20 20 20 / .22); } .tag.hot { background: var(--tile); }
+  button.tag { min-height: 44px; height: auto; padding: 0 12px; } .tbar button.tag, .ctags button.tag { min-height: 44px; }
+  .tag.bad { color: var(--bad); box-shadow: inset 0 0 0 1px rgb(168 50 29 / .4); background: transparent; }
+  /* buttons: one solid primary, everything else outline */
+  .btn { height: 48px; font-size: 12px; font-weight: 600; letter-spacing: .1em; border-radius: 0; background: var(--ink); color: #fff; box-shadow: none; }
+  .btn.go { background: var(--ink); color: #fff; } .btn.ghost, .btn.danger { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px rgb(20 20 20 / .3); } .btn.danger { color: var(--bad); box-shadow: inset 0 0 0 1px rgb(168 50 29 / .4); }
+  .btn.done { background: var(--s1); color: var(--muted); box-shadow: none; } .pill { box-shadow: inset 0 0 0 1px var(--hair); } .pill.on { background: var(--ink); color: #fff; }
+  .seg.subnav { box-shadow: none; border-bottom: 1px solid var(--hair); } .seg.subnav button { border-bottom: 2px solid transparent; margin-bottom: -1px; } .seg.subnav button.on { background: transparent; color: var(--ink); border-bottom-color: var(--ink); }
+  .chip.on { border-bottom-width: 2px; }
+  /* the clothes: one soft studio surface everywhere, no tint, no grain */
+  .flat, .item .ph, .spot, .pickgrid button, .carousel, .strip button, .cday, .looks .look, .flat { background-color: var(--tile); background-image: none; }
+  .cvs .carousel { background: none; }
+  /* menu: white, hairline, the active tab underlined */
+  nav { background: rgb(255 255 255 / .94); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--hair); }
+  nav .tabs button { color: var(--muted); } nav .tabs button.on { color: var(--ink); } nav .tabs button.on::after { background: var(--ink); width: 18px; height: 2px; margin-left: -9px; bottom: 12px; }
+  nav .add { background: transparent; color: var(--ink); box-shadow: inset 1px 0 0 var(--hair); }
+  /* Today: the card is just the look, no frame */
+  .dcard { background: transparent; box-shadow: none; padding: 0; } .dcard.under { display: none; } .dcard.end { box-shadow: inset 0 0 0 1px var(--hair); padding: 40px 16px; }
+  .dtitle { font-size: 24px; font-weight: 500; text-transform: none; letter-spacing: 0; margin: 4px 0 10px; } .dtitle::first-letter { text-transform: uppercase; }
+  .flatwrap { width: min(100%, calc(42dvh * .8)); }
+  .dcard[data-hint=save] .hint::after { color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); } .dcard[data-hint=wear] .hint::after { background: var(--ink); color: #fff; }
+  .dcard .hint::after { font-family: var(--display); font-weight: 700; font-size: 22px; background: #fff; }
+  .round { box-shadow: inset 0 0 0 1px rgb(20 20 20 / .3); } .round.on svg { fill: var(--ink); stroke: var(--ink); }
+  .capbar { background: var(--s1); color: var(--ink); box-shadow: inset 0 0 0 1px var(--hair); } .capbar button { color: var(--ink); }
+  .favbtn { box-shadow: inset 0 0 0 1px var(--hair); height: 44px; font-family: var(--mono); } .favbtn svg { fill: var(--ink); stroke: var(--ink); }
+  .streak { box-shadow: inset 0 0 0 1px var(--hair); min-height: 44px; display: inline-flex; align-items: center; } .streak.lit { background: var(--s1); color: var(--ink); } .streak.lit b { color: var(--ink); }
+  .seeall { color: var(--ink); text-decoration: underline; min-height: 44px; }
+  /* builder */
+  .ring { background: radial-gradient(closest-side, var(--bg) 82%, transparent 84%), conic-gradient(var(--ink) calc(var(--p) * 1%), var(--hair) 0); } .ring b { font-family: var(--display); font-weight: 600; font-size: 20px; } .ring span { font-size: 11px; }
+  .slab { background: rgb(255 255 255 / .9); color: var(--ink); font-size: 11px; font-family: var(--mono); box-shadow: inset 0 0 0 1px var(--hair); }
+  .cvs.empty { box-shadow: inset 0 0 0 1px rgb(20 20 20 / .3); background: rgb(255 255 255 / .5); } .cvs.empty span { font-family: var(--mono); }
+  .pickgrid small.why.neg { color: var(--bad); }
+  /* closet */
+  .item b { font-family: var(--display); font-weight: 500; font-size: 13px; letter-spacing: 0; text-transform: none; line-height: 1.3; margin-top: 8px; }
+  .item span { font-family: var(--mono); font-size: 11px; color: var(--muted); } .item .tag.corner { color: var(--ink); background: rgb(255 255 255 / .92); box-shadow: inset 0 0 0 1px var(--hair); font-size: 11px; height: 22px; }
+  .sec small, .chip small { font-size: 11px; }
+  .selbar { flex-wrap: wrap; row-gap: 6px; } .selbar .row2 { flex-wrap: wrap; } .selbar select { min-height: 44px; }
+  .capacts .icon { width: 44px; } .thead .eyebrow { white-space: nowrap; } .capbtn svg { width: 16px; height: 16px; } details.sizes summary { min-height: 44px; }
+  /* piece page, calendar, me */
+  .pname { font-size: 24px; font-weight: 600; } .review { box-shadow: inset 0 0 0 1px rgb(20 20 20 / .3); }
+  details.more { border-top: 1px solid var(--hair); } details.more > summary { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .06em; }
+  .recap > div { background: var(--s1); color: var(--ink); box-shadow: inset 0 0 0 1px var(--hair); } .recap .mono { color: var(--muted); font-size: 11px; } .recap b { font-family: var(--display); font-weight: 600; font-size: 15px; }
+  .tiles > * { background: var(--s1); } .tiles b { font-family: var(--display); font-weight: 600; font-size: 30px; letter-spacing: 0; }
+  .cday.today { box-shadow: inset 0 0 0 1.5px var(--ink); } .day.today { box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .feed.favs .outfit { background: transparent; padding: 0; box-shadow: none; } .ftitle { font-family: var(--display); font-weight: 500; font-size: 15px; text-transform: none; } .ftitle::first-letter { text-transform: uppercase; }
+  .facts .icon.on svg { fill: var(--ink); stroke: var(--ink); }
+  .update { background: var(--ink); } .cpref .good { box-shadow: inset 0 0 0 2px var(--ink); }
+  .caprow.on .capsel i { background: var(--ink); } .capsel b { font-family: var(--display); font-weight: 600; font-size: 16px; letter-spacing: .02em; }
 </style>
 </head>
 <body>
@@ -484,7 +543,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, combo, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.15 · v3.2'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.15 · v3.3'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -974,7 +1033,7 @@ function todayView() {
     setTimeout(() => toast(S.profile.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up', { label: 'Back up', fn: exportBackup }), 900); } // once a day, a week after the last backup
   const date = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const nf = (S.mode !== 'today' ? 1 : 0) + (S.occ ? 1 : 0);
-  const top = `<header class="thead"><div><div class="eyebrow">${greet()} · ${date}</div><h1>Today</h1></div><div class="right">${`<button class="favbtn" data-favs aria-label="Favorites, ${S.saved.length} saved">${heart}<b>${S.saved.length}</b></button>`}${streakChip()}</div></header>
+  const top = `<header class="thead"><div><div class="eyebrow">${greet()} · ${date}</div><h1>Today</h1></div><div class="right">${`<button class="favbtn" data-favs aria-label="Favorites, ${S.saved.length} saved">${heart}<b>${S.saved.length}</b></button>`}</div></header>
     <div class="tbar">${capBtn()}${w ? `<span class="tag" title="${esc(wxLine(w))}">${tempText(w.t)} ${esc(WX[w.code] ?? '')}</span>${w.lo != null && w.lo < w.t - 6 ? `<span class="tag o">${tempText(w.lo)} later</span>` : ''}` : `<button class="tag o" data-action="weather">+ Weather</button>`}
       <span class="sp"></span><button class="tag o" data-action="filters" aria-label="Filter">${ic('filter')}${nf ? ` ${nf}` : ''}</button><button class="tag o" data-action="shuffle" aria-label="Shuffle">${ic('shuffle')}</button></div>`;
   if (!complete(items)) return top + `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs at least a top, bottoms and shoes.` : 'Add at least one top, one bottom and one pair of shoes. Then this is where your looks land every morning.'}</p>
@@ -1087,14 +1146,14 @@ function recolor() {
 // Share a look: the flat-lay drawn to a picture (with its vibe and the app name), sent through the share sheet.
 async function shareLook(ps) {
   const W = 1080, H = 1350, c = Object.assign(document.createElement('canvas'), { width: W, height: H }), x = c.getContext('2d');
-  x.fillStyle = '#e2e1dc'; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#f0efec'; x.fillRect(0, 0, W, H);
   const by = {}; for (const p of ps) { const sl = slotOf(p); if (sl) by[sl] ??= p; }
   const L = flatLayout(Object.keys(by)), pad = 60, cw = W - pad * 2, ch = (H - 260) ;
   for (const [sl, p] of Object.entries(by)) { const [lx, ly, lw, lh] = L[sl], b = await createImageBitmap(p.img), bx = pad + lx / 100 * cw, byy = 60 + ly / 100 * ch, bw = lw / 100 * cw, bh = lh / 100 * ch, k = Math.min(bw / b.width, bh / b.height);
     x.shadowColor = 'rgba(0,0,0,.22)'; x.shadowBlur = 18; x.shadowOffsetY = 10; x.drawImage(b, bx + (bw - b.width * k) / 2, byy + (bh - b.height * k) / 2, b.width * k, b.height * k); }
   x.shadowColor = 'transparent'; const [title] = vibeOf({ items: ps, mode: bestMode(ps)?.mode });
-  x.fillStyle = '#0c0c0c'; x.fillRect(0, H - 190, W, 190); x.fillStyle = '#f0efeb'; x.font = '110px Anton, "HelveticaNeue-CondensedBlack", Impact, sans-serif'; x.fillText(title.toUpperCase(), pad, H - 70);
-  x.fillStyle = '#ff4d00'; x.font = '600 30px ui-monospace, Menlo, monospace'; x.fillText('CLOSET', W - pad - 120, H - 140);
+  x.fillStyle = '#ffffff'; x.fillRect(0, H - 190, W, 190); x.fillStyle = '#141414'; x.font = '500 64px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText(title[0].toUpperCase() + title.slice(1), pad, H - 80);
+  x.fillStyle = '#66665f'; x.font = '600 26px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText('CLOSET', W - pad - 120, H - 80);
   const f = new File([await new Promise(r => c.toBlob(r, 'image/png'))], 'look.png', { type: 'image/png' });
   if (navigator.canShare?.({ files: [f] })) { try { await navigator.share({ files: [f] }); } catch {} } else download(f);
 }
