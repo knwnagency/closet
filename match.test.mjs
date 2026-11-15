@@ -162,3 +162,12 @@ assert.deepEqual(bs.filter(b => b.done).map(b => b.id), ['first', 'streak3'], 'f
   assert.equal(cleanAlpha(c, w, h), 52 / 600, 'thin piece not eaten by the trim');
 }
 console.log('match.js ok');
+
+// swatches name themselves; teal-ish green jacket reads green; multi-vibe counts
+{
+  const m = await import('./match.js');
+  for (const [n, h] of Object.entries(m.SWATCHES)) assert.equal(m.colorName(h), n, `swatch ${n}`);
+  assert.equal(m.colorName('#3e7a6c'), 'green');
+  assert.equal(m.FITS.Tops[2], 'Oversized');
+}
+console.log('colors ok');

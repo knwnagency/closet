@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon.svg">
@@ -18,6 +18,7 @@
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   [hidden] { display: none !important; }
   body { margin: 0; min-height: 100dvh; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; } /* no double-tap zoom when tapping buttons fast */
   button, input, select { font: inherit; color: inherit; }
   button { cursor: pointer; border: 0; background: none; padding: 0; border-radius: 0; transition: opacity .2s; }
   button:active { opacity: .6; }
@@ -182,6 +183,11 @@
   .cell input:not([type]), .cell select { flex: 1; min-width: 0; border: 0; background: none; text-align: right; text-align-last: right; color: var(--ink); appearance: none; font-size: 16px; height: 52px; outline: 0; border-radius: 0; }
   .cell select { padding-right: 16px; background: linear-gradient(45deg, transparent 50%, var(--muted) 50%) right 4px center / 5px 5px no-repeat, linear-gradient(-45deg, transparent 50%, var(--muted) 50%) right 0 center / 5px 5px no-repeat; }
   .cell .cname { flex: 1; text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+  .swatches { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 10px 0 14px; border-bottom: 1px solid var(--hair); }
+  .swatches button { flex: none; width: 30px; height: 30px; border-radius: 50%; position: relative; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
+  .swatches button span { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); font-size: 8.5px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; color: var(--muted); display: none; }
+  .swatches button.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--ink); } .swatches button.on span { display: block; }
+  .swatches:has(.on) { padding-bottom: 26px; }
   .cell input[type=color] { width: 26px; height: 26px; border: 0; padding: 0; border-radius: 50%; background: none; flex: none; }
   .cell input[type=color]::-webkit-color-swatch-wrapper { padding: 0; } .cell input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
   .switch { appearance: none; margin: 0 0 0 auto; width: 44px; height: 24px; border-radius: 99px; box-shadow: inset 0 0 0 1px var(--ink); position: relative; flex: none; cursor: pointer; transition: background .2s; }
@@ -201,17 +207,17 @@
   .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 3px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12); }
   button:disabled { opacity: .3; pointer-events: none; }
 
-  /* builder: dress the silhouette — one swipe row per slot */
-  .dress { max-width: 440px; margin: 0 auto; background: var(--tile); border-radius: var(--r); padding: 8px 0; overflow: hidden; }
-  .sw { position: relative; height: var(--h); }
-  .sw::before { content: ''; position: absolute; inset: 2px 0; background: currentColor; opacity: .045; -webkit-mask: var(--sil) center / contain no-repeat; mask: var(--sil) center / contain no-repeat; }
-  .sw .lab { position: absolute; left: 12px; top: 4px; z-index: 2; pointer-events: none; font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); max-width: 40%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .track { position: relative; z-index: 1; display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 0 22%; overscroll-behavior-x: contain; }
-  .track::-webkit-scrollbar { display: none; }
-  .track > button { flex: 0 0 56%; height: 100%; padding: 4px 8px; scroll-snap-align: center; opacity: .25; transform: scale(.78); transition: opacity .2s, transform .25s cubic-bezier(.2, .9, .3, 1); }
-  .track > button.no { opacity: .1; } .track > button.cur { opacity: 1; transform: none; }
-  .track img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
-  .track .none span { display: grid; place-items: center; height: min(100%, 64px); margin-top: calc((var(--h) - min(var(--h), 64px)) / 2 - 4px); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); box-shadow: inset 0 0 0 1px var(--hair); border-radius: var(--r); }
+  /* builder: one card per slot */
+  .bgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 520px; margin: 0 auto; }
+  .bcard { display: flex; flex-direction: column; background: var(--s1); border-radius: var(--r); padding: 10px 10px 4px; min-width: 0; }
+  .bcard .lab { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+  .bcard .pic { display: block; width: 100%; height: 150px; padding: 8px; } .bcard .pic img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+  .bcard .nm { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bcard .ops { display: flex; justify-content: space-between; margin-top: auto; } .bcard .ops button { height: 40px; font-size: 12px; } .bcard .ops button:last-child { color: var(--muted); }
+  .bcard.add { justify-content: center; align-items: center; gap: 2px; min-height: 238px; background: none; box-shadow: inset 0 0 0 1px var(--hair); font-size: 13px; }
+  .bcard.add b { font-size: 26px; font-weight: 300; line-height: 1; } .bcard.add small { font-size: 11px; color: var(--muted); }
+  .bgrid.small .bcard.add { aspect-ratio: auto; min-height: 150px; } .bgrid.small .bcard .pic { height: 90px; }
+  .pickh { padding: 0 18px; margin: 4px 0 8px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
   .actions .icon.on svg { fill: var(--bg); }
   .looks { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 18px 2px; }
   .looks .look { flex: 0 0 92px; position: relative; } .looks .look > button:first-child { display: block; width: 100%; }
@@ -243,7 +249,7 @@
   .build .flat { max-width: 440px; margin: 0 auto; }
   .verdict { display: flex; gap: 8px; align-items: center; justify-content: center; text-align: center; font-size: 12px; margin: 14px 0 0; color: var(--ink); }
   .verdict svg { width: 14px; height: 14px; flex: none; } .verdict.bad { color: #9b3b2e; }
-  .build .actions { max-width: 440px; margin: 14px auto 0; position: sticky; bottom: calc(env(safe-area-inset-bottom) + 66px); z-index: 4; background: var(--bg); padding: 8px 0; box-shadow: 0 -1px 0 var(--hair); } .build .actions [data-action=planthis] { flex: 0 0 auto; padding: 0 16px; }
+  .build .actions { max-width: 520px; margin: 14px auto 0; } .build .actions [data-action=planthis] { flex: 0 0 auto; padding: 0 16px; }
   .hint { text-align: center; margin: 18px auto 4px; font-size: 12px; }
   .slot h4 { display: flex; justify-content: space-between; gap: 10px; margin: 22px 0 10px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; }
   .slot h4 span:last-child { color: var(--muted); font-weight: 500; letter-spacing: .08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -316,8 +322,8 @@
 
   /* item sheet tools + wishlist extras */
   .sheet .tools button.hl { background: var(--ink); color: var(--bg); }
-  .sheet .tools { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px; }
-  .sheet .tools button { height: 34px; padding: 0 12px; background: rgb(244 241 236 / .92); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; border-radius: var(--r); }
+  .sheet .tools { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 10px 18px; border-bottom: 1px solid var(--hair); }
+  .sheet .tools button { flex: none; height: 34px; padding: 0 12px; background: var(--s1); box-shadow: inset 0 0 0 1px var(--hair); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; border-radius: var(--r); }
   .shop { display: inline-block; margin-top: 4px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--ink); }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -340,7 +346,7 @@
 
 <script type="module">
 import { dayKey, prevDay, streaks, badges } from './progress.js';
-import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes } from './match.js';
+import { CATS, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES } from './match.js';
 import { cleanAlpha } from './cutout.js';
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
@@ -516,7 +522,7 @@ async function shrink(file, max = 1500) {
   const bmp = await createImageBitmap(file);
   const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
   const cv = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
-  cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height); bmp.close?.();
+  const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.drawImage(bmp, 0, 0, cv.width, cv.height); bmp.close?.(); // JPEG has no alpha: a cut-out PNG would go black
   return new Promise(r => cv.toBlob(r, 'image/jpeg', 0.92));
 }
 
@@ -683,74 +689,43 @@ function outfitsView() {
         : S.mode === 'classic' ? 'Add more neutral basics.' : 'Your closet needs more colors that fit this rule — try another style.'}</p></div>`}`;
 }
 
-// Builder: the outfit on a silhouette, one swipe row per slot. Swiping only patches the page (no re-render), so rows keep their place.
-const ROWS = ['Hat', 'Layers', 'Tops', 'Accessory', 'Bottoms', 'Shoes'], ROW_H = { Hat: 70, Layers: 120, Tops: 150, Accessory: 62, Bottoms: 200, Shoes: 78 };
-const body = d => `url('data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>${d}</svg>`).replace(/'/g, '%27')}')`; // sits inside style="…"
-const TORSO = "<path d='M22 6Q50-2 78 6L94 40 80 46 76 32 75 100H25L24 32 20 46 6 40Z'/>";
-const SILS = { Hat: body("<circle cx='50' cy='58' r='30'/>"), Layers: body(TORSO), Tops: body(TORSO), Accessory: body("<path d='M42 0h16v40H42z'/>"),
-  Bottoms: body("<path d='M25 0H75L73 100H54L50 28 46 100H27Z'/>"), Shoes: body("<ellipse cx='36' cy='55' rx='15' ry='30'/><ellipse cx='64' cy='55' rx='15' ry='30'/>") };
+// Builder: one card per slot (like Cladwell). Tap a card or Swap to pick from a list, best matches first.
+const ROWS = ['Layers', 'Tops', 'Bottoms', 'Shoes'], EXTRAS = ['Hat', 'Accessory'], OPTIONAL = ['Layers', 'Hat', 'Accessory'];
 const isFav = k => S.saved.some(s => s.key === k);
 const verdictHtml = o => { const v = bestMode(o);
   return `<p class="verdict ${v?.score == null ? 'bad' : ''}" id="verdict">${v?.score == null ? svg('M12 4 2.5 20h19L12 4zM12 10v4M12 17v.5') : svg('M5 12l5 5 9-10')}${v?.score == null ? `Doesn't work · ${esc(v?.note ?? 'needs a top, bottoms and shoes')}` : `Works as ${MODES[v.mode].label} · ${esc(v.note)}`}</p>`; };
-const actionsHtml = o => { const k = keyOf(o), worn = S.log.find(l => l.day === dayKey())?.key === k;
-  return `<div class="actions" id="bactions"><button class="btn ${isFav(k) ? '' : 'ghost'} sm" data-save="${k}">${isFav(k) ? '♥ Favorited' : '♡ Favorite'}</button><button class="btn ghost sm" data-action="planthis">Plan</button><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${k}">${worn ? 'Logged today ✓' : 'Wear today'}</button></div>`; };
+const actionsHtml = o => { const k = keyOf(o), worn = S.log.find(l => l.day === dayKey())?.key === k, off = complete(o) ? '' : 'disabled';
+  return `<div class="actions" id="bactions"><button class="btn ${isFav(k) ? '' : 'ghost'} sm" data-save="${k}" ${off}>${isFav(k) ? '♥ Favorited' : '♡ Favorite'}</button><button class="btn ghost sm" data-action="planthis" ${off}>Plan</button><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${k}" ${off}>${worn ? 'Logged today ✓' : 'Wear today'}</button></div>`; };
 const mini = (r, on) => { const items = r.ids.map(byId).filter(Boolean);
   return complete(items) ? `<div class="look"><button data-buildkey="${r.key}" aria-label="Open look">${flat(items)}</button><button class="icon ${on ? 'on' : ''}" data-save="${r.key}" aria-label="Favorite">${heart}</button></div>` : ''; };
 const recentHtml = () => { const list = S.history.filter(h => h.key !== keyOf(S.build)).slice(0, 12);
   return `<div id="recent">${list.length ? `<div class="looks-h"><span>Recent looks</span><span>tap to go back</span></div><div class="looks">${list.map(h => mini(h, isFav(h.key))).join('')}</div>` : ''}</div>`; };
 
-// What the builder can swipe through: the collection, plus whatever the outfit is already wearing (it may come from outside it).
+// What you can pick from: the collection, plus whatever the outfit is already wearing (it may come from outside it).
 const buildItems = () => [...new Set([...pool(), ...S.build])];
 function buildView() {
   const items = buildItems(), o = S.build;
-  const row = s => {
-    const cur = o.find(SLOTS[s]), opts = rankSwaps(items, o, s);
-    return `<div class="sw" style="--h:${ROW_H[s]}px;--sil:${SILS[s]}"><span class="lab">${SLOT_LABEL[s]}${cur ? ` · ${esc(cur.name)}` : ''}</span><div class="track" data-row="${s}">
-      ${['Tops', 'Bottoms', 'Shoes'].includes(s) ? '' : `<button class="none" data-pick="${s}:"><span>No ${SLOT_LABEL[s].toLowerCase()}</span></button>`}
-      ${opts.map(r => `<button class="${r.score == null ? 'no' : ''}" data-pick="${s}:${r.item.id}" aria-label="${esc(r.item.name)}"><img src="${src(r.item)}" alt="" draggable="false"></button>`).join('')}
-    </div></div>`;
-  };
+  const card = s => { const cur = o.find(SLOTS[s]), lab = SLOT_LABEL[s];
+    return cur ? `<div class="bcard"><span class="lab">${lab}</span><button class="pic" data-swap="${s}" aria-label="Swap ${lab.toLowerCase()}"><img src="${src(cur)}" alt=""></button><span class="nm">${esc(cur.name)}</span>
+        <div class="ops"><button data-swap="${s}">⇄ Swap</button><button data-unwear="${s}">Remove</button></div></div>`
+      : `<button class="bcard add" data-swap="${s}"><b>+</b>Add ${lab.toLowerCase()}${OPTIONAL.includes(s) ? '<small>Optional</small>' : ''}</button>`; };
+  const has = s => items.some(SLOTS[s]);
   return `<header><div><div class="eyebrow">Builder${S.coll ? ` · ${esc(collById(S.coll)?.name ?? '')}` : ''}</div><h1>Outfit</h1></div><div class="right"><button class="icon" data-go="outfits" aria-label="Close">${xIcon}</button></div></header>
-    <div class="build"><div class="dress">${ROWS.filter(s => items.some(SLOTS[s])).map(row).join('')}</div>
+    <div class="build">
+      <div class="bgrid">${ROWS.filter(has).map(card).join('')}</div>
+      ${EXTRAS.some(has) ? `<div class="looks-h"><span>Hat &amp; accessories</span></div><div class="bgrid small">${EXTRAS.filter(has).map(card).join('')}</div>` : ''}
       ${verdictHtml(o)}${actionsHtml(o)}
-      <p class="sub hint">Swipe a row to try the next piece. Best matches come first; faint ones break a style rule.</p>
       ${recentHtml()}
     </div>`;
 }
-
-// After render: center each row on the piece being worn, then follow swipes.
-function wireDress() {
-  let fixed = false;
-  document.querySelectorAll('.track').forEach(tr => {
-    const slot = tr.dataset.row, el = tr.querySelector(`[data-pick="${slot}:${S.build.find(SLOTS[slot])?.id ?? ''}"]`) ?? tr.firstElementChild;
-    centerOn(tr, el, 'instant'); el.classList.add('cur');
-    const id = el.dataset.pick.split(':')[1]; // what's centered IS the outfit (a deleted top gets replaced by the one on screen)
-    if (id && !S.build.some(p => p.id === id)) { S.build = S.build.filter(p => !SLOTS[slot](p)); S.build.push(byId(id)); fixed = true; }
-    let t; tr.onscroll = () => { clearTimeout(t); t = setTimeout(() => settle(tr), 90); };
-  });
-  if (fixed) patchBuild();
-}
-const centerOn = (tr, el, behavior = 'smooth') => tr.scrollTo({ left: el.offsetLeft - (tr.clientWidth - el.offsetWidth) / 2, behavior });
-function settle(tr) {
-  const mid = tr.scrollLeft + tr.clientWidth / 2, dist = b => Math.abs(b.offsetLeft + b.offsetWidth / 2 - mid);
-  const el = [...tr.children].reduce((a, b) => dist(b) < dist(a) ? b : a);
-  [...tr.children].forEach(b => b.classList.toggle('cur', b === el));
-  const [slot, id] = el.dataset.pick.split(':');
-  if ((S.build.find(SLOTS[slot])?.id ?? '') === id) return;
-  S.build = S.build.filter(p => !SLOTS[slot](p)); if (id) S.build.push(byId(id));
-  tr.parentElement.querySelector('.lab').textContent = SLOT_LABEL[slot] + (id ? ` · ${byId(id).name}` : '');
-  patchBuild();
-}
-let remembering;
-function patchBuild() {
-  const o = S.build, items = buildItems();
-  document.getElementById('verdict').outerHTML = verdictHtml(o);
-  document.getElementById('bactions').outerHTML = actionsHtml(o);
-  document.querySelectorAll('.track').forEach(tr => { // what breaks a rule depends on the rest of the outfit
-    const ok = new Map(rankSwaps(items, o, tr.dataset.row).map(r => [r.item.id, r.score != null]));
-    tr.querySelectorAll('[data-pick]').forEach(b => { const id = b.dataset.pick.split(':')[1]; b.classList.toggle('no', !!id && !ok.get(id)); });
-  });
-  clearTimeout(remembering); remembering = setTimeout(() => { remember(o); document.getElementById('recent')?.replaceWith(Object.assign(document.createElement('div'), { innerHTML: recentHtml() }).firstElementChild); }, 1200);
+// Pick a piece for one slot. Pieces that go with the rest of the outfit come first; the others sit under their own heading, never greyed out.
+function openSwap(slot) {
+  const opts = rankSwaps(buildItems(), S.build, slot), cur = S.build.find(SLOTS[slot])?.id, lab = SLOT_LABEL[slot].toLowerCase();
+  const tile = r => `<button class="${r.item.id === cur ? 'on' : ''}" data-wearpick="${slot}:${r.item.id}"><img src="${src(r.item)}" alt=""><span>${esc(r.item.name)}</span></button>`;
+  const good = opts.filter(r => r.score != null), rest = opts.filter(r => r.score == null);
+  showSheet(`<div class="pickhead"><div><div class="eyebrow">Outfit</div><h2>Pick a ${lab}</h2></div><button class="btn sm" data-action="close">Done</button></div>
+    ${good.length ? `<p class="pickh">Goes with this outfit</p><div class="pickgrid">${good.map(tile).join('')}</div>` : ''}
+    ${rest.length ? `<p class="pickh">${good.length ? 'Also yours · clashes a bit' : 'Nothing here matches perfectly'}</p><div class="pickgrid">${rest.map(tile).join('')}</div>` : ''}`);
 }
 // A look you stopped on for a beat goes in History (newest first, 40 max) so you can go back and favorite it.
 async function remember(o) {
@@ -953,7 +928,6 @@ function render() {
   scrollers().forEach((e, i) => { e.scrollLeft = keep[i] ?? 0; });
   render.view = S.view;
   if (S.view === 'inspo' && S.inspoTab === 'wheel') paintWheel();
-  if (S.view === 'build') wireDress();
   document.body.classList.toggle('onboarding', S.view === 'onboard');
   document.querySelectorAll('nav [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === (NAV_OF[S.view] ?? S.view)));
 }
@@ -971,10 +945,13 @@ const looksWith = it => {
   return cards ? `<div><div class="looks-h"><span>Looks with this piece</span><span>${fav.length} favorite${fav.length === 1 ? '' : 's'} · ${seen.length} from history</span></div><div class="looks">${cards}</div></div>` : '';
 };
 let openItem = null;
+const vibes = it => [].concat(it.vibe ?? []);
+const showColor = it => { sheet.querySelector('#cname').textContent = colorName(it.color) + (isNeutral(it.color) ? ' · neutral' : '');
+  sheet.querySelectorAll('[data-setcolor]').forEach(b => b.classList.toggle('on', b.getAttribute('aria-label') === colorName(it.color))); };
 function openSheet(id) {
   const it = byId(id), left = S.items.filter(i => i.review).length;
-  showSheet(`<div class="hero spot"><img src="${src(it)}" alt="">${closeBtn}
-    <div class="tools"><button type="button" data-rotate="${it.id}" class="${it.review && ['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? 'hl' : ''}">↻ Rotate</button><button type="button" data-touchup="${it.id}">Touch up</button>${it.photo ? `<button type="button" data-recut="${it.id}">Re-cut</button>` : ''}<button type="button" data-replace="${it.id}">Replace</button></div></div>
+  showSheet(`<div class="hero spot"><img src="${src(it)}" alt="">${closeBtn}</div>
+    <div class="tools"><button type="button" data-rotate="${it.id}" class="${it.review && ['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? 'hl' : ''}">↻ Rotate</button><button type="button" data-recut="${it.id}">Remove background</button><button type="button" data-touchup="${it.id}">Touch up</button><button type="button" data-replace="${it.id}">Replace photo</button></div>
   <form>
     <div class="stat mono">${it.review ? `AI guessed these — fix anything wrong${['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? ' · is it upright? tap ↻ Rotate' : ''}` : wornText(it)}</div>
     <div class="row" ${it.review ? 'hidden' : ''}><button type="button" class="btn" data-style="${it.id}">Style it</button><button type="button" class="btn ghost" data-wheel="${it.id}">Match color</button></div>
@@ -982,10 +959,11 @@ function openSheet(id) {
       <label class="cell"><span>Name</span><input name="name" value="${esc(it.name)}"></label>
       <label class="cell"><span>Category</span><select name="cat">${CATS.map(c => `<option ${c === it.cat ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
       <label class="cell" ${it.cat === 'Accessories' ? 'hidden' : ''}><span>Fit</span><select name="fit">${fitOptions(it)}</select></label>
-      <label class="cell"><span>Vibe</span><select name="vibe">${Object.keys(VIBES).map(v => `<option value="${v}" ${v === it.vibe ? 'selected' : ''}>${v[0].toUpperCase() + v.slice(1)}</option>`).join('')}</select></label>
     </div>
+    <div class="incoll"><span class="mono">Vibe · pick all that fit</span><div>${Object.keys(VIBES).map(v => `<button type="button" class="pill ${vibes(it).includes(v) ? 'on' : ''}" data-vibe="${it.id}|${v}">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')}</div></div>
     <div class="group">
-      <label class="cell"><span>Main color</span><span class="cname" id="cname">${colorName(it.color)}</span><input type="color" name="color" value="${it.color}"></label>
+      <label class="cell"><span>Main color</span><span class="cname" id="cname">${colorName(it.color)}${isNeutral(it.color) ? ' · neutral' : ''}</span><input type="color" name="color" value="${it.color}" aria-label="Custom color"></label>
+      <div class="swatches">${Object.entries(SWATCHES).map(([n, h]) => `<button type="button" class="${colorName(it.color) === n ? 'on' : ''}" data-setcolor="${it.id}|${h}" style="background:${h}" aria-label="${n}"><span>${n}</span></button>`).join('')}</div>
       ${it.accents?.length ? `<div class="cell"><span>Print colors</span><span class="accs">${it.accents.map(h => `<button type="button" data-accdel="${it.id}|${h}" style="background:${h}" aria-label="Remove ${colorName(h)}" title="${colorName(h)} · tap to remove"></button>`).join('')}</span></div>` : ''}
       <label class="cell"><span>Graphic / pattern</span><input type="checkbox" class="switch" name="patterned" ${it.patterned ? 'checked' : ''}></label>
       <label class="cell"><span>Price paid</span><input name="price" inputmode="decimal" placeholder="—" value="${it.price ?? ''}"></label>
@@ -998,10 +976,10 @@ function openSheet(id) {
   openItem = id; // after showSheet, which clears it
   sheet.querySelector('form').oninput = async e => {
     const f = e.currentTarget.elements, price = parseFloat(f.price.value.replace(/[^0-9.]/g, ''));
-    Object.assign(it, { name: f.name.value, cat: f.cat.value, fit: +f.fit.value, vibe: f.vibe.value, color: f.color.value, patterned: f.patterned.checked, price: price > 0 ? price : null });
+    Object.assign(it, { name: f.name.value, cat: f.cat.value, fit: +f.fit.value, color: f.color.value, patterned: f.patterned.checked, price: price > 0 ? price : null });
     if (e.target.name === 'cat') { f.fit.innerHTML = fitOptions(it); f.fit.closest('label').hidden = it.cat === 'Accessories'; }
     if (e.target.name === 'color' && it.accents) it.accents = it.accents.filter(a => colorDist(a, it.color) > 90);
-    sheet.querySelector('#cname').textContent = colorName(it.color) + (isNeutral(it.color) ? ' · neutral' : '');
+    showColor(it);
     S.ideas = null; await put('items', it);
   };
 }
@@ -1240,7 +1218,6 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'close') sheet.close();
   else if (ds.action === 'build') startBuild(S.ideas?.[0]?.items);
   else if (ds.buildkey) { if (sheet.open) sheet.close(); startBuild(outfitByKey(ds.buildkey)?.items); }
-  else if (ds.pick) centerOn(t.parentElement, t); // tap a peeking piece = swipe to it
   else if ('coll' in ds) { S.coll = ds.coll || null; S.cat = 'All'; S.ideas = null; render(); }
   else if (ds.action === 'newcoll') openNewColl();
   else if (ds.collname) sheet.querySelector('input[name=name]').value = ds.collname;
@@ -1260,12 +1237,21 @@ document.addEventListener('click', async e => {
   else if (ds.cat) { S.cat = ds.cat; render(); }
   else if (ds.mode) { S.mode = ds.mode; S.ideas = null; render(); }
   else if (ds.open) openSheet(ds.open);
+  else if (ds.setcolor) { const [id, h] = ds.setcolor.split('|'), it = byId(id); it.color = h; if (it.accents) it.accents = it.accents.filter(a => colorDist(a, h) > 90);
+    sheet.querySelector('[name=color]').value = h; showColor(it); S.ideas = null; await put('items', it); }
+  else if (ds.vibe) { const [id, v] = ds.vibe.split('|'), it = byId(id), cur = vibes(it), next = cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v];
+    if (!next.length) return toast('Keep at least one vibe');
+    it.vibe = next.length === 1 ? next[0] : next; t.classList.toggle('on', next.includes(v)); S.ideas = null; await put('items', it); }
+  else if (ds.swap) openSwap(ds.swap);
+  else if (ds.unwear) { S.build = S.build.filter(p => !SLOTS[ds.unwear](p)); render(); }
+  else if (ds.wearpick) { const [slot, id] = ds.wearpick.split(':'); S.build = [...S.build.filter(p => !SLOTS[slot](p)), byId(id)]; sheet.close(); remember(S.build); render(); }
   else if (ds.rotate) { const it = byId(ds.rotate); await rotate(it); const im = sheet.querySelector('.hero img'); if (im) im.src = src(it); S.ideas = null; }
   else if (ds.replace) { replacing = ds.replace; replaceInput.click(); }
   else if (ds.recut) {
-    const it = byId(ds.recut); t.disabled = true; toast('Cutting it out again…');
+    const it = byId(ds.recut); t.disabled = true; toast('Removing background…');
+    if (!it.photo) Object.assign(it, { photo: it.img, turns: 0 }); // imported pieces have no original: start from the picture as it is (already turned)
     try { const { img, accents } = await cutout(it.photo, undefined, it); Object.assign(it, { img: await turnBlob(img, it.turns ?? 0), accents }); resetSrc(it); await put('items', it); S.ideas = null; if (sheet.open) openSheet(it.id); toast('Re-cut'); }
-    catch (e) { console.warn(e); t.disabled = false; toast("Couldn't re-cut — check your connection and try again"); }
+    catch (e) { console.warn(e); t.disabled = false; toast("Couldn't remove it — check your connection and try again"); }
   }
   else if (ds.touchup) touchUp(byId(ds.touchup));
   else if (ds.touch) touchAct(ds.touch);

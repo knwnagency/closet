@@ -20,6 +20,10 @@ export function isNeutral(hex) {
     || (h >= 50 && h <= 100 && s < 0.35 && l < 0.45);   // olive
 }
 
+// Hue bands as people name clothes: a blue-ish green jacket is green, not cyan.
+const HUES = [[15, 'red'], [40, 'orange'], [65, 'yellow'], [85, 'lime'], [172, 'green'], [195, 'teal'], [250, 'blue'], [290, 'purple'], [325, 'magenta'], [345, 'pink'], [361, 'red']];
+// What you can pick in the item sheet. Each one reads back as its own name (match.test.mjs checks).
+export const SWATCHES = { black: '#1b1a19', grey: '#7d7b78', 'light grey': '#c9c7c3', white: '#f6f5f1', navy: '#1e2a45', denim: '#4d6a8c', 'light blue': '#9cc3e6', blue: '#2f5fb5', teal: '#2a8085', green: '#3f7a52', forest: '#22402c', olive: '#5c5b33', sage: '#8aa877', beige: '#d8c7a6', camel: '#b2874e', brown: '#5b3e2a', rust: '#a8522b', orange: '#e2782c', yellow: '#e9c548', red: '#c0392b', burgundy: '#6b1e2a', pink: '#e9a2b9', purple: '#6c4a90' };
 export function colorName(hex) {
   const { h, s, l } = hexToHsl(hex);
   if (l < 0.13) return 'black';
@@ -34,7 +38,8 @@ export function colorName(hex) {
   if (h >= 15 && h < 30 && l < 0.5) return 'rust';
   if (h >= 90 && h < 170 && l < 0.3) return 'forest';
   if (h >= 70 && h < 170 && s < 0.35 && l >= 0.45) return 'sage';
-  return ['red', 'orange', 'yellow', 'lime', 'green', 'teal', 'cyan', 'blue', 'indigo', 'purple', 'magenta', 'pink'][Math.round(h / 30) % 12];
+  if (h >= 195 && h < 250 && l > 0.65) return 'light blue';
+  return HUES.find(([end]) => h < end)[1];
 }
 
 export function hslToHex(h, s, l) {
@@ -47,15 +52,15 @@ export const hueDist = (a, b) => { const d = Math.abs(a - b) % 360; return Math.
 const colored = ps => ps.filter(p => !isNeutral(p.color));
 const hues = ps => colored(ps).map(p => hexToHsl(p.color).h);
 const prints = ps => ps.filter(p => p.patterned).length;
-const vibe = (ps, v) => ps.filter(p => p.vibe === v).length;
+const vibe = (ps, v) => ps.filter(p => [].concat(p.vibe).includes(v)).length; // an item can carry several vibes
 const pairs = a => a.flatMap((x, i) => a.slice(i + 1).map(y => [x, y]));
 
 // Best complementary pair: how far (degrees) it is from a perfect 180° split. Infinity if none.
 const compOff = hs => Math.min(Infinity, ...pairs(hs).map(([a, b]) => Math.abs(hueDist(a, b) - 180)));
 
 // ---------- proportions ----------
-// fit: 0 slim / 1 regular / 2 baggy. Shoes: 0 sleek / 1 regular / 2 chunky. Missing = regular.
-export const FITS = { Shoes: ['Sleek', 'Regular', 'Chunky'], default: ['Slim', 'Regular', 'Baggy'] };
+// fit: 0 slim / 1 regular / 2 baggy, named per category. Missing = regular.
+export const FITS = { Tops: ['Fitted', 'Regular', 'Oversized'], Layers: ['Fitted', 'Regular', 'Oversized'], Bottoms: ['Slim', 'Straight', 'Baggy'], Shoes: ['Sleek', 'Regular', 'Chunky'], default: ['Slim', 'Regular', 'Baggy'] };
 const fit = p => p?.fit ?? 1;
 
 // Silhouette rules: volume should balance top vs bottom, and shoes should carry the weight of the pants.
