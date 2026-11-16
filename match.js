@@ -57,7 +57,7 @@ export function hslToHex(h, s, l) {
 
 export const hueDist = (a, b) => { const d = Math.abs(a - b) % 360; return Math.min(d, 360 - d); };
 
-const colored = ps => ps.filter(p => !isNeutral(p.color));
+const colored = ps => ps.filter(p => !isNeutral(p.color) && !isDenim(p)); // jeans in any wash, even light blue, go with everything
 const hues = ps => colored(ps).map(p => hexToHsl(p.color).h);
 // Prints that compete: a big graphic or an all-over pattern. A small chest logo doesn't count, and neither does a plain piece.
 // p.pattern: 'solid' | 'logo' | 'graphic' | 'allover'; older pieces only have p.patterned (true = graphic).
@@ -133,7 +133,7 @@ export const MODES = {
     label: 'Classic', blurb: 'Neutral foundation, one accent max, nothing loud.',
     score(ps) {
       const c = colored(ps).length;
-      if (c > 1 || prints(ps) > 1 || vibe(ps, 'athletic')) return null;
+      if (c > 1 || prints(ps) > 1 || vibe(ps.filter(p => ['Tops', 'Layers', 'Bottoms'].includes(p.cat)), 'athletic')) return null; // gym clothes, not a cap or sneakers
       const { up, down } = proportion(ps);
       return (up === 2 && down === 2 ? -1.5 : 0) + 3 - c + vibe(ps, 'formal') * 0.5 + vibe(ps, 'casual') * 0.3 - prints(ps) - vibe(ps, 'streetwear') * 0.5;
     },
