@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v4.9'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v5.0'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -358,7 +358,7 @@ async function cutout(file, status = () => {}, known = null) {
   const photo = await shrink(file), url = await toDataUrl(photo);
   onDownload = pct => status(`Downloading AI ${Math.round(pct)}%`);
   let tags = known, cut = photo;
-  if (!tags) { status('Tagging…'); try { tags = await tag(url); } catch (e) { console.warn(e); toast('Auto-tag failed. Set the tags yourself'); } }
+  if (!tags) { status('Tagging…'); try { tags = await tag(url); } catch (e) { console.warn(e); toast("Couldn't tag it. Set the tags yourself"); } }
   try { status('Removing background…'); cut = await segment(url); }
   catch (e) { console.warn(e); toast('Background removal failed. Kept the photo'); }
   return { ...((await prep(cut, false, tags)) ?? (await prep(photo, true))), photo, tags };
@@ -393,7 +393,7 @@ async function addFiles(files) {
   if (running) return; // one queue: two models at once would eat a phone's memory
   running = true; skipped = added = 0;
   try { await backfillFp(); while (S.pending.length) await addOne(S.pending[0]); }
-  finally { running = false; if (skipped) toast(`Added ${added} · skipped ${skipped} already in your closet`); }
+  finally { running = false; if (skipped) toast(`Added ${added} · ${skipped} ${skipped === 1 ? 'was' : 'were'} already in your closet`); }
 }
 
 async function addOne(j) {
@@ -536,8 +536,8 @@ function outfitsView() {
     const FS = { new: (a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0), worn: (a, b) => wornN(b.key) - wornN(a.key), stale: (a, b) => lastW(a.key) - lastW(b.key) };
     const list = S.saved.map(s => ({ key: s.key, savedAt: s.savedAt, mode: s.mode, items: s.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items) && inC(o)) // a piece was deleted or re-tagged
       .filter(o => !fq || o.items.some(p => `${p.name} ${p.kind} ${colorName(p.color)} ${p.brand ?? ''}`.toLowerCase().includes(fq)) || (vibeOf(o)[0] ?? '').toLowerCase().includes(fq)).sort(FS[S.favSort ?? 'new']);
-    return top + (S.saved.length ? `<div class="ctools favtools"><input type="search" data-favq placeholder="search favorites" value="${esc(S.favQ ?? '')}" aria-label="Search favorites"><select data-favsort aria-label="Sort favorites">${[['new', 'sort: newest'], ['worn', 'sort: most worn'], ['stale', "sort: haven't worn lately"]].map(([k, l]) => `<option value="${k}" ${(S.favSort ?? 'new') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : '')
-      + (list.length ? `<p class="sub">${list.length} saved look${list.length > 1 ? 's' : ''}${c ? ` from ${esc(c.name)}` : ''}. Tap one to open it in the builder.</p><div class="feed favs">${list.map(o => favCard(o)).join('')}</div>`
+    return top + (S.saved.length ? `<div class="ctools favtools"><input type="search" data-favq placeholder="search" value="${esc(S.favQ ?? '')}" aria-label="Search favorites"><select data-favsort aria-label="Sort favorites">${[['new', 'sort: newest'], ['worn', 'sort: most worn'], ['stale', "sort: haven't worn lately"]].map(([k, l]) => `<option value="${k}" ${(S.favSort ?? 'new') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : '')
+      + (list.length ? `<p class="sub">Tap a look to change it in the builder.</p><div class="feed favs">${list.map(o => favCard(o)).join('')}</div>`
       : `<div class="empty"><h2>No favorites ${c ? `in ${esc(c.name)} ` : ''}yet</h2><p>Swipe right on a look in Today, or tap Save in the builder. Your keepers land here.</p><button class="btn" data-go="today">Go to Today</button></div>`);
   }
   if (!complete(items)) return top + `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs at least a top, bottoms and shoes.` : 'Add at least one top, one bottom and one pair of shoes to start getting outfits.'}</p>
@@ -594,7 +594,7 @@ function openCapsules() {
     ${row('', 'All clothes', S.items.length, false)}
     ${S.colls.map(c => row(c.id, c.name, c.ids.filter(byId).length, true)).join('')}
     ${S.colls.length ? '' : '<p class="sub">Make one for a trip, the club, work or the gym: pick its pieces once, and every look comes only from them.</p>'}
-    ${suggestCaps().length ? `<span class="mono">Suggested · tap to keep</span>${suggestCaps().map(([n, ids]) => `<div class="caprow"><button class="capsel" data-capsugg="${esc(n)}"><i>${ic('plus')}</i><span class="capcover">${ids.slice(0, 3).map(id => `<img src="${src(byId(id))}" alt="">`).join('')}</span><span><b>${esc(n)}</b><small>${ids.length} pieces · made from your closet</small></span></button></div>`).join('')}` : ''}
+    ${suggestCaps().length ? `<span class="mono">Suggested · tap to keep</span>${suggestCaps().map(([n, ids]) => `<div class="caprow"><button class="capsel" data-capsugg="${esc(n)}"><i>${ic('plus')}</i><span class="capcover">${ids.slice(0, 3).map(id => `<img src="${src(byId(id))}" alt="">`).join('')}</span><span><b>${esc(n)}</b><small>${ids.length} pieces</small></span></button></div>`).join('')}` : ''}
     <span class="mono">Automatic</span>${Object.entries(SMART).map(([k, [n, f]]) => row('smart:' + k, n, f(S.items).length, false)).join('')}
     <button class="btn wide" data-action="newcoll">${ic('plus')} Create capsule</button></div>`);
 }
@@ -623,10 +623,10 @@ const vibeOf = (o, used) => { const c = combo(o.items), opts = [c?.label, MODES[
 const moreWays = () => `<article class="dcard slide moreways"><div class="dtop"><span class="mono">more ways to get dressed</span></div>
   <div class="ways">${[S.src && ['', 'Fresh picks', 'new combos for today'], S.src !== 'saved' && ['saved', 'Your favorites', 'looks you kept'], S.src !== 'worn' && ['worn', 'Recently worn', 'wear one again']].filter(Boolean).map(([k, l, d]) => `<button data-src="${k}"><b>${l}</b><span>${d}</span></button>`).join('')}
     <button data-go="build"><b>Build your own</b><span>pick piece by piece</span></button><button data-action="addinspo"><b>From a pic</b><span>match an inspo photo</span></button></div>
-  <span class="mono">ask Claude</span><div class="tags">${["What should I wear today?", "What's missing from my closet?", 'Pack a 3-day trip', 'Dinner outfits'].map(q => `<button class="tag o" data-askclaude="${esc(q)}">${esc(q)}</button>`).join('')}</div></article>`;
+  <span class="mono">ask Claude</span><div class="tags">${["What to wear today", "What's missing from my closet", 'Pack a 3-day trip', 'Dinner outfits'].map(q => `<button class="tag o" data-askclaude="${esc(q)}">${esc(q)}</button>`).join('')}</div></article>`;
 function deckCard(o, i, n, cls, used) {
   const [title, cmb] = vibeOf(o, used), w = weatherNow(), worn = S.log.find(l => l.day === dayKey())?.key === o.key;
-  const tags = [cmb && `<span class="tag">${esc(cmb)}</span>`, w && `<span class="tag o">${esc(wxWhy(o).split(' · ')[1] ?? '')}</span>`, ].filter(Boolean).join(''); // short: the colors and why it fits today; the title already names the vibe
+  const tags = cmb && cmb.toLowerCase() !== title.toLowerCase() ? `<span class="tag">${esc(cmb)}</span>` : ''; // the colors, unless the title already says them; the weather card up top covers the weather
   return `<article class="dcard ${cls}" data-key="${o.key}" style="--tint:${tintOf(o.items)}" aria-label="Look ${i + 1} of ${n}: ${esc(o.items.map(p => `${colorName(p.color)} ${p.kind || p.cat}`).join(', '))}">
     <div class="dtop"><span class="mono">${pad2(i + 1)} / ${pad2(n)}</span>${worn ? '<span class="tag hot">Worn today</span>' : isFav(o.key) ? '<span class="tag">Saved</span>' : ''}</div>
     <h2 class="display dtitle">${esc(title)}</h2>
@@ -1053,9 +1053,9 @@ function meView() {
     <details class="sizes"><summary><h3><span>Sizes &amp; measurements</span><span>${MEASURE.filter(([k]) => m[k]).length} of ${MEASURE.length}</span></h3></summary>
     <form id="measure" class="group">${MEASURE.map(([k, label, ph]) => `<label class="cell"><span>${label}</span><input name="${k}" value="${esc(m[k] ?? '')}" placeholder="${ph}"></label>`).join('')}</form></details>
     <h3><span>Backup</span><span>${p.lastBackup ? `last ${ago(p.lastBackup)}` : 'never'}</span></h3>
-    <p class="sub">${kept ? 'This browser has agreed to keep your closet.' : 'Your closet lives only in this browser and can be cleared. Safari wipes sites you skip for 7 days, so add the app to your Home Screen and export a backup now and then.'}</p>
+    <p class="sub">${kept ? 'This browser has agreed to keep your closet.' : 'Your closet lives only in this browser and can be cleared. Safari wipes sites you skip for 7 days, so add the app to your Home Screen and save a backup now and then.'}</p>
     ${p.lastBackup ? `<button class="btn ghost sm" data-action="exportnew">Save changes only · ${S.items.filter(i => (i.updatedAt ?? i.createdAt ?? 0) > p.lastBackup).length} pieces</button>` : ''}
-    <label class="chk"><input type="checkbox" data-action="fullbackup" ${p.fullBackup ? 'checked' : ''}> Include original photos (bigger file, better Re-cut after a restore)</label>
+    <label class="chk"><input type="checkbox" data-action="fullbackup" ${p.fullBackup ? 'checked' : ''}> Include original photos (bigger file, so Remove background still works after a restore)</label>
     <div class="row"><button class="btn ghost sm" data-action="export">Save backup</button><button class="btn ghost sm" data-action="import">Restore backup</button></div>
     <h3><span>Your hair</span><span>outfits play off it near your face</span></h3>
     <div class="tags">${['black', 'brown', 'blonde', 'red', 'grey'].map(h => `<button class="tag ${p.hair === h ? '' : 'o'}" data-hair="${h}">${h}</button>`).join('')}</div>
@@ -1160,13 +1160,13 @@ function openSheet(id) {
       <div class="tags">${it.review ? `<span class="tag hot">New${left > 1 ? ` · ${n} of ${left}` : ''}</span>` : ''}${it.dirty ? '<span class="tag hot">In the laundry</span>' : ''}${stale(it) ? `<span class="tag o">Haven't worn in a while</span>` : ''}${it.bought ? `<span class="tag o">Bought ${ago(new Date(it.bought).getTime())}${it.from ? ` · ${esc(it.from)}` : ''}</span>` : ''}${(it.tags ?? []).map(t => `<span class="tag o">#${esc(t)}</span>`).join('')}</div></div>
     ${it.review ? `<div class="review"><p>The AI tagged it as above. Right?</p><div class="row"><button type="button" class="btn go" data-confirm="${it.id}">Looks right${left > 1 ? ' · next' : ''}</button><button type="button" class="btn ghost" data-action="opendetails">Fix tags</button></div></div>` : ''}
     ${issueOf(it) ? `<div class="issue"><span>${esc(issueOf(it).text)}</span><span class="row"><button type="button" class="btn sm" data-fixtag="${it.id}|${issueOf(it).fix}">${issueOf(it).label}</button><button type="button" class="btn ghost sm" data-tagok="${it.id}">It's right</button></span></div>` : ''}
-    <div class="photofix"><span class="mono">photo has a person or background?</span><button type="button" class="tag o" data-recut="${it.id}">Remove background</button><button type="button" class="tag o" data-touchup="${it.id}">Erase</button></div>
+    <div class="photofix"><span class="mono">Fix the photo</span><button type="button" class="tag o" data-replace="${it.id}">${ic('camera')} New photo</button><button type="button" class="tag o" data-recut="${it.id}">Remove background</button><button type="button" class="tag o" data-touchup="${it.id}">Erase</button></div>
     <div class="pieceacts"><button type="button" class="btn full" data-made="${it.id}">See what you can make with this</button>
       <div class="row"><button type="button" class="btn ghost" data-buildwith="${it.id}">Build with it</button><button type="button" class="btn ghost" data-wheel="${it.id}">Match color</button></div></div>
     <div id="made"></div>
     ${looksWith(it)}
     <details class="more" ${it.review ? 'open' : ''}><summary><span>Details &amp; tags</span><span class="mono">photo, type, fit, color, vibe</span></summary>
-    <div class="tools"><button type="button" data-rotate="${it.id}" class="${it.review && ['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? 'hl' : ''}">${ic('rotate')} Rotate</button><button type="button" data-recut="${it.id}">Remove background</button><button type="button" data-touchup="${it.id}">Touch up</button><button type="button" data-edit="${it.id}">Adjust</button><button type="button" data-replace="${it.id}">Replace photo</button></div>
+    <div class="tools"><button type="button" data-rotate="${it.id}" class="${it.review && ['Tops', 'Layers', 'Bottoms'].includes(it.cat) ? 'hl' : ''}">${ic('rotate')} Rotate</button><button type="button" data-edit="${it.id}">Crop &amp; adjust</button></div>
     <div class="group">
       <label class="cell"><span>Name</span><input name="name" value="${esc(it.name)}"></label>
       <label class="cell"><span>Brand</span><input name="brand" value="${esc(it.brand ?? '')}" placeholder="Add brand" autocomplete="off"></label>
@@ -1699,8 +1699,8 @@ document.addEventListener('click', async e => {
   else if (ds.recut) {
     const it = byId(ds.recut); t.disabled = true; toast('Removing background…');
     if (!it.photo) Object.assign(it, { photo: it.img, turns: 0 }); // imported pieces have no original: start from the picture as it is (already turned)
-    try { const { img, accents } = await cutout(it.photo, undefined, it); Object.assign(it, { img: await turnBlob(img, it.turns ?? 0), accents }); resetSrc(it); await put('items', it); S.ideas = null; if (sheet.open) openSheet(it.id); toast('Re-cut'); }
-    catch (e) { console.warn(e); t.disabled = false; toast("Couldn't remove it — check your connection and try again"); }
+    try { const { img, accents } = await cutout(it.photo, undefined, it); Object.assign(it, { img: await turnBlob(img, it.turns ?? 0), accents }); resetSrc(it); await put('items', it); S.ideas = null; if (sheet.open) openSheet(it.id); toast('Background removed'); }
+    catch (e) { console.warn(e); t.disabled = false; toast("Couldn't remove the background. Check your connection and try again"); }
   }
   else if (ds.touchup) touchUp(byId(ds.touchup));
   else if (ds.edit) editPhoto(byId(ds.edit));
