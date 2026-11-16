@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v5.5'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v5.6'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -154,7 +154,7 @@ const KIND_ALIAS = { 't-shirt': /\btees?\b|\bt-?shirt/i, sweater: /sweater|sweat
 const guessKind = it => Object.keys(KINDS).filter(k => KINDS[k] === it.cat).find(k => (KIND_ALIAS[k] ?? new RegExp(`\\b${k.split(/[\s-]/).pop()}`, 'i')).test(it.name));
 // Tags that contradict each other (AI guesses): a "denim jacket" filed under Tops, Air Force 1s called sleek. "It's right" silences it.
 const issueOf = it => {
-  const dbl = dupOf(it); if (dbl) return { text: `Same photo as your other "${dbl.name}". Added twice`, fix: `dup:${dbl.id}`, label: 'Merge into one' }; if (it.review) return null;
+  const dbl = dupOf(it); if (dbl) return { text: `Same photo as your other "${dbl.name}". Added twice`, fix: `dup:${dbl.id}`, label: 'Merge into one' }; // the nudge opens openDoubles for a side-by-side if (it.review) return null;
   if (PRINTABLE.includes(it.cat) && (patternOf(it) === 'graphic' || patternOf(it) === 'allover') && !it.accents?.length && !it.tagOk) return { text: 'Tagged as a print, but no print colors were found. Plain?', fix: 'pattern:solid', label: 'Mark as solid' };
   if (it.person && !it.tagOk) return { text: 'A person is in this photo, so their legs, arms or shoes come along. Erase them, or use a photo of just the piece.', fix: 'touch:1', label: 'Touch up' };
   if (it.broken) return { text: "This photo is missing on this phone. Restore it from a backup (Me › Restore backup), or take a new one.", fix: 'photo:1', label: 'New photo' };
@@ -168,6 +168,16 @@ const issueOf = it => {
   const twin = S.items.find(o => o !== it && o.cat === it.cat && o.kind === it.kind && colorDist(o.color, it.color) < 22 && o.name.toLowerCase().replace(/\W/g, '') === it.name.toLowerCase().replace(/\W/g, ''));
   if (twin && !it.dupOk) return { text: `Looks like a duplicate of another "${twin.name}"`, fix: `dup:${twin.id}`, label: 'Merge into one' };
   return null; };
+// Doubles, side by side: the piece you added first (kept) and the copy. Merge, or say they're different pieces.
+function openDoubles() {
+  const pairs = S.items.filter(dupOf).map(it => [dupOf(it), it]);
+  if (!pairs.length) { if (sheet.open) sheet.close(); return toast('No doubles left'); }
+  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${pairs.length} found</div><h2>Added twice</h2></div>${closeBtn}</div>
+    <p class="sub">Each pair below looks like the same photo added twice. <b>Merge into one</b> keeps the first and moves over the copy's wears, favorites and capsules. If they're really two pieces, tap <b>Not the same</b>.</p>
+    ${pairs.length > 1 ? `<button class="btn wide" data-mergeall="1">Merge all ${pairs.length}</button>` : ''}
+    ${pairs.map(([keep, dup]) => `<div class="dpair"><div class="dp">${[[keep, 'Kept'], [dup, 'The copy']].map(([p, l]) => `<figure><img src="${src(p)}" alt=""><figcaption><span class="mono">${l}</span>${esc(p.name)}</figcaption></figure>`).join('')}</div>
+      <div class="row"><button class="btn sm" data-mergedup="${dup.id}">Merge into one</button><button class="btn ghost sm" data-notdup="${dup.id}">Not the same</button></div></div>`).join('')}</div>`);
+}
 // Merging a double: the piece you had first takes over the other's wears, favorites, capsules, planned days and outfit log, then the double goes.
 async function mergeInto(gone, keep) {
   const swap = r => { if (!r?.ids?.includes(gone.id)) return false; r.ids = [...new Set(r.ids.map(x => x === gone.id ? keep.id : x))]; return true; };
@@ -1180,7 +1190,7 @@ function upPill() { let el = document.getElementById('uppill');
   if (!el) { el = Object.assign(document.createElement('button'), { id: 'uppill', className: 'uppill' }); el.dataset.go = 'closet'; document.body.append(el); }
   el.textContent = `Adding ${Math.max(1, S.upTotal - S.pending.length + 1)} of ${S.upTotal}`; el.hidden = S.view === 'closet'; }
 function render() {
-  const app = document.getElementById('app'), scrollers = () => document.querySelectorAll('.strip, .colls, .chips, .deck, .occ');
+  const app = document.getElementById('app'), scrollers = () => document.querySelectorAll('.strip, .colls, .chips, .deck, .occ, .shelf, .tbar.ctrl, .looks');
   const keep = render.view === S.view ? [...scrollers()].map(e => e.scrollLeft) : []; // swapping in the builder keeps each strip where it was
   app.innerHTML = VIEWS[S.view]();
   scrollers().forEach((e, i) => { e.scrollLeft = keep[i] ?? 0; });
@@ -1223,9 +1233,12 @@ const accHtml = it => { const acc = (it.accents ?? []).filter(a => keepAcc(it, a
 function colorAt(img, e) {
   const r = img.getBoundingClientRect(), k = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight), ox = r.left + (r.width - img.naturalWidth * k) / 2, oy = r.top + (r.height - img.naturalHeight * k) / 2;
   const px = Math.round((e.clientX - ox) / k), py = Math.round((e.clientY - oy) / k); if (px < 0 || py < 0 || px >= img.naturalWidth || py >= img.naturalHeight) return null;
-  const c = Object.assign(document.createElement('canvas'), { width: 9, height: 9 }), x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, px - 4, py - 4, 9, 9, 0, 0, 9, 9);
-  const d = x.getImageData(0, 0, 9, 9).data, sum = [0, 0, 0]; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) { sum[0] += d[i]; sum[1] += d[i + 1]; sum[2] += d[i + 2]; n++; }
-  return n ? '#' + sum.map(v => Math.round(v / n).toString(16).padStart(2, '0')).join('') : null; }
+  const R = Math.max(7, Math.round(img.naturalWidth / 60)), S2 = R * 2 + 1; // a patch about 1/30 of the photo wide, so one thread or shadow line doesn't decide it
+  const c = Object.assign(document.createElement('canvas'), { width: S2, height: S2 }), x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, px - R, py - R, S2, S2, 0, 0, S2, S2);
+  const d = x.getImageData(0, 0, S2, S2).data, ps = []; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) ps.push([d[i], d[i + 1], d[i + 2]]);
+  if (!ps.length) return null;
+  const ly = p => p[0] * .3 + p[1] * .59 + p[2] * .11, mid = ps.sort((a, b) => ly(a) - ly(b)).slice(Math.floor(ps.length / 3), Math.ceil(ps.length * .95)); // skip folds and shadows (darkest third) and shine
+  return '#' + [0, 1, 2].map(k => Math.round(mid.reduce((t, p) => t + p[k], 0) / mid.length).toString(16).padStart(2, '0')).join(''); }
 async function addAccent(it, h) { it.accents = [...(it.accents ?? []).filter(x => x !== h), h].slice(-6); it.accPicked = [...new Set([...(it.accPicked ?? []), h])]; S.accPick = null; await put('items', it); S.ideas = null; S.deck = null;
   const box = sheet.querySelector('#accbox'); if (box) box.innerHTML = accHtml(it); toast(`Added ${colorName(h)}`); }
 function openSheet(id) {
@@ -1239,7 +1252,7 @@ function openSheet(id) {
         .map(([f, l]) => `<button type="button" class="see${it.review && it.unsure?.includes(f) ? ' unsure' : ''}" data-field="${f}">${l}${it.review && it.unsure?.includes(f) ? ' ?' : ''}</button>`).join('')}</div>
       <div class="tags">${it.review ? `<span class="tag hot">New${left > 1 ? ` · ${n} of ${left}` : ''}</span>` : ''}${it.dirty ? '<span class="tag hot">In the laundry</span>' : ''}${stale(it) ? `<span class="tag o">Haven't worn in a while</span>` : ''}${it.price > 0 ? `<span class="tag o">${(x => '$' + (x < 10 ? x.toFixed(2) : Math.round(x)))(it.price / Math.max(1, it.wears ?? 0))} per wear</span>` : ''}${it.bought ? `<span class="tag o">Bought ${ago(new Date(it.bought).getTime())}${it.from ? ` · ${esc(it.from)}` : ''}</span>` : ''}${(it.tags ?? []).map(t => `<span class="tag o">#${esc(t)}</span>`).join('')}</div></div>
     ${it.review ? `<div class="review"><p>${it.unsure?.length ? `The AI wasn't sure about the tags marked ?. Right?` : 'The AI tagged it as above. Right?'}</p><div class="row"><button type="button" class="btn go" data-confirm="${it.id}">Looks right${left > 1 ? ' · next' : ''}</button><button type="button" class="btn ghost" data-action="opendetails">Fix tags</button></div></div>` : ''}
-    ${issueOf(it) ? `<div class="issue"><span>${esc(issueOf(it).text)}</span><span class="row"><button type="button" class="btn sm" data-fixtag="${it.id}|${issueOf(it).fix}">${issueOf(it).label}</button><button type="button" class="btn ghost sm" data-tagok="${it.id}">It's right</button></span></div>` : ''}
+    ${issueOf(it) ? `<div class="issue"><span>${esc(issueOf(it).text)}</span><span class="row"><button type="button" class="btn sm" data-fixtag="${it.id}|${issueOf(it).fix}">${issueOf(it).label}</button><button type="button" class="btn ghost sm" data-tagok="${it.id}">${issueOf(it).fix.startsWith('dup:') ? 'Not the same' : "It's right"}</button></span></div>` : ''}
     <div class="photofix"><span class="mono">Fix the photo</span><button type="button" class="tag o" data-replace="${it.id}">${ic('camera')} New photo</button><button type="button" class="tag o" data-recut="${it.id}">Remove background</button><button type="button" class="tag o" data-touchup="${it.id}">Erase</button><button type="button" class="tag o" data-angleadd="${it.id}">${ic('plus')} More photos</button></div>
     <div class="photofix rate"><span class="mono">Suggest it</span>${[[-1, 'Less'], [0, 'Normal'], [1, 'More']].map(([v, l]) => `<button type="button" class="tag o${(it.rate ?? 0) === v ? ' on' : ''}" aria-pressed="${(it.rate ?? 0) === v}" data-rate="${it.id}|${v}">${l}</button>`).join('')}
       <p class="sub">${it.rate < 0 ? 'Saved for special occasions: at most one look at a time, unless you pick it yourself.' : it.rate > 0 ? 'Shows up in more looks, so you wear it more.' : 'Less keeps it for special occasions. More puts it in more looks.'}</p></div>
@@ -1691,7 +1704,10 @@ document.addEventListener('click', async e => {
   }
   else if (ds.action === 'allclean') { for (const it of S.items.filter(i => i.dirty)) { delete it.dirty; await put('items', it); } S.ideas = null; toast('All clean'); render(); }
   else if (ds.action === 'fixtags') { const n = S.items.find(issueOf); if (n) openSheet(n.id); }
-  else if (ds.action === 'doubles') { const n = S.items.find(dupOf); if (n) openSheet(n.id); }
+  else if (ds.action === 'doubles') openDoubles();
+  else if (ds.mergedup) { const it = byId(ds.mergedup), keep = it && dupOf(it); if (keep) await mergeInto(it, keep); render(); openDoubles(); toast('Merged into one'); }
+  else if (ds.mergeall) { let n = 0; for (let it; (it = S.items.find(dupOf)); n++) await mergeInto(it, dupOf(it)); render(); sheet.close(); toast(`Merged ${n} double${n > 1 ? 's' : ''}`); }
+  else if (ds.notdup) { const it = byId(ds.notdup); it.dupOk = true; await put('items', it); render(); openDoubles(); }
   else if (ds.fixtag) { const [id, kv] = ds.fixtag.split('|'), it = byId(id), [k, v] = kv.split(':');
     if (k === 'touch') { delete it.person; await put('items', it); return touchUp(it); }
     if (k === 'pattern') { it.pattern = v; it.patterned = v === 'graphic' || v === 'allover'; await put('items', it); S.ideas = null; S.deck = null; const n = S.items.find(issueOf); if (n) openSheet(n.id); else sheet.close(); return toast('Marked as solid'); }
