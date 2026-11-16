@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v4.5'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v4.6'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -574,7 +574,7 @@ function openCapsules() {
 // The deck is saved per day + filters + weather band, so leaving and coming back shows the same looks. Shuffle makes a new one.
 const greet = () => { const h = new Date().getHours(); return h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
 const band = w => w ? (w.t < 12 ? 'cold' : w.t >= 24 ? 'hot' : 'mild') + (RAINY(w.code) ? '-rain' : '') : 'none';
-const deckSig = () => [dayKey(), S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
+const deckSig = () => ['v2', dayKey(), S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
 function getDeck(items) {
   if (S.deck?.sig === deckSig()) return S.deck;
   const recs = S.src === 'saved' ? S.saved : S.src === 'worn' ? wornLooks() : null; // looks you already know, instead of fresh picks
@@ -1809,7 +1809,17 @@ async function backfillAccents() {
 }
 
 render();
-backfillAccents().then(backfillOrient).then(checkPhotos);
+// Types the AI got wrong that the name settles ("Washed black tee" tagged hoodie, "Smiley sweatshirt" tagged belt). Only clear words
+// count (tee, sweatshirt, joggers, cargo…), never a generic "pants". Runs once per phone, so a type you set yourself is never overridden.
+async function fixKinds() {
+  if (S.profile?.kindsFixed) return;
+  let n = 0;
+  for (const it of S.items) { if (it.tagOk) continue; const g = Object.keys(KIND_ALIAS).filter(k => KINDS[k] === it.cat).find(k => KIND_ALIAS[k].test(it.name));
+    if (g && g !== it.kind) { it.kind = g; await putQuiet('items', it); n++; } }
+  S.profile = { k: 'me', ...S.profile, kindsFixed: true }; await put('profile', S.profile);
+  if (n) { S.deck = null; toast(`Fixed the type on ${n} piece${n > 1 ? 's' : ''} from their names`); render(); }
+}
+backfillAccents().then(backfillOrient).then(checkPhotos).then(fixKinds);
 window.__appReady = true; // the safety net above stays quiet
 navigator.serviceWorker?.register('sw.js').catch(e => console.warn(e)); // opens with no signal once installed (sw.js)
 // "New version" banner: version.txt is the live version; if it differs from this page, offer a reload. Checked on open and on every return to the app.

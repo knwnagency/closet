@@ -528,8 +528,9 @@ export function today(items, { t = null, rain = false, occasion = null, n = 5, r
   // skip: what you wore yesterday. Tops and layers rest a day; pants and shoes can repeat.
   const pool = forWeather(items, t, rain).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
   const list = collect(pool, { rand, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
-  // a new top every card, pants and shoes at most twice, the same cap or chain at most twice. Jackets may repeat: you wear the same coat all week.
-  return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + rand() * 1.5 })), n, { Tops: 1, Layers: n, Bottoms: 2, Shoes: 2, Accessories: 2 });
+  // a new top every card, pants and shoes at most twice, the same cap or chain at most twice. A jacket on up to a third of the cards:
+  // enough to say "this coat works all week", not so many that one favorite crowds out every other layer (varied() lifts it when you own few).
+  return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + rand() * 1.5 })), n, { Tops: 1, Layers: Math.max(2, Math.ceil(n / 3)), Bottoms: 2, Shoes: 2, Accessories: 2 });
 }
 
 // Every rule that scored a look, biggest first: the builder's "Why?". null = no style rule takes it.
