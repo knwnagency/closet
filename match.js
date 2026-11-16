@@ -422,7 +422,7 @@ export function bestMode(ps, modes = Object.keys(MODES).filter(k => !MODES[k].hi
   if (!['Tops', 'Bottoms', 'Shoes'].every(c => ps.some(p => p.cat === c))) return null;
   let best = null;
   for (const m of modes) { const r = scoreOutfit(ps, m); if (r && (!best || r.score > best.score)) best = { ...r, mode: m }; }
-  return best ?? { score: null, note: proportion(ps).veto ? proportion(ps).note : 'Colors clash under every style rule' };
+  return best ?? { score: null, note: whyNot(ps).note };
 }
 
 // k-means on [r,g,b] samples → the main colors (share ≥ min), biggest first. Seeds spread by brightness so it's deterministic.
@@ -521,18 +521,37 @@ export function forWeather(items, t, rain = false) {
 }
 // Today: n varied outfits from every style, a little random so each visit (or Shuffle) is different. Cold days want a layer.
 // Occasions: how dressed up (0-2) and which vibe fits. A look scores by how close it lands.
-export const OCCASIONS = { work: { label: 'Work', dress: 2 }, date: { label: 'Date', dress: 1.5 }, club: { label: 'Club', dress: 1, vibe: 'streetwear' }, errands: { label: 'Errands', dress: 0.8 }, gym: { label: 'Gym', dress: 0, vibe: 'athletic' } };
+export const OCCASIONS = { work: { label: 'Work', dress: 2 }, date: { label: 'Date', dress: 1.5 }, club: { label: 'Club', dress: 1, vibe: 'streetwear' }, errands: { label: 'Errands', dress: 0.8 }, gym: { label: 'Gym', dress: 0, vibe: 'athletic' }, event: { label: 'Event', dress: 2 } };
 export const occasionFit = (ps, occ) => { const o = OCCASIONS[occ]; if (!o) return 0; const cl = ps.filter(p => CLOTHES.includes(p.cat)), avg = cl.reduce((t, p) => t + dress(p), 0) / cl.length;
   return -Math.abs(avg - o.dress) * 1.5 + (o.vibe ? vibe(ps, o.vibe) * 0.3 : 0); };
 const likeness = (ps, like) => { if (!like?.length) return 0; const cn = p => colorName(p.color), lc = new Set(like.filter(p => p.cat !== 'Accessories').map(cn)), lk = new Set(like.map(p => p.kind));
   return Math.min(1.2, ps.filter(p => p.cat !== 'Accessories' && lc.has(cn(p))).length * 0.25 + ps.filter(p => lk.has(p.kind)).length * 0.15); };
 export function today(items, { t = null, rain = false, occasion = null, n = 5, rand = Math.random, skip = [], like = null } = {}) {
   // skip: what you wore yesterday. Tops and layers rest a day; pants and shoes can repeat.
+  if (OCCASIONS[occasion]?.dress >= 1.5) items = items.map(p => p.rate < 0 ? { ...p, rate: 0 } : p); // dressing up: pieces saved for special occasions come back
   const pool = forWeather(items, t, rain).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
   const list = collect(pool, { rand, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
   // a new top every card, pants and shoes at most twice, the same cap or chain at most twice. A jacket on up to a third of the cards:
   // enough to say "this coat works all week", not so many that one favorite crowds out every other layer (varied() lifts it when you own few).
   return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + rand() * 1.5 })), n, { Tops: 1, Layers: Math.max(2, Math.ceil(n / 3)), Bottoms: 2, Shoes: 2, Accessories: 2 });
+}
+
+// Why no style rule takes a look, and which piece to change: the one whose removal lets a rule pass. The builder shows this instead
+// of a blanket "colors clash" (loafers in a streetwear look, a cap tagged athletic, two prints). { note, piece?, fix: 'swap' | 'tag' }
+export function whyNot(ps) {
+  const pr = proportion(ps); if (pr.veto) return { note: pr.note, fix: 'swap' };
+  const ok = qs => VISIBLE().some(m => scoreOutfit(qs, m) != null);
+  const order = [...ps].sort((a, b) => (isNeutral(a.color) - isNeutral(b.color)) || ((a.cat === 'Accessories') - (b.cat === 'Accessories')));
+  for (const p of order) {
+    if (!ok(ps.filter(q => q !== p))) continue;
+    const v = [].concat(p.vibe ?? []), swap = (q, x) => ps.map(o => o === p ? { ...o, ...x } : o);
+    if (v.includes('athletic') && ok(swap(p, { vibe: 'casual' }))) return { note: `${p.name} is tagged sporty, which rules out the dressier looks. Tagged wrong?`, piece: p, fix: 'tag' };
+    if (prints(ps) > 1 && ['graphic', 'allover'].includes(patternOf(p))) return { note: `Two prints compete. Swap the ${p.name.toLowerCase()} for something plain`, piece: p, fix: 'swap' };
+    if (p.cat === 'Shoes' && !/sneaker|boot|trainer|dunk|jordan/i.test(`${p.name} ${p.kind}`)) return { note: `${p.name} work in classic looks, but not with these colors. Try sneakers or a neutral pair`, piece: p, fix: 'swap' };
+    if (!isNeutral(p.color) && !isDenim(p)) return { note: `The ${colorName(p.color)} ${p.name.toLowerCase()} doesn't go with the other colors`, piece: p, fix: 'swap' };
+    return { note: `${p.name} is the piece that doesn't fit`, piece: p, fix: 'swap' };
+  }
+  return { note: 'Too many colors at once. Swap one for black, white, grey or denim', fix: 'swap' };
 }
 
 // Every rule that scored a look, biggest first: the builder's "Why?". null = no style rule takes it.

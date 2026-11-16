@@ -1,1 +1,2 @@
-2026.11.16 · v5.4
+2026.11.16 · v5.5
+Build says which piece breaks a look · more photos per piece · eyedropper for accents · capsule ••• menu
