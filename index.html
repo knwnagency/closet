@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v4.8'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v4.9'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -88,7 +88,8 @@ const syncTaste = () => setTaste({ liked: S.saved.map(s => s.ids), worn: S.log.m
 syncTaste();
 S.mode = MODES[S.profile?.mode] ? S.profile.mode : 'today'; // the style you picked last time; Today (a mix of every style) by default
 // Ask the browser to keep the closet. Safari clears sites unused for 7 days unless they're on the Home Screen, so Me shows the answer.
-for (const it of S.items) if (it.accents?.some(a => isShade(a, it.color))) { it.accents = it.accents.filter(a => !isShade(a, it.color)); put('items', it); }
+const keepAcc = (it, a, base = it.color) => it.accPicked?.includes(a) || !isShade(a, base); // colors you add yourself always stay
+for (const it of S.items) if (it.accents?.some(a => !keepAcc(it, a))) { it.accents = it.accents.filter(a => keepAcc(it, a)); put('items', it); }
 let kept = false; navigator.storage?.persist?.().then(v => { kept = v; }).catch(() => {});
 
 const urls = new Map();
@@ -450,7 +451,7 @@ async function addInspo(files) {
 const badge = it => { const b = it.review || Date.now() - (it.createdAt ?? 0) < 864e5 ? ['New', 'hot'] : it.dirty ? ['Wash', ''] : it.stored ? ['Stored', 'o'] : null;
   return b ? `<span class="tag ${b[1]} corner">${b[0]}</span>` : ''; };
 const itemCard = it => `<button class="item ${S.sel?.has(it.id) ? 'picked' : ''}" ${S.sel ? `data-selitem="${it.id}" aria-pressed="${S.sel.has(it.id)}"` : `data-open="${it.id}"`}>
-  <div class="ph spot ${it.dirty || it.stored ? 'dirty' : ''}"><img src="${src(it)}" alt=""><i style="background:${it.color}"></i>${badge(it)}</div>
+  <div class="ph spot ${it.dirty || it.stored ? 'dirty' : ''}"><img src="${src(it)}" alt="" decoding="async"><i style="background:${it.color}"></i>${badge(it)}</div>
   <b>${esc(it.name)}</b><span>${it.dirty ? 'In the laundry' : it.stored ? 'Stored away' : it.review ? 'New · check tags' : issueOf(it) ? 'Check tags' : [fitLabel(it), wornText(it)].filter(Boolean).join(' · ')}</span></button>`;
 const matchRow = (c, items) => `<div class="match glass"><i style="background:${c}"></i>${items.length
   ? `<div class="thumbs">${items.map(i => `<button data-open="${i.id}"><img src="${src(i)}" alt="${esc(i.name)}"></button>`).join('')}</div>`
@@ -1122,7 +1123,8 @@ function render() {
 
 // ---------- sheets ----------
 const sheet = document.getElementById('sheet');
-const showSheet = html => { openItem = null; sheet.innerHTML = html; sheet.onclose = render; if (!sheet.open) { sheet.tabIndex = -1; sheet.showModal(); sheet.focus(); } sheet.scrollTop = 0; };
+sheet.addEventListener('close', () => { const b = sheet.back; if (b) requestAnimationFrame(() => { if (S.view === b.view) scrollTo(0, b.y); }); }); // iOS jumps to the top while a sheet is open
+const showSheet = html => { openItem = null; sheet.innerHTML = html; sheet.onclose = render; if (!sheet.open) { sheet.back = { view: S.view, y: scrollY }; sheet.tabIndex = -1; sheet.showModal(); sheet.focus(); } sheet.scrollTop = 0; };
 sheet.addEventListener('click', e => { if (e.target === sheet) sheet.close(); }); // tap the dimmed backdrop to close
 const closeBtn = `<button class="icon close" data-action="close" aria-label="Close">${xIcon}</button>`;
 const kindOptions = it => { const ks = Object.keys(KINDS).filter(k => KINDS[k] === it.cat); if (it.kind && !ks.includes(it.kind)) ks.unshift(it.kind);
@@ -1143,7 +1145,7 @@ const showColor = it => { sheet.querySelector('#cname').textContent = colorName(
 const vibeHtml = it => { const [main, ...also] = vibes(it), cap = v => v[0].toUpperCase() + v.slice(1);
   return `<span class="mono">Vibe</span><div class="vibes">${Object.keys(VIBES).map(v => `<button type="button" class="pill ${v === main ? 'on' : ''}" data-vibemain="${it.id}|${v}">${cap(v)}</button>`).join('')}</div>
     <span class="mono">Also works as · optional</span><div>${Object.keys(VIBES).filter(v => v !== main).map(v => `<button type="button" class="pill ${also.includes(v) ? 'on' : ''}" data-vibe="${it.id}|${v}">${also.includes(v) ? '✓ ' : '+ '}${cap(v)}</button>`).join('')}</div>`; };
-const accHtml = it => { const acc = (it.accents ?? []).filter(a => !isShade(a, it.color));
+const accHtml = it => { const acc = (it.accents ?? []).filter(a => keepAcc(it, a));
   return `<div class="cell"><span>Accent colors</span><span class="accs">${acc.map(h => `<button type="button" data-accdel="${it.id}|${h}" aria-label="Remove ${colorName(h)}"><i style="background:${h}"></i><b>×</b></button>`).join('')}<button type="button" class="accadd" data-accadd="${it.id}" aria-label="Add an accent color">+</button></span></div>
     ${S.accPick === it.id ? `<div class="cpick">${Object.entries(SWATCHES).filter(([, h]) => !acc.includes(h) && colorName(h) !== colorName(it.color)).map(([n, h]) => `<button type="button" data-accset="${it.id}|${h}" aria-label="Add ${n}"><i style="background:${h}"></i></button>`).join('')}</div>` : ''}`; };
 function openSheet(id) {
@@ -1210,7 +1212,7 @@ function openSheet(id) {
     const tg = f.tags.value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean).slice(0, 8); if (tg.length) it.tags = tg; else delete it.tags;
     if (e.target.name === 'dress') it.dress = +f.dress.value;
     if (e.target.name === 'cat') { f.fit.innerHTML = fitOptions(it); f.fit.closest('label').hidden = it.cat === 'Accessories'; f.kind.innerHTML = kindOptions(it); }
-    if (e.target.name === 'color' && it.accents) { it.accents = it.accents.filter(a => colorDist(a, it.color) > 90 && !isShade(a, it.color)); sheet.querySelector('#accbox').innerHTML = accHtml(it); }
+    if (e.target.name === 'color' && it.accents) { it.accents = it.accents.filter(a => it.accPicked?.includes(a) || colorDist(a, it.color) > 90 && keepAcc(it, a)); sheet.querySelector('#accbox').innerHTML = accHtml(it); }
     showColor(it);
     S.ideas = null; await put('items', it);
   };
@@ -1602,7 +1604,7 @@ document.addEventListener('click', async e => {
   else if (ds.tagok) { const it = byId(ds.tagok); it.tagOk = true; it.dupOk = true; delete it.turnHint; await put('items', it); const n = S.items.find(issueOf); if (n) openSheet(n.id); else openSheet(it.id); }
   else if ('favs' in ds) { if (sheet.open) { sheet.onclose = null; sheet.close(); } S.view = 'outfits'; S.tab = 'saved'; render(); scrollTo(0, 0); }
   else if (ds.accadd) { S.accPick = S.accPick === ds.accadd ? null : ds.accadd; sheet.querySelector('#accbox').innerHTML = accHtml(byId(ds.accadd)); }
-  else if (ds.accset) { const [id, h] = ds.accset.split('|'), it = byId(id); it.accents = [...(it.accents ?? []), h].slice(0, 4); S.accPick = null; await put('items', it); S.ideas = null; S.deck = null; sheet.querySelector('#accbox').innerHTML = accHtml(it); toast(`Added ${colorName(h)}`); }
+  else if (ds.accset) { const [id, h] = ds.accset.split('|'), it = byId(id); it.accents = [...(it.accents ?? []).filter(x => x !== h), h].slice(-6); it.accPicked = [...new Set([...(it.accPicked ?? []), h])]; S.accPick = null; await put('items', it); S.ideas = null; S.deck = null; sheet.querySelector('#accbox').innerHTML = accHtml(it); toast(`Added ${colorName(h)}`); }
   else if (ds.calday) openDay(ds.calday);
   else if (ds.selfie) { const i = selfieIn(); i.day = ds.selfie; i.click(); }
   else if (ds.hair) { S.profile = { k: 'me', ...S.profile, hair: S.profile?.hair === ds.hair ? null : ds.hair }; await put('profile', S.profile); syncTaste(); S.deck = null; render(); }
@@ -1683,7 +1685,7 @@ document.addEventListener('click', async e => {
   else if ('src' in ds && t.matches('[data-src]')) { S.src = ds.src || null; S.deck = null; if (sheet.querySelector('.filters')) openFilters(); else { if (sheet.open) { sheet.onclose = null; sheet.close(); } render(); } }
   else if (ds.mode) { S.mode = ds.mode; S.ideas = null; render(); S.profile = { k: 'me', ...S.profile, mode: ds.mode }; put('profile', S.profile); if (sheet.querySelector('.filters')) openFilters(); }
   else if (ds.open) openSheet(ds.open);
-  else if (ds.setcolor) { const [id, h] = ds.setcolor.split('|'), it = byId(id); it.color = h; if (it.accents) it.accents = it.accents.filter(a => colorDist(a, h) > 90 && !isShade(a, h));
+  else if (ds.setcolor) { const [id, h] = ds.setcolor.split('|'), it = byId(id); it.color = h; if (it.accents) it.accents = it.accents.filter(a => it.accPicked?.includes(a) || colorDist(a, h) > 90 && keepAcc(it, a, h));
     sheet.querySelector('[name=color]').value = h; showColor(it); sheet.querySelector('#accbox').innerHTML = accHtml(it); S.ideas = null; await put('items', it); }
   else if (ds.vibemain || ds.vibe) { const [id, v] = (ds.vibemain || ds.vibe).split('|'), it = byId(id), [main, ...also] = vibes(it);
     const next = ds.vibemain ? [v, ...also.filter(x => x !== v)] : [main, ...(also.includes(v) ? also.filter(x => x !== v) : [...also, v])];
@@ -1716,7 +1718,7 @@ document.addEventListener('click', async e => {
     S.mode = 'palette'; S.ideas = null; S.view = 'outfits'; S.tab = 'ideas'; render(); scrollTo(0, 0);
   }
   else if (ds.inspo) openInspo(ds.inspo);
-  else if (ds.accdel) { const [id, h] = ds.accdel.split('|'), it = byId(id); it.accents = it.accents.filter(x => x !== h); await put('items', it); S.ideas = null; openSheet(id); }
+  else if (ds.accdel) { const [id, h] = ds.accdel.split('|'), it = byId(id); it.accents = it.accents.filter(x => x !== h); it.accPicked = it.accPicked?.filter(x => x !== h); await put('items', it); S.ideas = null; openSheet(id); }
   else if (ds.readlook) {
     const ins = S.inspo.find(x => x.id === ds.readlook); t.disabled = true; t.textContent = 'Reading the pieces…';
     try { ins.pieces = await readLook(ins, s => { t.textContent = s; }); await put('inspo', ins); } catch (e) { console.warn(e); toast("Couldn't read this photo"); }
