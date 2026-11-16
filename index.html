@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v4.6'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v4.7'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -362,23 +362,40 @@ async function cutout(file, status = () => {}, known = null) {
   return { ...((await prep(cut, false, tags)) ?? (await prep(photo, true))), photo, tags };
 }
 
-let running = false;
+// Photo fingerprint (16×16 dHash, 256 bits): picking the same album again skips what's already in.
+// Same photo re-saved lands a few bits apart; a different shot lands far apart.
+async function fpOf(blob) {
+  const bmp = await createImageBitmap(blob), c = Object.assign(document.createElement('canvas'), { width: 17, height: 16 }), x = c.getContext('2d', { willReadFrequently: true });
+  x.imageSmoothingQuality = 'high'; x.drawImage(bmp, 0, 0, 17, 16); bmp.close?.();
+  const d = x.getImageData(0, 0, 17, 16).data, g = i => d[i * 4] * .3 + d[i * 4 + 1] * .59 + d[i * 4 + 2] * .11;
+  let s = ''; for (let y = 0; y < 16; y++) for (let k = 0; k < 16; k++) s += g(y * 17 + k) > g(y * 17 + k + 1) ? 1 : 0;
+  return s;
+}
+const fpDist = (a, b) => { let n = 0; for (let i = 0; i < a.length; i++) n += a[i] !== b[i]; return n; };
+const FP_SAME = 6; // tested on 174 real photos: same photo re-saved ≤4 bits, different shots ≥9
+let fpDone;
+const backfillFp = () => fpDone ??= (async () => { for (const it of S.items) if (!it.fp && it.photo instanceof Blob) try { it.fp = await fpOf(it.photo); await putQuiet('items', it); } catch (e) { console.warn(e); } })();
+
+let running = false, skipped = 0, added = 0;
 async function addFiles(files) {
   S.pending.push(...[...files].map(f => ({ id: uid(), file: f, url: URL.createObjectURL(f), status: 'Waiting…' })));
   S.view = 'closet'; render();
   if (running) return; // one queue: two models at once would eat a phone's memory
-  running = true;
-  try { while (S.pending.length) await addOne(S.pending[0]); } finally { running = false; }
+  running = true; skipped = added = 0;
+  try { await backfillFp(); while (S.pending.length) await addOne(S.pending[0]); }
+  finally { running = false; if (skipped) toast(`Added ${added} · skipped ${skipped} already in your closet`); }
 }
 
 async function addOne(j) {
   const status = s => { j.status = s; document.querySelector(`[data-pending="${j.id}"] span`)?.replaceChildren(s); };
   try {
-    const { img, color, accents, photo, tags, hard, turn } = await cutout(j.file, status);
+    const small = await shrink(j.file), fp = await fpOf(small);
+    if (S.items.some(i => i.fp && fpDist(i.fp, fp) <= FP_SAME)) { skipped++; return; }
+    const { img, color, accents, photo, tags, hard, turn } = await cutout(small, status);
     if (tags && (tags.pattern === 'graphic' || tags.pattern === 'allover') && !accents?.length) Object.assign(tags, { pattern: 'solid', patterned: false }); // no print colors found: a blank tee, not a print
     if (hard) toast('Tricky background. Light clothes cut out best on a dark, plain surface');
-    const item = { id: j.id, img, photo, color, accents, orientChecked: true, ...(turn ? { turnHint: turn } : {}), ...(tags ?? { cat: 'Tops', name: 'New item', kind: '', vibe: 'casual', patterned: false, fit: 1 }), review: true, wears: 0, lastWorn: null, createdAt: Date.now() };
-    await put('items', item); S.items.push(item); S.ideas = null;
+    const item = { id: j.id, img, photo, fp, color, accents, orientChecked: true, ...(turn ? { turnHint: turn } : {}), ...(tags ?? { cat: 'Tops', name: 'New item', kind: '', vibe: 'casual', patterned: false, fit: 1 }), review: true, wears: 0, lastWorn: null, createdAt: Date.now() };
+    await put('items', item); S.items.push(item); S.ideas = null; added++;
     if (S.coll) { const c = collById(S.coll); c.ids.push(item.id); await put('colls', c); toast(`Added to ${c.name}`); } // adding while inside a collection files it there too
   } catch (e) { console.warn(e); toast(`Couldn't read ${j.file.name}. Try a JPG`); } // one bad file never stops the batch
   finally { URL.revokeObjectURL(j.url); S.pending = S.pending.filter(p => p !== j); render(); }
@@ -484,7 +501,7 @@ function closetView() {
     ${S.q && !groups.length ? `<p class="sub">Nothing matches "${esc(S.q)}".</p>` : ''}
     ${groups.length > 1 ? `<div class="chips sticky">${groups.map(([k, l]) => `<button class="chip" data-jump="${k}">${k}<small>${l.length}</small></button>`).join('')}</div>` : ''}
     ${c && !inColl.length ? `<div class="empty"><h2>${esc(c.name)} is empty</h2><p>Pick its pieces once. Then Today, the builder and packing only use them.</p><button class="btn" data-action="collpick">Add pieces</button></div>` : ''}
-    ${S.pending.length ? `<div class="grid">${S.pending.map(p => `<div class="item pending" data-pending="${p.id}"><div class="ph"><img src="${p.url}" alt=""></div><b>Processing</b><span>${p.status}</span></div>`).join('')}</div>` : ''}
+    ${S.pending.length ? `<div class="grid">${S.pending.slice(0, 3).map(p => `<div class="item pending" data-pending="${p.id}"><div class="ph"><img src="${p.url}" alt=""></div><b>Processing</b><span>${p.status}</span></div>`).join('')}${S.pending.length > 3 ? `<div class="item pending"><div class="ph"></div><b>+${S.pending.length - 3} waiting</b><span>Keep the app open</span></div>` : ''}</div>` : '' /* only a few full-size photos on screen: 174 at once ran the phone out of memory */}
     ${S.sel ? `<div class="selbar"><span>${S.sel.size} selected</span><span class="row2">${S.sel.size ? `<select data-selcoll aria-label="Add to a capsule"><option value="">Add to capsule…</option>${S.colls.map(k => `<option value="${k.id}">${esc(k.name)}</option>`).join('')}</select><select data-selmat aria-label="Set material"><option value="">Material…</option>${MATERIALS.map(m => `<option>${m}</option>`).join('')}</select><button class="btn ghost sm" data-action="selwash">Laundry</button><button class="btn ghost sm" data-action="seldel">Delete</button>` : ''}</span></div>` : ''}
     ${groups.map(([k, l]) => `<h3 class="sec" id="sec-${k}">${k}<small>${l.length}</small></h3><div class="${shelf ? 'shelf' : 'grid'}">${l.map(itemCard).join('')}</div>`).join('')}`;
 }
@@ -1395,7 +1412,7 @@ let replacing = null;
 const replaceInput = picker('image/*', false, async ([f]) => {
   const it = byId(replacing); if (!it) return;
   toast('Cutting out the new photo…');
-  try { const { img, color, accents, photo } = await cutout(f, undefined, it); Object.assign(it, { img, color, accents, photo, turns: 0 }); /* new photo, new orientation */ resetSrc(it); await put('items', it); S.ideas = null; openSheet(it.id); toast('Photo replaced'); }
+  try { const { img, color, accents, photo } = await cutout(f, undefined, it); Object.assign(it, { img, color, accents, photo, fp: await fpOf(photo), turns: 0 }); /* new photo, new orientation */ resetSrc(it); await put('items', it); S.ideas = null; openSheet(it.id); toast('Photo replaced'); }
   catch (e) { console.warn(e); toast(`Couldn't read ${f.name}. Try a JPG`); }
 });
 const fileInput = document.getElementById('file');
@@ -1819,7 +1836,7 @@ async function fixKinds() {
   S.profile = { k: 'me', ...S.profile, kindsFixed: true }; await put('profile', S.profile);
   if (n) { S.deck = null; toast(`Fixed the type on ${n} piece${n > 1 ? 's' : ''} from their names`); render(); }
 }
-backfillAccents().then(backfillOrient).then(checkPhotos).then(fixKinds);
+backfillAccents().then(backfillOrient).then(checkPhotos).then(fixKinds).then(backfillFp);
 window.__appReady = true; // the safety net above stays quiet
 navigator.serviceWorker?.register('sw.js').catch(e => console.warn(e)); // opens with no signal once installed (sw.js)
 // "New version" banner: version.txt is the live version; if it differs from this page, offer a reload. Checked on open and on every return to the app.
