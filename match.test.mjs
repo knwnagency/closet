@@ -31,7 +31,7 @@ const chunky = it('chunky', 'Shoes', '#eeeeee', { fit: 2, kind: 'sneakers' }), s
 const boxy = it('boxy', 'Tops', '#f4f4f4', { fit: 2 }), slimJacket = it('sj', 'Layers', '#222222', { fit: 0 });
 assert.equal(scoreOutfit([white, wide, sleek], 'classic'), null, 'wide pants + sleek shoes is vetoed');
 assert.ok(scoreOutfit([white, wide, chunky], 'classic').score > scoreOutfit([white, skinny, chunky], 'classic').score, 'chunky shoes belong with wide pants');
-assert.equal(scoreOutfit([boxy, skinny, sleek, slimJacket], 'classic'), null, 'slim layer over baggy top is vetoed');
+assert.ok(scoreOutfit([boxy, skinny, sleek, slimJacket], 'classic'), 'a fitted jacket over a baggy tee is allowed (rule removed at your request)');
 assert.match(proportion([boxy, skinny, sleek]).note, /Volume up top|Slim line/);
 
 // color wheel
@@ -348,7 +348,7 @@ console.log('variety ok');
   const withLike = m.scoreOutfit([bk, ol, kicks], 'classic').score; m.setTaste(); assert.ok(withLike > m.scoreOutfit([bk, ol, kicks], 'classic').score, 'colors you keep choosing score higher');
 }
 { const m = await import('./match.js');
-  assert.equal(m.colorName('#37372c'), 'olive', 'dark olive trousers are not black'); assert.equal(m.colorName('#473833'), 'brown', 'dark brown trousers');
+  assert.equal(m.colorName('#37372c'), 'olive', 'dark olive trousers are not black'); assert.equal(m.colorName('#473833'), 'brown', 'dark brown trousers'); assert.equal(m.colorName('#322b28'), 'black', 'black hoodie in warm light'); assert.equal(m.colorName('#2d2620'), 'brown', 'dark brown stays brown');
   assert.equal(m.colorName('#2a2929'), 'black'); assert.equal(m.colorName('#1d2128'), 'black', 'black tee with a cool cast is not navy'); assert.equal(m.colorName('#1e2a45'), 'navy'); assert.equal(m.colorName('#13192f'), 'navy', 'very dark navy polo'); assert.equal(m.colorName('#151413'), 'black');
   assert.equal(m.FITS.Bottoms[3], 'Relaxed (loose straight)'); assert.equal(m.patternOf({ patterned: true }), 'graphic'); assert.equal(m.patternOf({ pattern: 'logo', patterned: false }), 'logo');
   const it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, ...x });

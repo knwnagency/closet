@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v5.6'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v5.7'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -340,7 +340,18 @@ function sane(t) {
 
 // Downscale, clean the mask, crop to the garment, pick its dominant color.
 // raw = the uncut photo (cutout failed): keep it whole and read the color from the middle, where the piece usually is.
-async function prep(blob, raw = false, tags = null) {
+// Warm room light turns a black hoodie brown on camera. The surface around the piece is usually a plain white/grey sheet or floor:
+// whatever tint it has came from the light, so the piece's color gets the opposite nudge. A clearly colored surface (a green table)
+// isn't trusted, and the nudge is capped. Returns per-channel gains for R, G, B.
+async function castGains(photo, d, w, h) {
+  const b = await createImageBitmap(photo), c = Object.assign(document.createElement('canvas'), { width: w, height: h }), x = c.getContext('2d', { willReadFrequently: true });
+  x.drawImage(b, 0, 0, w, h); b.close?.(); const p = x.getImageData(0, 0, w, h).data, s = [0, 0, 0]; let n = 0;
+  for (let y = 0; y < h; y += 4) for (let xx = 0; xx < w; xx += 4) { const i = (y * w + xx) * 4; if (d[i + 3] < 30) { s[0] += p[i]; s[1] += p[i + 1]; s[2] += p[i + 2]; n++; } }
+  if (n < 50) return [1, 1, 1];
+  const m = s.map(v => v / n), hi = Math.max(...m), lo = Math.min(...m), l = (hi + lo) / 510, sat = hi === lo ? 0 : (hi - lo) / 255 / (1 - Math.abs(2 * l - 1)), avg = (m[0] + m[1] + m[2]) / 3;
+  return sat < 0.2 && l > 0.45 ? m.map(v => Math.min(1.35, Math.max(0.75, avg / Math.max(1, v)))) : [1, 1, 1];
+}
+async function prep(blob, raw = false, tags = null, photo = null) {
   const bmp = await createImageBitmap(blob);
   const k = Math.min(1, 1000 / Math.max(bmp.width, bmp.height));
   const w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
@@ -375,14 +386,16 @@ async function prep(blob, raw = false, tags = null) {
   }
   const mid = (x, y) => !raw || (x > w / 4 && x < w * 3 / 4 && y > h / 4 && y < h * 3 / 4);
   let x0 = w, y0 = h, x1 = 0, y1 = 0;
+  const G = !raw && photo ? await castGains(photo, d, w, h) : [1, 1, 1];
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = (y * w + x) * 4;
     if (d[i + 3] < 30) continue;
     x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
     if (d[i + 3] < 220 || (x | y) & 3 || !mid(x, y)) continue; // sample every 4th solid pixel
-    px.push([d[i], d[i + 1], d[i + 2]]);
-    const key = (d[i] >> 5) << 6 | (d[i + 1] >> 5) << 3 | d[i + 2] >> 5, b = buckets.get(key) ?? [0, 0, 0, 0];
-    b[0]++; b[1] += d[i]; b[2] += d[i + 1]; b[3] += d[i + 2]; buckets.set(key, b);
+    const [cr, cg, cb] = [d[i] * G[0], d[i + 1] * G[1], d[i + 2] * G[2]].map(v => Math.min(255, v)); // the light's tint taken out (castGains)
+    px.push([cr, cg, cb]);
+    const key = (cr >> 5) << 6 | (cg >> 5) << 3 | cb >> 5, b = buckets.get(key) ?? [0, 0, 0, 0];
+    b[0]++; b[1] += cr; b[2] += cg; b[3] += cb; buckets.set(key, b);
   }
   if (x1 < x0) return null; // cutout erased everything (white tee on a white sheet)
   // ponytail: most common color bucket wins — shadows/linings can steal it; user fixes via the color picker.
@@ -415,7 +428,7 @@ async function cutout(file, status = () => {}, known = null) {
   if (!tags) { status('Tagging…'); try { tags = await tag(url); } catch (e) { console.warn(e); toast("Couldn't tag it. Set the tags yourself"); } }
   try { status('Removing background…'); cut = await segment(url); }
   catch (e) { console.warn(e); toast('Background removal failed. Kept the photo'); }
-  return { ...((await prep(cut, false, tags)) ?? (await prep(photo, true))), photo, tags };
+  return { ...((await prep(cut, false, tags, photo)) ?? (await prep(photo, true))), photo, tags };
 }
 
 // Photo fingerprint (16×16 dHash, 256 bits): picking the same album again skips what's already in.
@@ -1239,6 +1252,8 @@ function colorAt(img, e) {
   if (!ps.length) return null;
   const ly = p => p[0] * .3 + p[1] * .59 + p[2] * .11, mid = ps.sort((a, b) => ly(a) - ly(b)).slice(Math.floor(ps.length / 3), Math.ceil(ps.length * .95)); // skip folds and shadows (darkest third) and shine
   return '#' + [0, 1, 2].map(k => Math.round(mid.reduce((t, p) => t + p[k], 0) / mid.length).toString(16).padStart(2, '0')).join(''); }
+async function setMainColor(it, h) { it.color = h; if (it.accents) it.accents = it.accents.filter(a => it.accPicked?.includes(a) || colorDist(a, h) > 90 && keepAcc(it, a, h));
+  const f = sheet.querySelector('[name=color]'); if (f) { f.value = h; showColor(it); } const box = sheet.querySelector('#accbox'); if (box) box.innerHTML = accHtml(it); S.ideas = null; S.deck = null; await put('items', it); }
 async function addAccent(it, h) { it.accents = [...(it.accents ?? []).filter(x => x !== h), h].slice(-6); it.accPicked = [...new Set([...(it.accPicked ?? []), h])]; S.accPick = null; await put('items', it); S.ideas = null; S.deck = null;
   const box = sheet.querySelector('#accbox'); if (box) box.innerHTML = accHtml(it); toast(`Added ${colorName(h)}`); }
 function openSheet(id) {
@@ -1276,7 +1291,7 @@ function openSheet(id) {
     <div class="incoll" id="vibebox">${vibeHtml(it)}</div>
     <div class="group">
       <div class="cell"><span>Main color</span><span class="cname" id="cname">${colorName(it.color)}${isNeutral(it.color) ? ' · neutral' : ''}</span><i class="cdot" id="cdot" style="background:${it.color}"></i></div>
-      <div class="cpick" id="cpick">${Object.entries(SWATCHES).map(([n, h]) => `<button type="button" class="${colorName(it.color) === n ? 'on' : ''}" data-setcolor="${it.id}|${h}" aria-label="${n}"><i style="background:${h}"></i></button>`).join('')}<label aria-label="Pick any color"><i></i><input type="color" name="color" value="${it.color}"></label></div>
+      <div class="cpick" id="cpick">${Object.entries(SWATCHES).map(([n, h]) => `<button type="button" class="${colorName(it.color) === n ? 'on' : ''}" data-setcolor="${it.id}|${h}" aria-label="${n}"><i style="background:${h}"></i></button>`).join('')}<label aria-label="Pick any color"><i></i><input type="color" name="color" value="${it.color}"></label><button type="button" class="tag o drop" data-colordrop="${it.id}">Pick from photo</button></div>
       <div id="accbox">${accHtml(it)}</div>
       <label class="cell"><span>Pattern</span><select name="pattern">${[['solid', 'Solid (plain)'], ['logo', 'Small logo'], ['graphic', 'Big graphic'], ['allover', 'All-over pattern']].map(([v, l]) => `<option value="${v}" ${patternOf(it) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="cell"><span>In the laundry</span><input type="checkbox" class="switch" name="dirty" ${it.dirty ? 'checked' : ''}></label>
@@ -1764,7 +1779,8 @@ document.addEventListener('click', async e => {
   else if (ds.anglezoom) { const lb = document.createElement('dialog'); lb.className = 'lightbox'; lb.innerHTML = `<img src="${t.querySelector('img').src}" alt="">`; document.body.append(lb); lb.onclick = () => { lb.close(); lb.remove(); }; lb.showModal(); }
   else if (ds.angledel) { if (!t.classList.contains('armed')) { t.classList.add('armed'); t.textContent = 'Remove?'; return; }
     const [id, k] = ds.angledel.split('|'), it = byId(id); it.more = it.more.filter(x => x !== k); if (!it.more.length) delete it.more; await put('items', it); await del('orig', k); openSheet(id); toast('Photo removed'); }
-  else if (ds.zoom && S.dropping === ds.zoom) { const h = colorAt(t.querySelector('img'), e); S.dropping = null; sheet.querySelector('.hero')?.classList.remove('dropping'); if (h) await addAccent(byId(ds.zoom), h); else toast('Tap on the piece itself'); }
+  else if (ds.zoom && S.dropping === ds.zoom) { const h = colorAt(t.querySelector('img'), e); S.dropping = null; sheet.querySelector('.hero')?.classList.remove('dropping'); const main = S.dropMain; S.dropMain = false;
+    if (!h) toast('Tap on the piece itself'); else if (main) { await setMainColor(byId(ds.zoom), h); toast(`Color set to ${colorName(h)}`); } else await addAccent(byId(ds.zoom), h); }
   else if (ds.zoom) { const lb = document.createElement('dialog'); lb.className = 'lightbox'; lb.innerHTML = `<img data-full="${ds.zoom}" src="${srcFull(byId(ds.zoom))}" alt="">`; document.body.append(lb); lb.onclick = () => { lb.close(); lb.remove(); }; lb.showModal(); }
   else if (ds.action === 'selllist') { const sell = S.items.filter(i => !i.stored && Date.now() - Math.max(i.lastWorn ?? 0, i.createdAt ?? 0) > 180 * 864e5);
     const text = sell.map(i => `${i.brand ? i.brand + ' ' : ''}${i.name} · ${colorName(i.color)} ${i.kind || i.cat}${i.fit != null && i.cat !== 'Accessories' ? ` · ${(FITS[i.cat] ?? FITS.default)[i.fit ?? 1].toLowerCase()} fit` : ''}${i.price ? ` · paid ${money(i.price)}` : ''}`).join('\n');
@@ -1806,8 +1822,8 @@ document.addEventListener('click', async e => {
   else if ('src' in ds && t.matches('[data-src]')) { S.src = ds.src || null; S.deck = null; if (sheet.querySelector('.filters')) openFilters(); else { if (sheet.open) { sheet.onclose = null; sheet.close(); } render(); } }
   else if (ds.mode) { S.mode = ds.mode; S.ideas = null; render(); S.profile = { k: 'me', ...S.profile, mode: ds.mode }; put('profile', S.profile); if (sheet.querySelector('.filters')) openFilters(); }
   else if (ds.open) openSheet(ds.open);
-  else if (ds.setcolor) { const [id, h] = ds.setcolor.split('|'), it = byId(id); it.color = h; if (it.accents) it.accents = it.accents.filter(a => it.accPicked?.includes(a) || colorDist(a, h) > 90 && keepAcc(it, a, h));
-    sheet.querySelector('[name=color]').value = h; showColor(it); sheet.querySelector('#accbox').innerHTML = accHtml(it); S.ideas = null; await put('items', it); }
+  else if (ds.setcolor) { const [id, h] = ds.setcolor.split('|'); await setMainColor(byId(id), h); }
+  else if (ds.colordrop) { S.dropping = ds.colordrop; S.dropMain = true; sheet.querySelector('.hero')?.classList.add('dropping'); sheet.scrollTo({ top: 0, behavior: 'smooth' }); toast('Tap the main color on the photo'); }
   else if (ds.vibemain || ds.vibe) { const [id, v] = (ds.vibemain || ds.vibe).split('|'), it = byId(id), [main, ...also] = vibes(it);
     const next = ds.vibemain ? [v, ...also.filter(x => x !== v)] : [main, ...(also.includes(v) ? also.filter(x => x !== v) : [...also, v])];
     it.vibe = next.length === 1 ? next[0] : next; sheet.querySelector('#vibebox').innerHTML = vibeHtml(it); S.ideas = null; await put('items', it); }

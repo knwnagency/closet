@@ -29,7 +29,7 @@ export function colorName(hex) {
   const { h, s, l } = hexToHsl(hex);
   if (l < 0.13) return h >= 200 && h <= 250 && s >= 0.4 && l >= 0.09 ? 'navy' : 'black'; // a very dark but clearly blue polo is navy
   if (l < 0.25 && s < 0.25) { // dark and muted: a washed black tee is black (s ≈ 0.02), but dark olive or brown trousers keep their color
-    if (s >= 0.1 && h >= 5 && h < 100) return h >= 45 ? "olive" : "brown";
+    if (s >= 0.1 && h >= 5 && h < 100) return h >= 45 ? "olive" : s >= 0.15 || l >= 0.2 ? "brown" : "black"; // a black hoodie in warm room light reads #322b28: barely warm is still black
     if (s >= 0.12 && h >= 100 && h < 170) return 'forest';
     return 'black';
   }
@@ -93,7 +93,6 @@ export function proportion(ps) {
   const legs = !!bottom && !/short/i.test(bottom.kind || bottom.name); // shorts show the leg, so pant-width rules don't apply
   const up = top || layer ? Math.max(top ? fit(top) : 0, layer ? fit(layer) : 0) : null, down = bottom ? fit(bottom) : null, feet = shoes ? fit(shoes) : null;
   const notes = [], add = (s, note) => notes.push([s, note]);
-  if (layer && top && fit(layer) < fit(top)) add(-2, 'Slim layer over a baggy top bunches up');
   if (layer && top && level(layer) < level(top)) add(-2, `A ${layer.kind || 'layer'} doesn't go over a ${top.kind || 'heavier top'}`);
   if (layer && top && level(layer) === level(top) && level(top) >= 2) add(-2, level(top) === 2 ? 'Two knits or hoodies stacked is too bulky' : 'Two jackets at once, drop one');
   if (legs && down === 2 && feet === 0) add(-2, 'Sleek shoes get swallowed by wide pants');
