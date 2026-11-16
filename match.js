@@ -400,7 +400,7 @@ export function flatLayout(slots) {
   if (layer) { box.Layers = [2, y0, tw * 0.52, th]; box.Tops = [2 + tw * 0.52, y0 + 2, tw * 0.48, th - 4]; }
   else box.Tops = [2 + tw * 0.1, y0, tw * 0.8, th];
   if (acc) box.Accessory = [100 - side, y0 + 6, side - 2, 24];
-  const by = y0 + th + 2; box.Bottoms = [26, by, 48, 100 - by]; box.Shoes = [24, 101, 52, 22]; // shoes big enough to read
+  const by = y0 + th + 2; box.Bottoms = [26, by, 48, 100 - by]; box.Shoes = [24, 101, 52, 21]; // shoes big enough to read
   return Object.fromEntries(Object.entries(box).filter(([k]) => slots.includes(k)).map(([k, [x, y, w, h]]) => [k, [x, y / 1.25, w, h / 1.25].map(v => +v.toFixed(2))]));
 }
 

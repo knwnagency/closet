@@ -512,7 +512,7 @@
   .item span { font-family: var(--mono); font-size: 11px; color: var(--muted); } .item .tag.corner { color: var(--ink); background: rgb(255 255 255 / .92); box-shadow: inset 0 0 0 1px var(--hair); font-size: 11px; height: 22px; }
   .sec small, .chip small { font-size: 11px; }
   .selbar { flex-wrap: wrap; row-gap: 6px; } .selbar .row2 { flex-wrap: wrap; } .selbar select { min-height: 44px; }
-  .capacts .icon { width: 44px; } .thead .eyebrow { white-space: nowrap; } .capbtn svg { width: 16px; height: 16px; } details.sizes summary { min-height: 44px; }
+  .capacts .icon { width: 44px; } .thead .eyebrow { white-space: nowrap; } .capbtn svg { width: 16px; height: 16px; } details.sizes summary h3 { position: relative; } details.sizes summary h3::before { content: ""; position: absolute; inset: -14px 0 -8px; } /* 44px tap area without extra space */ details.sizes:not([open]) summary h3 { margin-bottom: 0; }
   /* piece page, calendar, me */
   .pname { font-size: 24px; font-weight: 600; } .review { box-shadow: inset 0 0 0 1px rgb(20 20 20 / .3); }
   details.more { border-top: 1px solid var(--hair); } details.more > summary { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .06em; }
@@ -574,7 +574,7 @@
   .sheet .hero { height: 46dvh; padding: 28px; } dialog.sheet:has(.hero) { min-height: 86dvh; } dialog.sheet:focus { outline: none; }
   .photofix { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0 0; } .photofix .mono { width: 100%; }
   /* Closet: one row of controls, then search */
-  .tbar.ctrl { overflow-x: auto; scrollbar-width: none; margin: 0 -18px 8px; padding: 0 18px; } .tbar.ctrl::-webkit-scrollbar { display: none; } .tbar.ctrl > * { flex: none; }
+  .tbar.ctrl { overflow-x: auto; scrollbar-width: none; margin: 0 -18px 8px; padding: 0 18px; } .tbar.ctrl::-webkit-scrollbar { display: none; } .tbar.ctrl > * { flex: none; } .tbar.ctrl { padding-right: 48px; mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent); } /* last chip fades instead of being cut */
   .sortsel { height: 44px; padding: 0 14px; border: 0; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--hair); background: transparent; color: var(--ink); font: 500 11px/1 var(--mono); letter-spacing: .02em; -webkit-appearance: none; appearance: none; }
   .ctools.solo { grid-template-columns: minmax(0, 1fr); } .ctools input { font-size: 16px; }
   /* one lowercase voice; names keep their own case */

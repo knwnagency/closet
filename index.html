@@ -41,12 +41,12 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v5.0'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v5.1'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
-const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
+const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
 const db = await new Promise((res, rej) => {
-  const r = indexedDB.open('closet', 4); // v2 wear log, v3 wishlist, v4 collections + inspo board + profile
+  const r = indexedDB.open('closet', 5); // v2 wear log, v3 wishlist, v4 collections + inspo board + profile, v5 photos apart from tags + upload queue
   r.onupgradeneeded = () => { for (const [n, k] of STORES) if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n, { keyPath: k }); };
   r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
 });
@@ -56,7 +56,7 @@ const store = (name, mode, fn) => new Promise((res, rej) => {
 });
 // Photos are saved as raw bytes (ArrayBuffer), not Blob objects: iPhone Safari can lose Blobs kept in IndexedDB
 // ("images not loading"), bytes it keeps. In memory they're Blobs as usual; old Blob records still load and convert on their next save.
-const BLOBS = { items: ['img', 'photo', 'thumb'], inspo: ['img'], log: ['selfie'] };
+const BLOBS = { items: ['img', 'photo', 'thumb'], full: ['img'], orig: ['photo'], queue: ['file'], inspo: ['img'], log: ['selfie'] };
 const pack = async (name, v) => { const o = { ...v };
   for (const k of BLOBS[name] ?? []) if (o[k] instanceof Blob) try { o[k] = { bytes: await o[k].arrayBuffer(), type: o[k].type || 'image/png' }; } catch { /* unreadable: keep as is, the photo check flags it */ }
   return o; };
@@ -65,7 +65,16 @@ const isBytes = x => x != null && !(x instanceof Blob) && x.bytes instanceof Arr
 const unpack = (name, v) => { for (const k of BLOBS[name] ?? []) if (isBytes(v?.[k])) v[k] = new Blob([v[k].bytes], { type: v[k].type }); return v; };
 const all = name => store(name, 'readonly', s => s.getAll()).then(list => list.map(v => unpack(name, v)));
 const put = async (name, v) => { if (name === 'items') v.updatedAt = Date.now(); return putQuiet(name, v); }; // updatedAt: small "changes only" backups
-const putQuiet = async (name, v) => { const o = await pack(name, v); return store(name, 'readwrite', s => s.put(o)); }; // housekeeping saves (previews, format) aren't "changes"
+const putQuiet = async (name, v) => { // housekeeping saves (previews, format) aren't "changes"
+  if (name === 'items') { // a piece's photo and original live in their own stores: opening the app reads only tags + small previews
+    if (v.img instanceof Blob && !onDisk.has(v.img)) { await putQuiet('full', { id: v.id, img: v.img }); onDisk.add(v.img); }
+    if (v.photo instanceof Blob) { await putQuiet('orig', { id: v.id, photo: v.photo }); delete v.photo; }
+    const { img, photo, ...rec } = v; v = rec; }
+  const o = await pack(name, v); return store(name, 'readwrite', s => s.put(o)); };
+const onDisk = new WeakSet(); // photos already saved, so a tag edit doesn't rewrite a 1 MB picture
+const loadPic = async (name, id) => { const r = unpack(name, await store(name, 'readonly', s => s.get(id))); return r?.img ?? r?.photo; };
+const imgOf = async it => { if (!it.img) { const b = await loadPic('full', it.id); if (b) { onDisk.add(b); it.img ??= b; } } return it.img; }; // the full photo, loaded on first use
+const origOf = async it => it.photo ?? loadPic('orig', it.id); // the photo as taken, for Remove background
 const del = (name, k) => store(name, 'readwrite', s => s.delete(k));
 
 // ---------- state ----------
@@ -98,15 +107,18 @@ const objUrl = (k, b) => urls.get(k) ?? urls.set(k, URL.createObjectURL(b)).get(
 // A piece without a preview shows the full photo once and gets its preview made in the background.
 // A photo this phone lost: its outline in its own color + "photo missing", so every tile, outfit and list stays readable.
 const missSrc = it => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 150"><path d="${SIL[it.cat] ?? SIL.Tops}" transform="translate(24 20) scale(3)" fill="${it.color ?? '#999'}" fill-opacity=".3" stroke="${it.color ?? '#999'}" stroke-opacity=".6" stroke-width=".4"/><text x="60" y="138" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="11" fill="#6e6a63">photo missing</text></svg>`);
-const src = it => it.broken ? missSrc(it) : it.thumb instanceof Blob ? objUrl(it.id + ':t', it.thumb) : (it.cat && queueThumb(it), objUrl(it.id, it.img));
-const srcFull = it => it.broken ? missSrc(it) : objUrl(it.id, it.img);
+const BLANK = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+const src = it => it.broken ? missSrc(it) : it.thumb instanceof Blob ? objUrl(it.id + ':t', it.thumb) : it.img ? (queueThumb(it), objUrl(it.id, it.img)) : (queueThumb(it), BLANK);
+// Full photo: the preview shows first, the full one swaps in once it's read (tag the <img> with data-full).
+const srcFull = it => it.broken ? missSrc(it) : it.img ? objUrl(it.id, it.img)
+  : (imgOf(it).then(b => b && document.querySelectorAll(`img[data-full="${it.id}"]`).forEach(e => { e.src = objUrl(it.id, b); })), src(it));
 const resetSrc = it => { for (const k of [it.id, it.id + ':t']) { URL.revokeObjectURL(urls.get(k)); urls.delete(k); } delete it.thumb; };
 const thumbQ = new Set(); let thumbBusy = false;
 function queueThumb(it) { if (thumbQ.has(it)) return; thumbQ.add(it); if (!thumbBusy) setTimeout(makeThumbs, 300); }
 async function makeThumbs() {
   thumbBusy = true;
-  for (const it of [...thumbQ]) { thumbQ.delete(it); try { it.thumb = await thumbOf(it.img); await putQuiet('items', it); } catch (e) { console.warn(e); } }
-  thumbBusy = false;
+  let n = 0; for (const it of [...thumbQ]) { thumbQ.delete(it); try { const had = it.img; it.thumb = await thumbOf(await imgOf(it)); await putQuiet('items', it); if (!had) { delete it.img; n++; } } catch (e) { console.warn(e); } }
+  thumbBusy = false; if (n) render();
 }
 async function thumbOf(blob) {
   const b = await createImageBitmap(blob), k0 = Math.min(1, 480 / Math.max(b.width, b.height)), w = Math.round(b.width * k0), h = Math.round(b.height * k0);
@@ -142,7 +154,7 @@ const KIND_ALIAS = { 't-shirt': /\btees?\b|\bt-?shirt/i, sweater: /sweater|sweat
 const guessKind = it => Object.keys(KINDS).filter(k => KINDS[k] === it.cat).find(k => (KIND_ALIAS[k] ?? new RegExp(`\\b${k.split(/[\s-]/).pop()}`, 'i')).test(it.name));
 // Tags that contradict each other (AI guesses): a "denim jacket" filed under Tops, Air Force 1s called sleek. "It's right" silences it.
 const issueOf = it => {
-  const dbl = dupOf(it); if (dbl) return { text: `Same photo as your other "${dbl.name}". Added twice`, fix: 'dup:1', label: 'Delete this one' }; if (it.review) return null;
+  const dbl = dupOf(it); if (dbl) return { text: `Same photo as your other "${dbl.name}". Added twice`, fix: `dup:${dbl.id}`, label: 'Merge into one' }; if (it.review) return null;
   if (PRINTABLE.includes(it.cat) && (patternOf(it) === 'graphic' || patternOf(it) === 'allover') && !it.accents?.length && !it.tagOk) return { text: 'Tagged as a print, but no print colors were found. Plain?', fix: 'pattern:solid', label: 'Mark as solid' };
   if (it.person && !it.tagOk) return { text: 'A person is in this photo, so their legs, arms or shoes come along. Erase them, or use a photo of just the piece.', fix: 'touch:1', label: 'Touch up' };
   if (it.broken) return { text: "This photo is missing on this phone. Restore it from a backup (Me › Restore backup), or take a new one.", fix: 'photo:1', label: 'New photo' };
@@ -154,8 +166,21 @@ const issueOf = it => {
   if (g && g !== it.kind && KINDS[it.kind] === it.cat && level({ ...it, kind: g }) !== level(it)) return { text: `Named like a ${g}, but the type says ${it.kind}`, fix: `kind:${g}`, label: `Set type to ${g}` };
   const k = knownFit(it), F = FITS[it.cat] ?? FITS.default; if (k != null && k !== (it.fit ?? 1)) return { text: `${it.cat === 'Shoes' ? 'These are' : 'This brand is'} usually ${F[k].toLowerCase()}, not ${F[it.fit ?? 1].toLowerCase()}`, fix: `fit:${k}`, label: `Set to ${F[k]}` };
   const twin = S.items.find(o => o !== it && o.cat === it.cat && o.kind === it.kind && colorDist(o.color, it.color) < 22 && o.name.toLowerCase().replace(/\W/g, '') === it.name.toLowerCase().replace(/\W/g, ''));
-  if (twin && !it.dupOk) return { text: `Looks like a duplicate of another "${twin.name}"`, fix: 'dup:1', label: 'Delete this one' };
+  if (twin && !it.dupOk) return { text: `Looks like a duplicate of another "${twin.name}"`, fix: `dup:${twin.id}`, label: 'Merge into one' };
   return null; };
+// Merging a double: the piece you had first takes over the other's wears, favorites, capsules, planned days and outfit log, then the double goes.
+async function mergeInto(gone, keep) {
+  const swap = r => { if (!r?.ids?.includes(gone.id)) return false; r.ids = [...new Set(r.ids.map(x => x === gone.id ? keep.id : x))]; return true; };
+  const rekey = r => { const k = [...r.ids].sort().join(); if (r.key === k) return; const old = r.key; r.key = k; return old; };
+  for (const r of [...S.saved]) if (swap(r)) { const old = rekey(r); if (old) await del('outfits', old); if (S.saved.some(x => x !== r && x.key === r.key)) S.saved = S.saved.filter(x => x !== r); else await put('outfits', r); }
+  for (const r of S.log) if (swap(r)) { rekey(r); await put('log', r); }
+  for (const c of S.colls) if (swap(c)) { if (c.packed) c.packed = [...new Set(c.packed.map(x => x === gone.id ? keep.id : x))]; await put('colls', c); }
+  if ([...Object.values(S.plan.days), ...Object.values(S.plan.weekly)].map(r => swap(r) && (rekey(r), true)).some(Boolean)) await put('profile', S.plan);
+  Object.assign(keep, { wears: (keep.wears ?? 0) + (gone.wears ?? 0), lastWorn: Math.max(keep.lastWorn ?? 0, gone.lastWorn ?? 0) || null });
+  await put('items', keep); await del('items', gone.id); S.items = S.items.filter(i => i !== gone);
+  if (S.build) S.build = S.build.map(p => p.id === gone.id ? keep : p); if (S.anchor === gone.id) S.anchor = keep.id;
+  S.ideas = null; S.deck = null; S.cs = {}; syncTaste();
+}
 const fitLabel = it => it.cat === 'Accessories' ? '' : (FITS[it.cat] ?? FITS.default)[it.fit ?? 1];
 const lum = hex => { const n = parseInt(hex.slice(1), 16); return [16, 8, 0].map(b => (n >> b & 255) / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((t, v, i) => t + v * [.2126, .7152, .0722][i], 0); };
 const inkOn = hex => (lum(hex) + .05) / .057 > 1.05 / (lum(hex) + .05) ? '#141414' : '#fff';
@@ -380,16 +405,20 @@ let fpDone;
 // Catches doubles the photo check can't: two screenshots of the same product, or pieces restored without their photo.
 const CFP_SAME = 16;
 const backfillFp = () => fpDone ??= (async () => { for (const it of S.items) {
-  if (!it.fp && it.photo instanceof Blob) try { it.fp = await fpOf(it.photo); await putQuiet('items', it); } catch (e) { console.warn(e); }
-  if (!it.cfp && it.img instanceof Blob) try { it.cfp = await fpOf(it.img); await putQuiet('items', it); } catch (e) { console.warn(e); } }
+  if (!it.fp) try { const b = await origOf(it); if (b) it.fp = await fpOf(b); await putQuiet('items', it); } catch (e) { console.warn(e); }
+  if (!it.cfp) try { const b = await imgOf(it); if (b) it.cfp = await fpOf(b); await putQuiet('items', it); } catch (e) { console.warn(e); } }
   if (S.items.some(dupOf)) render(); })();
 // the newer of two pieces with the same cut-out (the older one keeps your tag edits)
 const dupOf = it => !it.dupOk && it.cfp && S.items.find(o => o !== it && o.cfp && ((o.createdAt ?? 0) < (it.createdAt ?? 0) || ((o.createdAt ?? 0) === (it.createdAt ?? 0) && o.id < it.id)) && fpDist(o.cfp, it.cfp) <= CFP_SAME);
 
 let running = false, skipped = 0, added = 0;
-async function addFiles(files) {
-  S.pending.push(...[...files].map(f => ({ id: uid(), file: f, url: URL.createObjectURL(f), status: 'Waiting…' })));
-  S.view = 'closet'; render();
+// Every picked photo is saved (shrunk) to the queue store first, so a crash, a call or a locked phone never loses the batch:
+// the next open picks up where it stopped. A photo that was mid-way through twice in a row is dropped, so it can't crash the app forever.
+async function addFiles(files, left = []) {
+  const jobs = [...left, ...[...files].map(f => ({ id: uid(), file: f, name: f.name, url: URL.createObjectURL(f), status: 'Saving…', at: Date.now() }))];
+  S.pending.push(...jobs); S.view = 'closet'; render();
+  for (const j of jobs) if (!j.saved) try { const small = await shrink(j.file); await putQuiet('queue', { id: j.id, file: small, name: j.name, at: j.at, tries: 0 }); Object.assign(j, { file: small, saved: true }); if (!S.pending.includes(j)) await del('queue', j.id); }
+    catch (e) { console.warn(e); } finally { if (j.status === 'Saving…') j.status = 'Waiting…'; document.querySelector(`[data-pending="${j.id}"] span`)?.replaceChildren(j.status); }
   if (running) return; // one queue: two models at once would eat a phone's memory
   running = true; skipped = added = 0;
   try { await backfillFp(); while (S.pending.length) await addOne(S.pending[0]); }
@@ -399,6 +428,7 @@ async function addFiles(files) {
 async function addOne(j) {
   const status = s => { j.status = s; document.querySelector(`[data-pending="${j.id}"] span`)?.replaceChildren(s); };
   try {
+    if (j.saved) await putQuiet('queue', { id: j.id, file: j.file, name: j.name, at: j.at, tries: (j.tries ?? 0) + 1 });
     const small = await shrink(j.file), fp = await fpOf(small);
     if (S.items.some(i => i.fp && fpDist(i.fp, fp) <= FP_SAME)) { skipped++; return; }
     const { img, color, accents, photo, tags, hard, turn } = await cutout(small, status), cfp = await fpOf(img);
@@ -408,8 +438,8 @@ async function addOne(j) {
     const item = { id: j.id, img, photo, fp, cfp, color, accents, orientChecked: true, ...(turn ? { turnHint: turn } : {}), ...(tags ?? { cat: 'Tops', name: 'New item', kind: '', vibe: 'casual', patterned: false, fit: 1 }), review: true, wears: 0, lastWorn: null, createdAt: Date.now() };
     await put('items', item); S.items.push(item); S.ideas = null; added++;
     if (S.coll) { const c = collById(S.coll); c.ids.push(item.id); await put('colls', c); toast(`Added to ${c.name}`); } // adding while inside a collection files it there too
-  } catch (e) { console.warn(e); toast(`Couldn't read ${j.file.name}. Try a JPG`); } // one bad file never stops the batch
-  finally { URL.revokeObjectURL(j.url); S.pending = S.pending.filter(p => p !== j); render(); }
+  } catch (e) { console.warn(e); toast(`Couldn't read ${j.name}. Try a JPG`); } // one bad file never stops the batch
+  finally { del('queue', j.id).catch(() => {}); URL.revokeObjectURL(j.url); S.pending = S.pending.filter(p => p !== j); render(); }
 }
 
 // Picture turned q × 90° clockwise. PNG, so turning 4× gives back the same picture.
@@ -421,7 +451,7 @@ async function turnBlob(blob, q) {
 }
 // Taps queue up (two quick taps = two turns) and the turn count is kept, so Re-cut from the original photo comes out the same way up.
 let turning = Promise.resolve();
-const rotate = it => turning = turning.then(async () => { it.img = await turnBlob(it.img, 1); it.turns = ((it.turns ?? 0) + 1) % 4; resetSrc(it); await put('items', it); });
+const rotate = it => turning = turning.then(async () => { it.img = await turnBlob(await imgOf(it), 1); it.turns = ((it.turns ?? 0) + 1) % 4; resetSrc(it); await put('items', it); });
 
 // ---------- inspo: pull the outfit's colors (person only, background masked out) ----------
 async function paletteOf(blob) {
@@ -497,8 +527,8 @@ function closetView() {
   const toReview = S.items.filter(i => i.review).length;
   const best = !c && !toReview && !S.pending.length && S.items.length >= 3 && getGaps()?.find(g => !isNeutral(g.ghost.color));
   return head(`${S.items.length} pieces`, 'Closet') + `
-    ${[S.items.some(dupOf) && `<button class="nudge glass" data-action="doubles"><div><span class="mono">Same photo added twice</span><b>Remove ${S.items.filter(dupOf).length} double${S.items.filter(dupOf).length > 1 ? 's' : ''}</b></div><span class="plus">Review →</span></button>`,
-    toReview && `<button class="nudge glass" data-action="review"><div><span class="mono">AI guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>`,
+    ${[S.items.some(dupOf) && `<button class="nudge glass" data-action="doubles"><div><span class="mono">Same photo added twice</span><b>Merge ${S.items.filter(dupOf).length} double${S.items.filter(dupOf).length > 1 ? 's' : ''}</b></div><span class="plus">Review →</span></button>`,
+    toReview && `<button class="nudge glass" data-action="review"><div><span class="mono"><span class="nc">AI</span> guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>`,
     S.items.some(i => i.broken) && `<button class="nudge glass" data-action="import"><div><span class="mono">This phone lost ${S.items.filter(i => i.broken).length} photos</span><b>Restore them from a backup</b></div><span class="plus">Pick file →</span></button>`,
     S.items.some(i => !i.pattern && PRINTABLE.includes(i.cat)) && `<button class="nudge glass" data-action="patreview"><div><span class="mono">Quick check · makes print warnings accurate</span><b>Is it plain or printed? ${S.items.filter(i => !i.pattern && PRINTABLE.includes(i.cat)).length} pieces</b></div><span class="plus">Start →</span></button>`,
     issues && `<button class="nudge glass" data-action="fixtags"><div><span class="mono">Tags that don't add up</span><b>Check ${issues} piece${issues > 1 ? 's' : ''}</b></div><span class="plus">Fix →</span></button>`,
@@ -581,7 +611,7 @@ async function shareCapsule(c) {
   const ps = c.ids.map(byId).filter(Boolean), cols = 4, cell = 270, rows = Math.ceil(ps.length / cols), W = cols * cell, H = rows * cell + 140;
   const cv = Object.assign(document.createElement('canvas'), { width: W, height: H }), x = cv.getContext('2d'); x.fillStyle = '#faf8f5'; x.fillRect(0, 0, W, H);
   x.fillStyle = '#141414'; x.font = '500 56px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText(c.name.toLowerCase(), 40, 86); x.fillStyle = '#66665f'; x.font = '26px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText(`${ps.length} pieces`, 40, 122);
-  for (const [k, p] of ps.entries()) { const b = await createImageBitmap(p.thumb instanceof Blob ? p.thumb : p.img), cx = (k % cols) * cell, cy = 140 + Math.floor(k / cols) * cell, sc = Math.min((cell - 40) / b.width, (cell - 40) / b.height);
+  for (const [k, p] of ps.entries()) { const b = await createImageBitmap(p.thumb instanceof Blob ? p.thumb : await imgOf(p)), cx = (k % cols) * cell, cy = 140 + Math.floor(k / cols) * cell, sc = Math.min((cell - 40) / b.width, (cell - 40) / b.height);
     x.fillStyle = '#efebe5'; x.fillRect(cx + 8, cy + 8, cell - 16, cell - 16); x.drawImage(b, cx + (cell - b.width * sc) / 2, cy + (cell - b.height * sc) / 2, b.width * sc, b.height * sc); }
   const f = new File([await new Promise(r => cv.toBlob(r, 'image/png'))], `${c.name.replace(/\W+/g, '-').toLowerCase()}.png`, { type: 'image/png' });
   if (navigator.canShare?.({ files: [f] })) { try { await navigator.share({ files: [f], text: `${c.name}: ${ps.map(p => p.name).join(', ')}` }); } catch {} } else download(f);
@@ -784,7 +814,7 @@ async function shareLook(ps) {
   x.fillStyle = '#f0efec'; x.fillRect(0, 0, W, H);
   const by = {}; for (const p of ps) { const sl = slotOf(p); if (sl) by[sl] ??= p; }
   const L = flatLayout(Object.keys(by)), pad = 60, cw = W - pad * 2, ch = (H - 260) ;
-  for (const [sl, p] of Object.entries(by)) { const [lx, ly, lw, lh] = L[sl], b = await createImageBitmap(p.img), bx = pad + lx / 100 * cw, byy = 60 + ly / 100 * ch, bw = lw / 100 * cw, bh = lh / 100 * ch, k = Math.min(bw / b.width, bh / b.height);
+  for (const [sl, p] of Object.entries(by)) { const [lx, ly, lw, lh] = L[sl], b = await createImageBitmap(await imgOf(p)), bx = pad + lx / 100 * cw, byy = 60 + ly / 100 * ch, bw = lw / 100 * cw, bh = lh / 100 * ch, k = Math.min(bw / b.width, bh / b.height);
     x.shadowColor = 'rgba(0,0,0,.22)'; x.shadowBlur = 18; x.shadowOffsetY = 10; x.drawImage(b, bx + (bw - b.width * k) / 2, byy + (bh - b.height * k) / 2, b.width * k, b.height * k); }
   x.shadowColor = 'transparent'; const [title] = vibeOf({ items: ps, mode: bestMode(ps)?.mode });
   x.fillStyle = '#ffffff'; x.fillRect(0, H - 190, W, 190); x.fillStyle = '#141414'; x.font = '500 64px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText(title[0].toUpperCase() + title.slice(1), pad, H - 80);
@@ -798,7 +828,7 @@ function patReview() {
   const it = S.items.find(ask); if (!it) { sheet.close(); return toast('All patterns checked'); }
   const left = S.items.filter(ask).length;
   showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${left} left · tap the one that fits</div><h2>Plain or printed?</h2></div>${closeBtn}</div>
-    <div class="revimg"><img src="${srcFull(it)}" alt="${esc(it.name)}"></div><b class="revname">${esc(it.name)}</b>
+    <div class="revimg"><img data-full="${it.id}" src="${srcFull(it)}" alt="${esc(it.name)}"></div><b class="revname">${esc(it.name)}</b>
     <div class="quick">${[['solid', 'Solid (plain)'], ['logo', 'Small logo'], ['graphic', 'Big graphic'], ['allover', 'All-over pattern (stripes, camo, plaid)']].map(([v, l]) => `<button class="btn ${v === patternOf(it) ? '' : 'ghost'}" data-patset="${it.id}|${v}">${l}</button>`).join('')}</div></div>`);
 }
 function openWhy() {
@@ -1066,7 +1096,7 @@ function meView() {
     <p class="sub">Copies your closet and your style rules as text. Paste it into a Claude chat on any device and ask what to wear.</p>
     <button class="btn ghost sm" data-action="copyclaude">Copy closet for Claude</button>
     <p class="mono version">Version ${VERSION}${S.storage ? ` · using ${S.storage}` : ''}</p>
-    <a class="btn ghost wide" href="v2/">Open the previous version (v2.4)</a><p class="sub center">Same closet, same data. Use it if something here breaks.</p>`;
+    `;
 }
 
 function progressView() {
@@ -1151,7 +1181,7 @@ const accHtml = it => { const acc = (it.accents ?? []).filter(a => keepAcc(it, a
 function openSheet(id) {
   const it = byId(id), left = S.items.filter(i => i.review).length;
   const n = S.items.filter(i => i.review).indexOf(it) + 1;
-  showSheet(`<div class="hero spot"><i class="grab" aria-hidden="true"></i><button type="button" class="zoomer" data-zoom="${it.id}" aria-label="See the photo full screen"><img src="${srcFull(it)}" alt=""></button>${closeBtn}</div>
+  showSheet(`<div class="hero spot"><i class="grab" aria-hidden="true"></i><button type="button" class="zoomer" data-zoom="${it.id}" aria-label="See the photo full screen"><img data-full="${it.id}" src="${srcFull(it)}" alt=""></button>${closeBtn}</div>
   <form>
     <div class="phead"><h2 class="display pname">${esc(it.name)}</h2>
       <div class="sees" aria-label="What your stylist sees">${[['color', `<i style="background:${it.color}"></i>${colorName(it.color)}`], ['material', it.material ?? 'material?'],
@@ -1299,7 +1329,7 @@ async function editPhoto(it) {
     <label class="light">Contrast<input id="ek" type="range" min="70" max="140" value="100"></label>
     <label class="light">Straighten<input id="er" type="range" min="-15" max="15" step="0.5" value="0"></label>
     <div class="row"><button class="btn ghost" data-action="close">Cancel</button><button class="btn" data-action="editsave">Save</button></div></div>`);
-  const b = await createImageBitmap(it.img), c = document.getElementById('ec'), diag = Math.ceil(Math.hypot(b.width, b.height));
+  const b = await createImageBitmap(await imgOf(it)), c = document.getElementById('ec'), diag = Math.ceil(Math.hypot(b.width, b.height));
   Object.assign(c, { width: diag, height: diag });
   const draw = () => { const x = c.getContext('2d'), v = id => +document.getElementById(id).value; x.clearRect(0, 0, diag, diag); x.save();
     x.filter = `brightness(${v('eb')}%) contrast(${v('ek')}%)`; x.translate(diag / 2, diag / 2); x.rotate(v('er') * Math.PI / 180); x.drawImage(b, -b.width / 2, -b.height / 2); x.restore(); };
@@ -1310,7 +1340,7 @@ async function touchUp(it) {
   showSheet(`<div class="touch"><div class="pickhead"><div><div class="eyebrow">${esc(it.name)}</div><h2>Touch up</h2></div>${closeBtn}</div>
     <canvas id="tc"></canvas><p class="sub">Tap the background to erase that whole area. Drag to erase by hand.</p>
     <div class="row3"><button class="btn ghost" data-touch="undo">Undo</button><button class="btn ghost" data-touch="reset">Reset</button><button class="btn" data-touch="save">Save</button></div></div>`);
-  const c = document.getElementById('tc'), x = c.getContext('2d'), bmp = await createImageBitmap(it.img);
+  const c = document.getElementById('tc'), x = c.getContext('2d'), bmp = await createImageBitmap(await imgOf(it));
   Object.assign(c, { width: bmp.width, height: bmp.height }); x.drawImage(bmp, 0, 0);
   touch = { it, c, x, bmp, undo: [] };
   let last = null;
@@ -1344,7 +1374,7 @@ async function touchAct(a) {
 const toDataUrl = b => new Promise((res, rej) => { const f = new FileReader(); f.onload = () => res(f.result); f.onerror = () => rej(f.error); f.readAsDataURL(b); });
 async function exportBackup() {
   const full = S.profile?.fullBackup; // originals (for Re-cut) only when asked: they ~triple the file
-  const items = await Promise.all(S.items.filter(i => !S.backupSince || (i.updatedAt ?? i.createdAt ?? 0) > S.backupSince).map(async ({ photo, thumb, ...i }) => ({ ...i, img: await toDataUrl(i.img), ...(full && photo ? { photo: await toDataUrl(photo) } : {}) })));
+  const items = await Promise.all(S.items.filter(i => !S.backupSince || (i.updatedAt ?? i.createdAt ?? 0) > S.backupSince).map(async it => { const { photo, thumb, img, ...i } = it, o = full && await origOf(it); return { ...i, img: await toDataUrl(img ?? await loadPic('full', it.id)), ...(o ? { photo: await toDataUrl(o) } : {}) }; }));
   const inspo = await Promise.all(S.inspo.map(async i => ({ ...i, img: await toDataUrl(i.img) })));
   const log = await Promise.all(S.log.map(async l => hasPic(l) ? { ...l, selfie: await toDataUrl(l.selfie) } : (({ selfie, ...r }) => r)(l)));
   const blob = new Blob([JSON.stringify({ app: 'closet', v: 3, items, outfits: S.saved, log, wish: S.wish, colls: S.colls, inspo, profile: S.profile, history: S.history, plan: S.plan })], { type: 'application/json' });
@@ -1395,7 +1425,7 @@ async function importBackup(file) {
     // Repair: a piece that's here but whose photo this phone lost gets the photo back from the backup (everything else stays as it is here)
     let fixed = 0;
     for (const i of b.items) { const here = str(i?.id) && haveId.has(i.id) && byId(i.id); if (!here || !pic(i.img)) continue;
-      let ok = true; try { if (!(here.img instanceof Blob) || !here.img.size) throw 0; (await createImageBitmap(here.img)).close?.(); } catch { ok = false; }
+      let ok = true; try { const b = await imgOf(here); if (!b?.size) throw 0; (await createImageBitmap(b)).close?.(); } catch { ok = false; }
       if (ok) continue;
       here.img = await blob(i.img); if (pic(i.photo)) here.photo = await blob(i.photo); delete here.broken; delete here.thumb; await putQuiet('items', here); fixed++; }
     for (const i of items) { const { photo, ...rest } = i; await put('items', { ...rest, name: String(i.name ?? 'Item'), img: await blob(i.img), ...(pic(photo) ? { photo: await blob(photo) } : {}) }); }
@@ -1599,7 +1629,8 @@ document.addEventListener('click', async e => {
     if (k === 'touch') { delete it.person; await put('items', it); return touchUp(it); }
     if (k === 'pattern') { it.pattern = v; it.patterned = v === 'graphic' || v === 'allover'; await put('items', it); S.ideas = null; S.deck = null; const n = S.items.find(issueOf); if (n) openSheet(n.id); else sheet.close(); return toast('Marked as solid'); }
     if (k === 'photo') { replacing = id; sheet.close(); return replaceInput.click(); }
-    if (k === 'dup') { const gone = it; await del('items', id); S.items = S.items.filter(i => i.id !== id); const n = S.items.find(dupOf); if (n) openSheet(n.id); else sheet.close(); render(); return toast('Deleted the duplicate', { label: 'Undo', fn: async () => { await put('items', gone); S.items.push(gone); render(); } }); }
+    if (k === 'dup') { const keep = byId(v); if (keep) await mergeInto(it, keep); else { await del('items', id); S.items = S.items.filter(i => i !== it); }
+      render(); const n = S.items.find(dupOf); if (n) openSheet(n.id); else sheet.close(); return toast(keep ? `Merged into your other "${keep.name}"` : 'Deleted the duplicate'); }
     if (k === 'turn') { for (let i = 0; i < +v; i++) await rotate(it); delete it.turnHint; } else it[k] = k === 'fit' ? +v : v; await put('items', it); S.ideas = null; S.cs = {}; toast('Fixed'); const n = S.items.find(issueOf); if (n) openSheet(n.id); else { sheet.close(); } }
   else if (ds.tagok) { const it = byId(ds.tagok); it.tagOk = true; it.dupOk = true; delete it.turnHint; await put('items', it); const n = S.items.find(issueOf); if (n) openSheet(n.id); else openSheet(it.id); }
   else if ('favs' in ds) { if (sheet.open) { sheet.onclose = null; sheet.close(); } S.view = 'outfits'; S.tab = 'saved'; render(); scrollTo(0, 0); }
@@ -1645,7 +1676,7 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'exportnew') { S.backupSince = S.profile.lastBackup; try { await exportBackup(); } finally { S.backupSince = null; } }
   else if (ds.action === 'copyclaude') copyForClaude();
   else if (ds.askclaude) copyForClaude(ds.askclaude);
-  else if (ds.zoom) { const lb = document.createElement('dialog'); lb.className = 'lightbox'; lb.innerHTML = `<img src="${srcFull(byId(ds.zoom))}" alt="">`; document.body.append(lb); lb.onclick = () => { lb.close(); lb.remove(); }; lb.showModal(); }
+  else if (ds.zoom) { const lb = document.createElement('dialog'); lb.className = 'lightbox'; lb.innerHTML = `<img data-full="${ds.zoom}" src="${srcFull(byId(ds.zoom))}" alt="">`; document.body.append(lb); lb.onclick = () => { lb.close(); lb.remove(); }; lb.showModal(); }
   else if (ds.action === 'selllist') { const sell = S.items.filter(i => !i.stored && Date.now() - Math.max(i.lastWorn ?? 0, i.createdAt ?? 0) > 180 * 864e5);
     const text = sell.map(i => `${i.brand ? i.brand + ' ' : ''}${i.name} · ${colorName(i.color)} ${i.kind || i.cat}${i.fit != null && i.cat !== 'Accessories' ? ` · ${(FITS[i.cat] ?? FITS.default)[i.fit ?? 1].toLowerCase()} fit` : ''}${i.price ? ` · paid ${money(i.price)}` : ''}`).join('\n');
     try { await navigator.clipboard.writeText(text); toast(`Copied ${sell.length} listings`); } catch { showSheet(`<div class="pad"><div class="pickhead"><h2>Copy this</h2>${closeBtn}</div><textarea class="copybox" readonly>${esc(text)}</textarea></div>`); } }
@@ -1698,7 +1729,7 @@ document.addEventListener('click', async e => {
   else if (ds.replace) { replacing = ds.replace; replaceInput.click(); }
   else if (ds.recut) {
     const it = byId(ds.recut); t.disabled = true; toast('Removing background…');
-    if (!it.photo) Object.assign(it, { photo: it.img, turns: 0 }); // imported pieces have no original: start from the picture as it is (already turned)
+    it.photo = await origOf(it); if (!it.photo) Object.assign(it, { photo: await imgOf(it), turns: 0 }); // imported pieces have no original: start from the picture as it is (already turned)
     try { const { img, accents } = await cutout(it.photo, undefined, it); Object.assign(it, { img: await turnBlob(img, it.turns ?? 0), accents }); resetSrc(it); await put('items', it); S.ideas = null; if (sheet.open) openSheet(it.id); toast('Background removed'); }
     catch (e) { console.warn(e); t.disabled = false; toast("Couldn't remove the background. Check your connection and try again"); }
   }
@@ -1809,7 +1840,7 @@ async function backfillOrient() {
   let n = 0;
   for (const it of S.items.filter(i => !i.orientChecked && ['Tops', 'Layers', 'Bottoms'].includes(i.cat) && !/short/i.test(i.kind ?? ''))) {
     try {
-      const bmp = await createImageBitmap(it.img), k = Math.min(1, 200 / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+      const bmp = await createImageBitmap(await imgOf(it)), k = Math.min(1, 200 / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
       const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), x = c.getContext('2d'); x.drawImage(bmp, 0, 0, w, h);
       const q = orient(x.getImageData(0, 0, w, h).data, w, h, it.cat); if (q) { it.turnHint = q; n++; }
       it.orientChecked = true; await put('items', it);
@@ -1817,19 +1848,20 @@ async function backfillOrient() {
   }
   if (n) render(); // swap any "?" already on screen for the missing-photo outline
 }
-// Photos that won't decode (a bad import, a cleared blob) get flagged so they show up in "Tags that don't add up".
+// Once (v5.1): each piece's photo moves out of its record into its own store, so the app opens on tags + small previews alone.
+// Then: a piece with no photo on disk is flagged (it shows in "Tags that don't add up"), and photos of deleted pieces are cleared.
 async function checkPhotos() {
-  let n = 0;
-  const convert = !S.profile?.bytesStored2;
-  for (const it of S.items) { try { if (!(it.img instanceof Blob) || !it.img.size) throw 0; (await createImageBitmap(it.img)).close?.(); if (convert) await putQuiet('items', it); } catch { it.broken = true; n++; } }
-  if (convert && S.profile && !n) { S.profile.bytesStored2 = true; await put('profile', S.profile); } // every photo now saved as bytes; any failure retries next time
+  for (const it of S.items) if (it.photo || it.img && !onDisk.has(it.img)) try { if (!it.img?.size) throw 0; await putQuiet('items', it); if (it.thumb) delete it.img; } catch (e) { console.warn(e); }
+  const ids = new Set(S.items.map(i => i.id)), full = new Set(await store('full', 'readonly', s => s.getAllKeys()));
+  for (const name of ['full', 'orig']) for (const k of name === 'full' ? full : await store(name, 'readonly', s => s.getAllKeys())) if (!ids.has(k)) await del(name, k);
+  let n = 0; for (const it of S.items) if (!it.img && !full.has(it.id)) { it.broken = true; n++; }
   if (n && S.view === 'closet') render();
 }
 async function backfillAccents() {
   let n = 0;
   for (const it of S.items.filter(i => !i.accents)) {
     try {
-      const bmp = await createImageBitmap(it.img), k = Math.min(1, 240 / Math.max(bmp.width, bmp.height));
+      const bmp = await createImageBitmap(await imgOf(it)), k = Math.min(1, 240 / Math.max(bmp.width, bmp.height));
       const c = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) }), x = c.getContext('2d');
       x.drawImage(bmp, 0, 0, c.width, c.height); const d = x.getImageData(0, 0, c.width, c.height).data, px = [];
       for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 220) px.push([d[i], d[i + 1], d[i + 2]]);
@@ -1850,6 +1882,11 @@ async function fixKinds() {
   S.profile = { k: 'me', ...S.profile, kindsFixed: true }; await put('profile', S.profile);
   if (n) { S.deck = null; toast(`Fixed the type on ${n} piece${n > 1 ? 's' : ''} from their names`); render(); }
 }
+(async () => { const left = (await all('queue')).sort((a, b) => a.at - b.at), bad = left.filter(q => q.tries >= 2);
+  for (const q of bad) await del('queue', q.id);
+  const go = left.filter(q => q.tries < 2).map(q => ({ id: q.id, file: q.file, name: q.name, at: q.at, tries: q.tries, saved: true, url: URL.createObjectURL(q.file), status: 'Waiting…' }));
+  if (bad.length) toast(`Skipped ${bad.length} photo${bad.length > 1 ? 's' : ''} that kept stopping the upload`);
+  if (go.length) { toast(`Picking up ${go.length} photo${go.length > 1 ? 's' : ''} where you left off`); addFiles([], go); } })().catch(e => console.warn(e));
 backfillAccents().then(backfillOrient).then(checkPhotos).then(fixKinds).then(backfillFp);
 window.__appReady = true; // the safety net above stays quiet
 navigator.serviceWorker?.register('sw.js').catch(e => console.warn(e)); // opens with no signal once installed (sw.js)

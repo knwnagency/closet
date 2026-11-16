@@ -1,6 +1,6 @@
 // Offline support. The app's own files: network first (so updates show up), this cache when there's no signal.
 // transformers.js + its wasm (versioned URLs on jsdelivr): cache first. The AI models cache themselves (transformers.js browser cache).
-const CACHE = 'closet-v26', SHELL = ['./', 'index.html', 'styles.css', 'match.js', 'style.js', 'cutout.js', 'progress.js', 'manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'version.txt', 'gaps-worker.js'];
+const CACHE = 'closet-v27', SHELL = ['./', 'index.html', 'styles.css', 'match.js', 'style.js', 'cutout.js', 'progress.js', 'manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'version.txt', 'gaps-worker.js'];
 const keep = (req, res) => { if (res.ok && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; };
 
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
