@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v5.2'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v5.3'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -333,7 +333,11 @@ async function prep(blob, raw = false, tags = null) {
     const inset = Math.round(0.04 * Math.max(w, h)), ring = [];
     for (let x = inset; x < w - inset; x++) ring.push(inset * w + x, (h - 1 - inset) * w + x);
     for (let y = inset; y < h - inset; y++) ring.push(y * w + inset, y * w + w - 1 - inset);
-    if (kept < min || ring.filter(q => d[q * 4 + 3] > 128).length / ring.length > 0.35) {
+    // A piece that fills the frame (a product shot cropped at the sleeves) also covers that ring, but the model clears the corners;
+    // a kept mat runs into them. So the ring only counts when 2+ corners are still solid.
+    const cs = Math.max(4, Math.round(0.06 * Math.min(w, h))), solid = (cx, cy) => { let on = 0; for (let y = cy; y < cy + cs; y++) for (let x = cx; x < cx + cs; x++) on += d[(y * w + x) * 4 + 3] > 128; return on > cs * cs / 2; };
+    const matKept = [solid(0, 0), solid(w - cs, 0), solid(0, h - cs), solid(w - cs, h - cs)].filter(Boolean).length >= 2;
+    if (kept < min || matKept && ring.filter(q => d[q * 4 + 3] > 128).length / ring.length > 0.35) {
       const was = d.filter((_, i) => i % 4 === 3);
       for (let p = 3; p < d.length; p += 4) d[p] = 255;
       keyOut(d, w, h);
