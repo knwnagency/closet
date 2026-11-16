@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v4.7'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v4.8'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k']];
@@ -140,7 +140,8 @@ const wornText = it => stale(it) ? "haven't worn in a while" : '';
 const KIND_ALIAS = { 't-shirt': /\btees?\b|\bt-?shirt/i, sweater: /sweater|sweatshirt|crewneck|knit/i, 'button-up shirt': /button|oxford|dress shirt/i, sweatpants: /sweat|jogger|track ?pant/i, 'cargo pants': /cargo/i, 'baseball cap': /\bcap\b|fitted|snapback/i, 'chain necklace': /chain|necklace|pendant/i, sneakers: /sneaker|dunk|jordan|yeezy|air force|trainer/i };
 const guessKind = it => Object.keys(KINDS).filter(k => KINDS[k] === it.cat).find(k => (KIND_ALIAS[k] ?? new RegExp(`\\b${k.split(/[\s-]/).pop()}`, 'i')).test(it.name));
 // Tags that contradict each other (AI guesses): a "denim jacket" filed under Tops, Air Force 1s called sleek. "It's right" silences it.
-const issueOf = it => { if (it.review) return null;
+const issueOf = it => {
+  const dbl = dupOf(it); if (dbl) return { text: `Same photo as your other "${dbl.name}". Added twice`, fix: 'dup:1', label: 'Delete this one' }; if (it.review) return null;
   if (PRINTABLE.includes(it.cat) && (patternOf(it) === 'graphic' || patternOf(it) === 'allover') && !it.accents?.length && !it.tagOk) return { text: 'Tagged as a print, but no print colors were found. Plain?', fix: 'pattern:solid', label: 'Mark as solid' };
   if (it.person && !it.tagOk) return { text: 'A person is in this photo, so their legs, arms or shoes come along. Erase them, or use a photo of just the piece.', fix: 'touch:1', label: 'Touch up' };
   if (it.broken) return { text: "This photo is missing on this phone. Restore it from a backup (Me › Restore backup), or take a new one.", fix: 'photo:1', label: 'New photo' };
@@ -374,7 +375,15 @@ async function fpOf(blob) {
 const fpDist = (a, b) => { let n = 0; for (let i = 0; i < a.length; i++) n += a[i] !== b[i]; return n; };
 const FP_SAME = 6; // tested on 174 real photos: same photo re-saved ≤4 bits, different shots ≥9
 let fpDone;
-const backfillFp = () => fpDone ??= (async () => { for (const it of S.items) if (!it.fp && it.photo instanceof Blob) try { it.fp = await fpOf(it.photo); await putQuiet('items', it); } catch (e) { console.warn(e); } })();
+// cfp = fingerprint of the cut-out: same garment cut twice ≈ 0 bits apart, different pieces ≥64 (tested on 69 pieces).
+// Catches doubles the photo check can't: two screenshots of the same product, or pieces restored without their photo.
+const CFP_SAME = 16;
+const backfillFp = () => fpDone ??= (async () => { for (const it of S.items) {
+  if (!it.fp && it.photo instanceof Blob) try { it.fp = await fpOf(it.photo); await putQuiet('items', it); } catch (e) { console.warn(e); }
+  if (!it.cfp && it.img instanceof Blob) try { it.cfp = await fpOf(it.img); await putQuiet('items', it); } catch (e) { console.warn(e); } }
+  if (S.items.some(dupOf)) render(); })();
+// the newer of two pieces with the same cut-out (the older one keeps your tag edits)
+const dupOf = it => !it.dupOk && it.cfp && S.items.find(o => o !== it && o.cfp && ((o.createdAt ?? 0) < (it.createdAt ?? 0) || ((o.createdAt ?? 0) === (it.createdAt ?? 0) && o.id < it.id)) && fpDist(o.cfp, it.cfp) <= CFP_SAME);
 
 let running = false, skipped = 0, added = 0;
 async function addFiles(files) {
@@ -391,10 +400,11 @@ async function addOne(j) {
   try {
     const small = await shrink(j.file), fp = await fpOf(small);
     if (S.items.some(i => i.fp && fpDist(i.fp, fp) <= FP_SAME)) { skipped++; return; }
-    const { img, color, accents, photo, tags, hard, turn } = await cutout(small, status);
+    const { img, color, accents, photo, tags, hard, turn } = await cutout(small, status), cfp = await fpOf(img);
+    if (S.items.some(i => i.cfp && fpDist(i.cfp, cfp) <= CFP_SAME)) { skipped++; return; }
     if (tags && (tags.pattern === 'graphic' || tags.pattern === 'allover') && !accents?.length) Object.assign(tags, { pattern: 'solid', patterned: false }); // no print colors found: a blank tee, not a print
     if (hard) toast('Tricky background. Light clothes cut out best on a dark, plain surface');
-    const item = { id: j.id, img, photo, fp, color, accents, orientChecked: true, ...(turn ? { turnHint: turn } : {}), ...(tags ?? { cat: 'Tops', name: 'New item', kind: '', vibe: 'casual', patterned: false, fit: 1 }), review: true, wears: 0, lastWorn: null, createdAt: Date.now() };
+    const item = { id: j.id, img, photo, fp, cfp, color, accents, orientChecked: true, ...(turn ? { turnHint: turn } : {}), ...(tags ?? { cat: 'Tops', name: 'New item', kind: '', vibe: 'casual', patterned: false, fit: 1 }), review: true, wears: 0, lastWorn: null, createdAt: Date.now() };
     await put('items', item); S.items.push(item); S.ideas = null; added++;
     if (S.coll) { const c = collById(S.coll); c.ids.push(item.id); await put('colls', c); toast(`Added to ${c.name}`); } // adding while inside a collection files it there too
   } catch (e) { console.warn(e); toast(`Couldn't read ${j.file.name}. Try a JPG`); } // one bad file never stops the batch
@@ -486,7 +496,8 @@ function closetView() {
   const toReview = S.items.filter(i => i.review).length;
   const best = !c && !toReview && !S.pending.length && S.items.length >= 3 && getGaps()?.find(g => !isNeutral(g.ghost.color));
   return head(`${S.items.length} pieces`, 'Closet') + `
-    ${[toReview && `<button class="nudge glass" data-action="review"><div><span class="mono">AI guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>`,
+    ${[S.items.some(dupOf) && `<button class="nudge glass" data-action="doubles"><div><span class="mono">Same photo added twice</span><b>Remove ${S.items.filter(dupOf).length} double${S.items.filter(dupOf).length > 1 ? 's' : ''}</b></div><span class="plus">Review →</span></button>`,
+    toReview && `<button class="nudge glass" data-action="review"><div><span class="mono">AI guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>`,
     S.items.some(i => i.broken) && `<button class="nudge glass" data-action="import"><div><span class="mono">This phone lost ${S.items.filter(i => i.broken).length} photos</span><b>Restore them from a backup</b></div><span class="plus">Pick file →</span></button>`,
     S.items.some(i => !i.pattern && PRINTABLE.includes(i.cat)) && `<button class="nudge glass" data-action="patreview"><div><span class="mono">Quick check · makes print warnings accurate</span><b>Is it plain or printed? ${S.items.filter(i => !i.pattern && PRINTABLE.includes(i.cat)).length} pieces</b></div><span class="plus">Start →</span></button>`,
     issues && `<button class="nudge glass" data-action="fixtags"><div><span class="mono">Tags that don't add up</span><b>Check ${issues} piece${issues > 1 ? 's' : ''}</b></div><span class="plus">Fix →</span></button>`,
@@ -1581,11 +1592,12 @@ document.addEventListener('click', async e => {
   }
   else if (ds.action === 'allclean') { for (const it of S.items.filter(i => i.dirty)) { delete it.dirty; await put('items', it); } S.ideas = null; toast('All clean'); render(); }
   else if (ds.action === 'fixtags') { const n = S.items.find(issueOf); if (n) openSheet(n.id); }
+  else if (ds.action === 'doubles') { const n = S.items.find(dupOf); if (n) openSheet(n.id); }
   else if (ds.fixtag) { const [id, kv] = ds.fixtag.split('|'), it = byId(id), [k, v] = kv.split(':');
     if (k === 'touch') { delete it.person; await put('items', it); return touchUp(it); }
     if (k === 'pattern') { it.pattern = v; it.patterned = v === 'graphic' || v === 'allover'; await put('items', it); S.ideas = null; S.deck = null; const n = S.items.find(issueOf); if (n) openSheet(n.id); else sheet.close(); return toast('Marked as solid'); }
     if (k === 'photo') { replacing = id; sheet.close(); return replaceInput.click(); }
-    if (k === 'dup') { const gone = it; await del('items', id); S.items = S.items.filter(i => i.id !== id); sheet.close(); render(); return toast('Deleted the duplicate', { label: 'Undo', fn: async () => { await put('items', gone); S.items.push(gone); render(); } }); }
+    if (k === 'dup') { const gone = it; await del('items', id); S.items = S.items.filter(i => i.id !== id); const n = S.items.find(dupOf); if (n) openSheet(n.id); else sheet.close(); render(); return toast('Deleted the duplicate', { label: 'Undo', fn: async () => { await put('items', gone); S.items.push(gone); render(); } }); }
     if (k === 'turn') { for (let i = 0; i < +v; i++) await rotate(it); delete it.turnHint; } else it[k] = k === 'fit' ? +v : v; await put('items', it); S.ideas = null; S.cs = {}; toast('Fixed'); const n = S.items.find(issueOf); if (n) openSheet(n.id); else { sheet.close(); } }
   else if (ds.tagok) { const it = byId(ds.tagok); it.tagOk = true; it.dupOk = true; delete it.turnHint; await put('items', it); const n = S.items.find(issueOf); if (n) openSheet(n.id); else openSheet(it.id); }
   else if ('favs' in ds) { if (sheet.open) { sheet.onclose = null; sheet.close(); } S.view = 'outfits'; S.tab = 'saved'; render(); scrollTo(0, 0); }
