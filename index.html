@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v5.3'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v5.4'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -1195,6 +1195,8 @@ function openSheet(id) {
     ${it.review ? `<div class="review"><p>The AI tagged it as above. Right?</p><div class="row"><button type="button" class="btn go" data-confirm="${it.id}">Looks right${left > 1 ? ' · next' : ''}</button><button type="button" class="btn ghost" data-action="opendetails">Fix tags</button></div></div>` : ''}
     ${issueOf(it) ? `<div class="issue"><span>${esc(issueOf(it).text)}</span><span class="row"><button type="button" class="btn sm" data-fixtag="${it.id}|${issueOf(it).fix}">${issueOf(it).label}</button><button type="button" class="btn ghost sm" data-tagok="${it.id}">It's right</button></span></div>` : ''}
     <div class="photofix"><span class="mono">Fix the photo</span><button type="button" class="tag o" data-replace="${it.id}">${ic('camera')} New photo</button><button type="button" class="tag o" data-recut="${it.id}">Remove background</button><button type="button" class="tag o" data-touchup="${it.id}">Erase</button></div>
+    <div class="photofix rate"><span class="mono">Suggest it</span>${[[-1, 'Less'], [0, 'Normal'], [1, 'More']].map(([v, l]) => `<button type="button" class="tag o${(it.rate ?? 0) === v ? ' on' : ''}" aria-pressed="${(it.rate ?? 0) === v}" data-rate="${it.id}|${v}">${l}</button>`).join('')}
+      <p class="sub">${it.rate < 0 ? 'Saved for special occasions: at most one look at a time, unless you pick it yourself.' : it.rate > 0 ? 'Shows up in more looks, so you wear it more.' : 'Less keeps it for special occasions. More puts it in more looks.'}</p></div>
     <div class="pieceacts"><button type="button" class="btn full" data-made="${it.id}">See what you can make with this</button>
       <div class="row"><button type="button" class="btn ghost" data-buildwith="${it.id}">Build with it</button><button type="button" class="btn ghost" data-wheel="${it.id}">Match color</button></div></div>
     <div id="made"></div>
@@ -1731,6 +1733,7 @@ document.addEventListener('click', async e => {
   else if (ds.wearpick) { const [slot, id] = ds.wearpick.split(':'); sheet.onclose = null; sheet.close(); S.dropped = slot; setBuild([...S.build.filter(p => !SLOTS[slot](p)), byId(id)]); }
   else if (ds.rotate) { const it = byId(ds.rotate); await rotate(it); const im = sheet.querySelector('.hero img'); if (im) im.src = src(it); S.ideas = null; }
   else if (ds.replace) { replacing = ds.replace; replaceInput.click(); }
+  else if (ds.rate) { const [id, v] = ds.rate.split('|'), it = byId(id); if (+v) it.rate = +v; else delete it.rate; await put('items', it); S.ideas = null; S.deck = null; S.cs = {}; openSheet(id); }
   else if (ds.recut) {
     const it = byId(ds.recut); t.disabled = true; toast('Removing background…');
     it.photo = await origOf(it); if (!it.photo) Object.assign(it, { photo: await imgOf(it), turns: 0 }); // imported pieces have no original: start from the picture as it is (already turned)

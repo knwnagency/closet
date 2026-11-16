@@ -360,6 +360,12 @@ console.log('variety ok');
   const closet = [boxy, it('t2', 'Tops', '#7d7b78', { kind: 't-shirt' }), wide, it('p2', 'Bottoms', '#1e2a45', { kind: 'jeans' }), chunky, it('k2', 'Shoes', '#151515', { kind: 'boots' })];
   const pos = m.possibilities(closet, [wide, chunky]); assert.ok(pos.length >= 1 && pos.every(o => o.items.includes(wide) && o.items.includes(chunky)), 'possibilities keep every picked piece');
   const liked = m.today(closet, { n: 3, like: [boxy, wide] }); assert.ok(liked.length, 'today with more-like-this'); }
+{ const m = await import('./match.js'), it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, vibe: 'casual', ...x });
+  const tops = ['#f6f5f1', '#151515', '#7d7b78', '#c9c7c3', '#1e2a45', '#d8c7a6'].map((c, i) => it('t' + i, 'Tops', c, { kind: 't-shirt' }));
+  const boots = it('chelsea', 'Shoes', '#151515', { kind: 'boots', name: 'Chelsea boots' }), closet = [...tops, it('b1', 'Bottoms', '#151515', { kind: 'jeans' }), it('b2', 'Bottoms', '#1e2a45', { kind: 'trousers' }), boots, it('s1', 'Shoes', '#f6f5f1', { kind: 'sneakers' }), it('s2', 'Shoes', '#7d7b78', { kind: 'sneakers' })];
+  const count = () => { let n = 0; for (let k = 0; k < 20; k++) n += m.today(closet, { n: 5 }).filter(o => o.items.includes(boots)).length; return n; };
+  const before = count(); boots.rate = -1; const after = count(); boots.rate = 1; const more = count();
+  assert.ok(after <= 20 && after < before, `suggest less: boots in ${before} → ${after} of 100 cards`); assert.ok(more >= before, `suggest more: ${before} → ${more}`); }
 console.log('v3 rules ok');
 { const c = await import('./cutout.js'), w = 10, h = 10, d = new Uint8ClampedArray(w * h * 4);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) d[(y * w + x) * 4 + 3] = x < 5 ? 255 : 0;

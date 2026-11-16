@@ -344,6 +344,8 @@ const BRAND_FITS = [[/essentials|fear of god|\bfog\b|gallery dept|balenciaga|vet
 export const knownFit = p => p.cat === 'Shoes' ? SHOE_FITS.find(([re]) => re.test(`${p.name ?? ''}`))?.[1] ?? null
   : (p.cat === 'Tops' || p.cat === 'Layers') && p.fit !== 3 ? BRAND_FITS.find(([re]) => re.test(`${p.brand ?? ''} ${p.name ?? ''}`))?.[1] ?? null : null;
 
+// Suggest it less / more (piece page): rate -1 = special occasion only (boots for a wedding), +1 = pieces you're trying to wear.
+const pull = ps => ps.reduce((t, p) => t + (p.rate > 0 ? 0.6 : p.rate < 0 ? -2.5 : 0), 0);
 // Returns { score, note } or null. Color mode decides if it's allowed; proportions can veto or boost.
 export function scoreOutfit(ps, mode, opts = {}) {
   // A cap or shoes repeating a color from the print up top belongs to that print's palette, so the color rule judges the fit without them.
@@ -355,7 +357,7 @@ export function scoreOutfit(ps, mode, opts = {}) {
   const finish = Math.min(2, ps.filter(p => p.cat === 'Accessories').length) * 0.3; // a hat / chain finishes the look
   const st = style(ps), e = ech[0], good = st.find(([v]) => v > 0); // the caption says what works; warnings go to the builder's tip (fixTip)
   const note = e ? `${e.p.name} picks up the ${colorName(e.p.color)} in the ${e.from.name}` : good ? good[1] : pr.note; // never pitches a look with its flaw
-  return { score: base + pr.score + finish + Math.min(2, ech.length) * 0.7 + st.reduce((t, [x]) => t + x, 0) + tb, warn: pr.score < 0, note: tb >= 1 && !e ? `${note} · like looks you've saved` : note };
+  return { score: base + pr.score + finish + pull(ps) + Math.min(2, ech.length) * 0.7 + st.reduce((t, [x]) => t + x, 0) + tb, warn: pr.score < 0, note: tb >= 1 && !e ? `${note} · like looks you've saved` : note };
 }
 
 // Graphic/print colors: an item's `accents` are the colors in it besides its base color (the red logo on a black tee).
@@ -468,7 +470,7 @@ export function generate(items, mode, { anchor, fixed = [], palette, inspo, n = 
   // Greedy pick with a reuse penalty, so one great pair of cargos doesn't star in every idea.
   const left = [...seen.values()], used = new Map(), out = [];
   const cap = Math.max(2, Math.ceil(n / 4)); // no piece in more than ~a quarter of the ideas (the same cap + chain in every fit)
-  const reuse = o => o.items.reduce((t, p) => { const u = used.get(p.id) ?? 0; return t + u + (u >= cap ? 5 : 0); }, 0);
+  const reuse = o => o.items.reduce((t, p) => { const u = used.get(p.id) ?? 0; return t + u + (u >= (p.rate < 0 ? 1 : cap) ? 5 : 0); }, 0); // "less" pieces: one idea at most
   while (out.length < n && left.length) {
     let bi = 0;
     for (let i = 1; i < left.length; i++) if (left[i].score - 0.45 * reuse(left[i]) > left[bi].score - 0.45 * reuse(left[bi])) bi = i;
@@ -494,7 +496,7 @@ function varied(list, n, base = { Tops: 2, Layers: 2, Bottoms: 2, Shoes: 2, Acce
     if (out.length === n) return out;
     if (out.includes(o)) continue;
     const main = o.items.filter(p => p !== o.anchor);
-    if (cap && main.some(p => (used.get(p.id) ?? 0) >= (cap[p.cat] ?? 2))) continue;
+    if (cap && main.some(p => (used.get(p.id) ?? 0) >= (p.rate < 0 ? 1 : cap[p.cat] ?? 2))) continue; // "less" pieces: one card at most
     out.push(o); main.forEach(p => used.set(p.id, (used.get(p.id) ?? 0) + 1));
   }
   return out;
@@ -540,7 +542,7 @@ export function explain(ps) {
   const rows = [[`Color rule: ${MODES[b.mode].label}`, base], ...[...proportion(ps).list, ...style(ps)].map(([v, l]) => [l, v]),
     ...ech.slice(0, 2).map(e => [`${e.p.name} picks up the ${colorName(e.p.color)} in the ${e.from.name}`, 0.7]),
     [`Finished with ${ps.filter(p => p.cat === 'Accessories').length} accessor${ps.filter(p => p.cat === 'Accessories').length === 1 ? 'y' : 'ies'}`, Math.min(2, ps.filter(p => p.cat === 'Accessories').length) * 0.3],
-    [tb > 0 ? 'You wear these together' : 'Close to looks you passed on', tb]];
+    [tb > 0 ? 'You wear these together' : 'Close to looks you passed on', tb], [pull(ps) > 0 ? 'Pieces you want to wear more' : 'Has a piece you set to suggest less', pull(ps)]];
   return { mode: b.mode, total: b.score, rows: rows.filter(([, v]) => Math.abs(v) >= 0.05).sort((x, y) => y[1] - x[1]) };
 }
 

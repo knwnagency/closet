@@ -612,3 +612,4 @@
   /* small buttons keep their look but get a 44px tap area */
   .capbar button, .morelike { position: relative; } .capbar button::after, .morelike::after { content: ""; position: absolute; inset: -8px -6px; }
   .sheet .tools { padding: 10px 0; } .sheet .tools button { border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; } .sheet .tools svg { width: 16px; height: 16px; }
+  .photofix .tag.on { background: var(--ink); color: var(--bg); box-shadow: none; } .photofix.rate .sub { width: 100%; margin: 2px 0 0; }
