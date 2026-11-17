@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v5.9'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v5.10'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -684,7 +684,7 @@ function openCapsules() {
 // The deck is saved per day + filters + weather band, so leaving and coming back shows the same looks. Shuffle makes a new one.
 const greet = () => { const h = new Date().getHours(); return h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
 const band = w => w ? (w.t < 12 ? 'cold' : w.t >= 24 ? 'hot' : 'mild') + (RAINY(w.code) ? '-rain' : '') : 'none';
-const deckSig = () => ['v2', dayKey(), S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
+const deckSig = () => ['v2', dayKey(), S.items.length, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
 function getDeck(items) {
   if (S.deck?.sig === deckSig()) return S.deck;
   const recs = S.src === 'saved' ? S.saved : S.src === 'worn' ? wornLooks() : null; // looks you already know, instead of fresh picks
@@ -1701,8 +1701,7 @@ document.addEventListener('click', async e => {
   const ds = t.dataset;
   if (ds.go) { if (ds.tabto) S.tab = ds.tabto; const go = () => { S.view = ds.go; if (ds.go === 'build') S.build ??= []; if (ds.listtab) S.listTab = ds.listtab; render(); scrollTo(0, 0); };
     if (sheet.open) { sheet.onclose = null; sheet.close(); } // a tap on the menu while a sheet is open: close it without a second render racing this one
-    const moved = ds.go !== S.view; go(); // the screen changes now; the motion is decoration on top (fade + rise), skipped with Reduce Motion
-    if (moved && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.getElementById('app').animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.2, .9, .3, 1)' }); }
+    go(); } // no fade-in: on iPhone it left the top of the new screen blank until you scrolled
   else if (ds.sub) { const [k, v] = ds.sub.split(':'); S[k] = v; render(); }
   else if (ds.listtab) { S.listTab = ds.listtab; render(); }
   else if (ds.wishgap) {

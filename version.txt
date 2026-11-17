@@ -1,2 +1,2 @@
-2026.11.16 · v5.9
-A second layer is now tucked in the layer menu (+ Layer on top), never suggested
+2026.11.16 · v5.10
+New pieces show up in Today right away · no blank screen after switching tabs · Wear this stays above the menu
