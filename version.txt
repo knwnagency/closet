@@ -1,2 +1,2 @@
-2026.11.16 · v5.7
-Dark clothes read black, not brown · pick a piece's main color from its photo · fitted jacket over a baggy tee allowed
+2026.11.16 · v5.8
+Restore brush in Erase · two layers in Build (tee + flannel + jacket) · editing a piece keeps your place · look titles name the right colors

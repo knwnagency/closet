@@ -395,16 +395,25 @@ export const slotOf = p => Object.keys(SLOTS).find(k => SLOTS[k](p));
 // Stacked the way it's worn: hat on top, layer + top, chain or bag beside the torso, pants, shoes at the bottom.
 // Pieces get as much room as the card allows (big and even beats true-to-scale), but a cap still stays smaller than a tee.
 export function flatLayout(slots) {
-  const has = x => slots.includes(x), hat = has('Hat'), acc = has('Accessory'), layer = has('Layers');
+  const has = x => slots.includes(x), hat = has('Hat'), acc = has('Accessory'), layer = has('Layers'), outer = layer && has('Outer');
   const y0 = hat ? 20 : 3, th = hat ? 38 : 50, side = acc ? 22 : 0, tw = 100 - side - 4, box = {};
   if (hat) box.Hat = [38, 1, 24, 18];
-  if (layer) { box.Layers = [2, y0, tw * 0.52, th]; box.Tops = [2 + tw * 0.52, y0 + 2, tw * 0.48, th - 4]; }
+  if (outer) { box.Outer = [2, y0, tw * 0.36, th]; box.Layers = [2 + tw * 0.34, y0 + 1, tw * 0.34, th - 2]; box.Tops = [2 + tw * 0.68, y0 + 2, tw * 0.32, th - 4]; } // jacket, flannel, tee: outermost on the left
+  else if (layer) { box.Layers = [2, y0, tw * 0.52, th]; box.Tops = [2 + tw * 0.52, y0 + 2, tw * 0.48, th - 4]; }
   else box.Tops = [2 + tw * 0.1, y0, tw * 0.8, th];
   if (acc) box.Accessory = [100 - side, y0 + 6, side - 2, 24];
   const by = y0 + th + 2; box.Bottoms = [26, by, 48, 100 - by]; box.Shoes = [24, 101, 52, 21]; // shoes big enough to read
   return Object.fromEntries(Object.entries(box).filter(([k]) => slots.includes(k)).map(([k, [x, y, w, h]]) => [k, [x, y / 1.25, w, h / 1.25].map(v => +v.toFixed(2))]));
 }
 
+// A look's pieces by slot. Two layers (tee + flannel + jacket): the lighter one is Layers, the heavier one Outer.
+export function bySlot(ps, outerId = null) {
+  const by = {}, ls = ps.filter(p => p.cat === 'Layers');
+  for (const p of ps) { const sl = slotOf(p); if (sl && sl !== 'Layers') by[sl] ??= p; }
+  const out = ls.length > 1 ? ls.find(p => p.id === outerId) ?? [...ls].sort((a, b) => level(b) - level(a))[0] : null;
+  if (ls.length) by.Layers = ls.find(p => p !== out); if (out) by.Outer = out;
+  return by;
+}
 // Builder: try every piece that fits `slot` in the current outfit, best first. score null = breaks every style rule.
 export function rankSwaps(items, outfit, slot, modes = Object.keys(MODES).filter(k => !MODES[k].hidden)) {
   const rest = outfit.filter(p => !SLOTS[slot](p));
