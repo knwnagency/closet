@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Fitted">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Fitted</title>
-<script>try { document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light'; } catch { document.documentElement.dataset.theme = 'light'; }</script>
+<script>try { document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light'; const p = JSON.parse(localStorage.getItem('pop') || 'null'); if (p) for (const [k, v] of Object.entries(p)) document.documentElement.style.setProperty(k, v); } catch { document.documentElement.dataset.theme = 'light'; }</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -39,10 +39,10 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges } from './progress.js';
-import { complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
+import { hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.22'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.23'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -661,7 +661,7 @@ function closetView() {
     ${groups.length > 1 ? `<div class="chips sticky">${groups.map(([k, l]) => `<button class="chip" data-jump="${k}">${k}<small>${l.length}</small></button>`).join('')}</div>` : ''}
     ${c && !inColl.length ? `<div class="empty"><h2>${esc(c.name)} is empty</h2><p>Pick its pieces once. Then Today, the builder and packing only use them.</p><button class="btn" data-action="collpick">Add pieces</button></div>` : ''}
     ${S.pending.length ? `<div class="grid">${S.pending.slice(0, 3).map(p => `<div class="item pending" data-pending="${p.id}"><div class="ph"><img src="${p.url}" alt=""></div><b>Processing</b><span>${p.status}</span></div>`).join('')}${S.pending.length > 3 ? `<div class="item pending"><div class="ph"></div><b>+${S.pending.length - 3} waiting</b><span>Keep the app open</span></div>` : ''}</div>` : '' /* only a few full-size photos on screen: 174 at once ran the phone out of memory */}
-    ${S.sel ? `<div class="selbar"><span>${S.sel.size} selected</span><span class="row2">${S.sel.size ? `<select data-selcoll aria-label="Add to a capsule"><option value="">Add to capsule…</option>${S.colls.map(k => `<option value="${k.id}">${esc(k.name)}</option>`).join('')}</select><select data-selset aria-label="Change the selected pieces"><option value="">Set…</option><optgroup label="Category">${CATS.map(c => `<option value="cat:${c}">${c}</option>`).join('')}</optgroup><optgroup label="Vibe">${Object.keys(VIBES).map(v => `<option value="vibe:${v}">${v}</option>`).join('')}</optgroup><optgroup label="Suggest it">${[['-1', 'Less'], ['0', 'Normal'], ['1', 'More']].map(([v, l]) => `<option value="rate:${v}">${l}</option>`).join('')}</optgroup><optgroup label="New pieces"><option value="review:ok">Tags look right</option></optgroup><optgroup label="Names"><option value="rename:1">Rename these…</option></optgroup></select><select data-selmat aria-label="Set material"><option value="">Material…</option>${MATERIALS.map(m => `<option>${m}</option>`).join('')}</select><button class="btn ghost sm" data-action="selwash">Laundry</button><button class="btn ghost sm" data-action="seldel">Delete</button>` : ''}</span></div>` : ''}
+    ${S.sel ? `<div class="selbar"><span>${S.sel.size} selected</span><span class="row2">${S.sel.size ? `<select data-selcoll aria-label="Add to a capsule"><option value="">Add to capsule…</option>${S.colls.map(k => `<option value="${k.id}">${esc(k.name)}</option>`).join('')}</select><select data-selset aria-label="Change the selected pieces"><option value="">Set…</option><optgroup label="Category">${CATS.map(c => `<option value="cat:${c}">${c}</option>`).join('')}</optgroup><optgroup label="Vibe">${Object.keys(VIBES).map(v => `<option value="vibe:${v}">${v}</option>`).join('')}</optgroup><optgroup label="Suggest it">${[['-1', 'Less'], ['0', 'Normal'], ['1', 'More']].map(([v, l]) => `<option value="rate:${v}">${l}</option>`).join('')}</optgroup><optgroup label="New pieces"><option value="review:ok">Tags look right</option></optgroup><optgroup label="Names"><option value="rename:1">Rename these…</option></optgroup><optgroup label="Doubles"><option value="merge:1">Merge into one (same piece)</option></optgroup></select><select data-selmat aria-label="Set material"><option value="">Material…</option>${MATERIALS.map(m => `<option>${m}</option>`).join('')}</select><button class="btn ghost sm" data-action="selwash">Laundry</button><button class="btn ghost sm" data-action="seldel">Delete</button>` : ''}</span></div>` : ''}
     ${!S.q && !S.sel && !S.pending.length ? (fresh => fresh.length ? `<h3 class="sec">New this week<small>${fresh.length}</small></h3><div class="shelf">${fresh.slice(0, 24).map(itemCard).join('')}</div>` : '')(owned().filter(i => Date.now() - (i.createdAt ?? 0) < 7 * 864e5).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))) : ''}
     ${groups.map(([k, l]) => `<h3 class="sec" id="sec-${k}">${k}<small>${l.length}</small></h3><div class="${shelf ? 'shelf' : 'grid'}">${l.map(itemCard).join('')}</div>`).join('')}`;
 }
@@ -1353,6 +1353,7 @@ function meView() {
       <button type="button" class="btn ghost sm" data-action="copylink">Copy the app's link</button></details>
     <h3><span>Look</span></h3>
     <div class="seg themeseg">${[['light', 'Light'], ['dark', 'Dark'], ['auto', 'Match my phone']].map(([k, l]) => `<button type="button" class="${(document.documentElement.dataset.theme || 'light') === k ? 'on' : ''}" data-themeset="${k}">${l}</button>`).join('')}</div>
+    <span class="mono">Pop color</span><div class="popsw">${[['racing green', '#004225'], ...Object.entries(SWATCHES).filter(([n]) => !/white|light grey|beige|grey/.test(n))].map(([n, h]) => `<button type="button" class="${(p.pop ?? '#004225') === h ? 'on' : ''}" style="background:${h}" data-popset="${h}" aria-label="${n}"></button>`).join('')}<label aria-label="Pick any color"><input type="color" data-popany value="${p.pop ?? '#004225'}"></label></div>
     <h3><span>How you wear things</span></h3>
     <label class="chk"><input type="checkbox" data-pref="hoodieAlone" ${p.hoodieAlone ? 'checked' : ''}> Suggest hoodies, sweaters and quarter zips on their own (no tee under)</label>
     <h3><span>Your hair</span><span>outfits play off it near your face</span></h3>
@@ -1929,6 +1930,7 @@ document.addEventListener('scroll', e => {
 }, true);
 document.addEventListener('change', async e => {
   if (e.target.matches('[data-sort]')) { S.sort = e.target.value; render(); return; }
+  if (e.target.matches('[data-popany]')) { const h = e.target.value; applyPop(h); S.profile = { k: 'me', ...S.profile, pop: h }; await put('profile', S.profile); render(); return; }
   if (e.target.matches('[data-pref]')) { S.profile = { k: 'me', ...S.profile, [e.target.dataset.pref]: e.target.checked }; await put('profile', S.profile); S.deck = null; S.ideas = null; toast(e.target.checked ? 'Hoodies and sweaters can be worn alone now' : 'A tee goes under hoodies again'); return; }
   if (e.target.matches('[data-favsort]')) { S.favSort = e.target.value; render(); return; }
   if (e.target.matches('[data-action="fullbackup"]')) { S.profile = { k: 'me', ...S.profile, fullBackup: e.target.checked }; await put('profile', S.profile); return; }
@@ -1938,6 +1940,10 @@ document.addEventListener('change', async e => {
     if (!k || !it) { e.target.value = it?.kind ?? ''; return; } await rememberKind(k, catGuess(k, it.cat)); toast(`Added "${k}" under ${KINDS[k].toLowerCase()}. Wrong? Change it in the piece's Details`); const o = new Option(k, k, true, true); e.target.add(o, 0); e.target.value = k; }
   if (e.target.matches('[data-qkind]')) { const it = byId(e.target.dataset.qkind), k = e.target.value; if (it && KINDS[k]) { const generic = KINDS[it.name.toLowerCase()] || it.name.toLowerCase() === (it.kind ?? '').toLowerCase();
     it.kind = k; it.cat = KINDS[k]; if (generic) it.name = k[0].toUpperCase() + k.slice(1); await put('items', it); e.target.closest('.qrow').querySelector('b').textContent = it.name; } return; }
+  if (e.target.matches('[data-selset]') && e.target.value === 'merge:1') { const ps = [...S.sel].map(byId).filter(Boolean).sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0)); e.target.value = '';
+    if (ps.length < 2) return toast('Select at least 2 copies of the same piece');
+    const keep = ps[0]; if (!confirm(`Merge ${ps.length} pieces into "${keep.name}"? The first one you added stays, and it takes over the others' wears, favorites, capsules and planned days.`)) return;
+    for (const o of ps.slice(1)) await mergeInto(o, keep); S.sel = null; render(); return toast(`Merged ${ps.length} into one`); }
   if (e.target.matches('[data-selset]') && e.target.value === 'rename:1') { const ids = [...S.sel]; e.target.value = ''; S.sel = null; render(); return openRename(ids); }
   if (e.target.matches('[data-selset]') && e.target.value) { const [k, v] = e.target.value.split(':');
     for (const id of S.sel) { const it = byId(id); if (k === 'rate') { if (+v) it.rate = +v; else delete it.rate; it.rateAsked = true; } else if (k === 'review') delete it.review; else it[k] = v; await put('items', it); }
@@ -1949,6 +1955,12 @@ document.addEventListener('pointerdown', e => { if (!e.target.closest('.clearnam
 // iPhone: the keyboard scrolls the page behind a sheet to show the field, and leaves it there when it closes, so the sheet sits too high
 // and the menu floats mid-screen. When the keyboard goes away, put the page back where it was.
 // The phone's top bar follows the theme. A theme saved in the profile wins over this browser's memory (a restored backup brings it back).
+// Your pop color (Me › Look): the light version as picked, a lifted one for dark mode, and black or white text, whichever reads.
+const popVars = h => { const { h: hh, s: ss, l } = hexToHsl(h), d = l < 0.35 ? hslToHex(hh, ss, Math.min(0.5, l + 0.2)) : h, on = x => lum(x) > 0.4 ? '#141414' : '#fbfaf6';
+  return { '--pop-l': h, '--on-pop-l': on(h), '--pop-d': d, '--on-pop-d': on(d) }; };
+const applyPop = h => { const vars = h ? popVars(h) : null, st = document.documentElement.style; for (const k of ['--pop-l', '--on-pop-l', '--pop-d', '--on-pop-d']) vars ? st.setProperty(k, vars[k]) : st.removeProperty(k);
+  try { vars ? localStorage.setItem('pop', JSON.stringify(vars)) : localStorage.removeItem('pop'); } catch {} };
+if (S.profile?.pop) applyPop(S.profile.pop);
 const paintTheme = () => { const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#ffffff'; };
 if (S.profile?.theme && S.profile.theme !== document.documentElement.dataset.theme) { document.documentElement.dataset.theme = S.profile.theme; try { localStorage.setItem('theme', S.profile.theme); } catch {} }
 paintTheme(); matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', paintTheme);
@@ -1998,6 +2010,7 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'tipsok') { S.profile = { k: 'me', ...S.profile, tipsSeen: true }; await put('profile', S.profile); render(); }
   else if (ds.untold) { const [k, i] = ds.untold.split('|'), p = S.profile; if (Array.isArray(p[k])) p[k] = p[k].filter((_, j) => j !== +i); else delete p[k];
     await put('profile', p); syncTaste(); S.deck = null; S.ideas = null; render(); toast('Undone'); }
+  else if (ds.popset) { const h = ds.popset === '#004225' ? null : ds.popset; applyPop(h); S.profile = { k: 'me', ...S.profile, pop: h }; await put('profile', S.profile); render(); toast('Pop color changed'); }
   else if (ds.themeset) { document.documentElement.dataset.theme = ds.themeset; try { localStorage.setItem('theme', ds.themeset); } catch {} S.profile = { k: 'me', ...S.profile, theme: ds.themeset }; await put('profile', S.profile); paintTheme(); render(); }
   else if (ds.action === 'copylink') { try { await navigator.clipboard.writeText(location.origin + location.pathname.replace(/index\.html$/, '')); toast('Link copied'); } catch { toast(location.origin + location.pathname); } }
   else if (ds.planask) { const days = ds.planask.split(','), wx = S.profile?.wx?.daily ?? {}, ps = pool(), notes = S.profile?.notes ?? [];

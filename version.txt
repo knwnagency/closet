@@ -1,2 +1,2 @@
-2026.11.17 · v5.22
-Now called Fitted · racing green on the main button · light or dark (Me › Look)
+2026.11.17 · v5.23
+Pick your own pop color (Me › Look) · stone grey behind clothes in dark mode · merge doubles yourself (select › Set… › Merge into one)
