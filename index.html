@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.24'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.25'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -1243,18 +1243,20 @@ function listView() {
 
 function myList() {
   const ready = S.items.length >= 3;
-  const row = w => { const r = ready && !w.got ? tryPiece(S.items, wishPiece(w)) : null, n = r?.count ?? 0, pairs = r?.examples[0]?.items.filter(p => !p.ghost && p.cat !== 'Accessories').slice(0, 2).map(p => p.name) ?? []; // ~1ms each
-    return `<div class="wish ${w.got ? 'got' : ''}">${ghostEl(w)}<div><b>${esc(w.name)}</b><span class="mono">${w.cat} · ${colorName(w.color)}${w.price ? ` · ${money(w.price)}` : ''}${n ? ` · +${n} outfits` : ''}${pairs.length ? ` · with ${esc(pairs.join(' + '))}` : ''}</span>
+  const row = w => { const r = ready && !w.got && w.cat && w.color ? tryPiece(S.items, wishPiece(w)) : null, n = r?.count ?? 0, pairs = r?.examples[0]?.items.filter(p => !p.ghost && p.cat !== 'Accessories').slice(0, 2).map(p => p.name) ?? []; // ~1ms each
+    return `<div class="wish ${w.got ? 'got' : ''}">${w.cat && w.color ? ghostEl(w) : `<div class="gh plain">${w.link ? '↗' : '✦'}</div>`}<div><b>${esc(w.name)}</b>${w.note ? `<span class="wnote">${esc(w.note)}</span>` : ''}<span class="mono">${[w.cat, w.color && colorName(w.color)].filter(Boolean).join(' · ')}${w.price ? ` · ${money(w.price)}` : ''}${n ? ` · +${n} outfits` : ''}${pairs.length ? ` · with ${esc(pairs.join(' + '))}` : ''}</span>
       ${w.link ? `<a class="shop" href="${esc(w.link)}" target="_blank" rel="noopener">Shop ↗</a>` : ''}</div>
       <button class="check" data-wishgot="${w.id}" aria-label="Got it">${svg('M5 12l5 5 9-10')}</button><button class="x" data-wishdel="${w.id}" aria-label="Remove">×</button></div>`; };
   const want = S.wish.filter(w => !w.got).sort((a, b) => b.at - a.at), got = S.wish.filter(w => w.got);
-  return `<form class="wishform" id="wishform">
-      <input type="text" name="name" placeholder="What are you looking for?" required autocomplete="off">
-      <select name="cat">${CATS.map(c => `<option>${c}</option>`).join('')}</select>
-      <select name="color" aria-label="Color">${Object.entries(SWATCHES).map(([n, h]) => `<option value="${h}">${n[0].toUpperCase() + n.slice(1)}</option>`).join('')}</select>
-      <button class="btn sm">Add</button>
-      <input type="url" name="link" placeholder="Link (optional)" autocomplete="off">
-      <input type="text" name="price" inputmode="decimal" placeholder="Price" autocomplete="off">
+  return `<form class="wishform" id="wishform" novalidate>
+      <input type="text" name="name" placeholder="What do you want? (or just paste a link below)" autocomplete="off">
+      <input type="url" name="link" placeholder="Link, if you found it somewhere" autocomplete="off" inputmode="url">
+      <input type="text" name="note" placeholder="Note (size, colorway, when it drops)" autocomplete="off" maxlength="140">
+      <details class="wishmore"><summary>Type, color, price · optional</summary>
+        <select name="cat" aria-label="Type"><option value="">Type?</option>${CATS.map(c => `<option>${c}</option>`).join('')}</select>
+        <select name="color" aria-label="Color"><option value="">Color?</option>${Object.entries(SWATCHES).map(([n, h]) => `<option value="${h}">${n[0].toUpperCase() + n.slice(1)}</option>`).join('')}</select>
+        <input type="text" name="price" inputmode="decimal" placeholder="Price" autocomplete="off"></details>
+      <button class="btn sm go">Add to wishlist</button>
     </form>
     ${want.length ? want.map(row).join('') : `<div class="empty"><h2>Nothing on the list</h2><p>Add what you're hunting for, or pull ideas from Suggested. Each one shows how many outfits it unlocks.</p></div>`}
     ${got.length ? `<h3><span>Copped</span><span>${got.length}</span></h3>${got.map(row).join('')}` : ''}`;
@@ -1320,7 +1322,7 @@ function meView() {
     ${S.meTab !== 'settings' ? `
     <div class="tiles"><button data-go="closet"><span class="mono">Pieces ›</span><b>${items.length}</b></button><button data-favs><span class="mono">Favorites ›</span><b>${S.saved.length}</b></button>
       <button data-go="outfits" data-tabto="cal"><span class="mono">Days logged ›</span><b>${S.log.length}</b></button><button data-go="progress"><span class="mono">Streak &amp; badges ›</span><b>${st.cur}</b></button>
-      <button data-go="list"><span class="mono">Shopping list ›</span><b>${S.wish.filter(w => !w.got).length}</b></button><button data-go="inspo"><span class="mono">Inspo ›</span><b>${S.inspo.length}</b></button></div>
+      <button data-go="list" data-listtab="mine"><span class="mono">Wishlist ›</span><b>${S.wish.filter(w => !w.got).length}</b></button><button data-go="inspo"><span class="mono">Inspo ›</span><b>${S.inspo.length}</b></button></div>
     ${styleReport()}
     <h3><span>Closet value</span><span>${priced.length} of ${items.length} priced</span></h3>
     ${priced.length ? `<div class="tiles"><div><span class="mono">Total</span><b>${money(value)}</b></div><div><span class="mono">Cost per wear</span><b>${pricedWears ? money(value / pricedWears) : '$0'}</b>${pricedWears ? '' : '<small class="sub">Log a wear to see it</small>'}</div></div>`
@@ -1872,9 +1874,10 @@ document.addEventListener('submit', async e => {
   e.preventDefault();
   const f = e.target.elements;
   if (e.target.id === 'wishform') {
-    const name = f.name.value.trim(), price = parseFloat(f.price.value.replace(/[^0-9.]/g, '')), link = f.link.value.trim();
-    if (!name) return;
-    const w = { id: uid(), name, cat: f.cat.value, color: f.color.value, got: false, at: Date.now(), price: price > 0 ? price : null, link: /^https?:\/\//.test(link) ? link : null };
+    let link = f.link.value.trim(); if (link && !/^https?:\/\//.test(link) && /\.[a-z]{2,}/i.test(link)) link = 'https://' + link; if (!/^https?:\/\//.test(link)) link = '';
+    const price = parseFloat(f.price.value.replace(/[^0-9.]/g, '')), fromLink = link && (u => decodeURIComponent(u.pathname.split('/').filter(Boolean).pop() ?? u.hostname).replace(/[-_]+/g, ' ').replace(/\.\w+$/, '').trim() || u.hostname.replace(/^www\./, ''))(new URL(link));
+    const name = f.name.value.trim() || fromLink; if (!name) return toast('Add a name or a link');
+    const w = { id: uid(), name: name.slice(0, 80), ...(f.cat.value ? { cat: f.cat.value } : {}), ...(f.color.value ? { color: f.color.value } : {}), note: f.note.value.trim() || null, got: false, at: Date.now(), price: price > 0 ? price : null, link: link || null };
     await put('wish', w); S.wish.push(w); render(); document.querySelector('#wishform input')?.focus();
   } else if (e.target.id === 'renform') {
     const c = collById(e.target.dataset.id), name = f.name.value.trim(); if (!name) return; c.name = name; await put('colls', c); openCapsules();
@@ -1993,7 +1996,7 @@ document.addEventListener('click', async e => {
   else if (ds.wishdel) { await del('wish', ds.wishdel); S.wish = S.wish.filter(x => x.id !== ds.wishdel); render(); }
   else if (ds.action === 'add' && t.closest('nav')) showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">Closet</div><h2>Add</h2></div>${closeBtn}</div>
     <p class="sub">Shoot each piece flat from above on a plain floor that contrasts with it: light clothes on dark, dark on light. Pick as many photos as you like.</p>
-    <div class="quick"><button class="btn" data-action="addfiles">${ic('camera')} Clothes · photos</button><button class="btn ghost" data-action="addinspo">Inspo pic</button><button class="btn ghost" data-calday="${dayKey()}">Log today's fit</button></div></div>`);
+    <div class="quick"><button class="btn" data-action="addfiles">${ic('camera')} Clothes · photos</button><button class="btn ghost" data-action="addinspo">Inspo pic</button><button class="btn ghost" data-calday="${dayKey()}">Log today's fit</button><button class="btn ghost" data-go="list" data-listtab="mine">Something I want (wishlist)</button></div></div>`);
   else if (ds.action === 'add' || ds.action === 'addfiles') { if (sheet.open) { sheet.onclose = null; sheet.close(); } fileInput.click(); }
   else if (ds.action === 'addinspo') { if (sheet.open) { sheet.onclose = null; sheet.close(); } inspoInput.click(); }
   else if (ds.action === 'export') exportBackup();

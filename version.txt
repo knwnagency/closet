@@ -1,2 +1,2 @@
-2026.11.17 · v5.24
-Bigger looks on Today with one ••• menu each · Wear today always on screen · Me split into Your closet and Settings · cleaner icon
+2026.11.17 · v5.25
+Wishlist is easier to find (Me › Wishlist, or + › Something I want) · add a want with just a name or a link · notes for size or colorway
