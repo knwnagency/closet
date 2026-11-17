@@ -1,2 +1,2 @@
-2026.11.17 · v5.19
-Rename many pieces at once (Me › Brands, the closet card, or select › Set… › Rename these)
+2026.11.17 · v5.20
+Hoodies, sweaters, crewnecks and quarter zips now live in layers (worn over a tee)

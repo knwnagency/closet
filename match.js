@@ -419,6 +419,10 @@ export function bySlot(ps, outerId = null) {
   if (ls.length) by.Layers = ls.find(p => p !== out); if (out) by.Outer = out;
   return by;
 }
+// A wearable look: something on top, bottoms, shoes. Hoodies, sweaters and quarter zips live in Layers but still count as the top
+// of a look you saved without a tee (Today pairs them with one).
+export const isTopish = p => p.cat === 'Tops' || p.cat === 'Layers' && level(p) <= 2;
+export const complete = ps => ps.some(isTopish) && ps.some(p => p.cat === 'Bottoms') && ps.some(p => p.cat === 'Shoes');
 // Builder: try every piece that fits `slot` in the current outfit, best first. score null = breaks every style rule.
 export function rankSwaps(items, outfit, slot, modes = Object.keys(MODES).filter(k => !MODES[k].hidden)) {
   const rest = outfit.filter(p => !SLOTS[slot](p));
@@ -432,7 +436,7 @@ export function rankSwaps(items, outfit, slot, modes = Object.keys(MODES).filter
 
 // Best style for a whole outfit (builder header). null = no style rule accepts it.
 export function bestMode(ps, modes = Object.keys(MODES).filter(k => !MODES[k].hidden)) {
-  if (!['Tops', 'Bottoms', 'Shoes'].every(c => ps.some(p => p.cat === c))) return null;
+  if (!complete(ps)) return null;
   let best = null;
   for (const m of modes) { const r = scoreOutfit(ps, m); if (r && (!best || r.score > best.score)) best = { ...r, mode: m }; }
   return best ?? { score: null, note: whyNot(ps).note };

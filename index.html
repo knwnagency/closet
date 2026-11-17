@@ -38,10 +38,10 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges } from './progress.js';
-import { rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
+import { complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.19'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.20'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -143,7 +143,7 @@ const smart = () => S.coll?.startsWith('smart:') && SMART[S.coll.slice(6)];
 const owned = () => smart() ? smart()[1](S.items) : S.coll ? S.items.filter(i => collById(S.coll)?.ids.includes(i.id)) : S.items; // what the closet shows
 const pool = () => owned().filter(i => !i.dirty && !i.stored); // where outfits come from: nothing in the laundry or stored for the season
 const keyOf = ps => ps.map(p => p.id).sort().join();
-const complete = ps => ['Tops', 'Bottoms', 'Shoes'].every(c => ps.some(p => p.cat === c));
+const complete = completeLook; // match.js: a hoodie with no tee still counts as the top
 const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 // randomUUID only exists on https/localhost; the fallback keeps uploads working on a phone over plain http.
 const uid = () => crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -309,7 +309,7 @@ const loadSeg = () => seg ??= loadTf().then(m => m.pipeline('background-removal'
 const loadClf = () => clf ??= loadTf().then(m => m.pipeline('zero-shot-image-classification', 'Xenova/clip-vit-base-patch32', { progress_callback })).catch(e => { clf = null; throw e; });
 
 const KINDS = {
-  't-shirt': 'Tops', 'long sleeve tee': 'Tops', 'button-up shirt': 'Tops', 'polo shirt': 'Tops', 'sweater': 'Tops', 'crewneck sweatshirt': 'Tops', 'quarter zip': 'Tops', 'hoodie': 'Tops', 'tank top': 'Tops', 'jersey': 'Tops',
+  't-shirt': 'Tops', 'long sleeve tee': 'Tops', 'button-up shirt': 'Tops', 'polo shirt': 'Tops', 'sweater': 'Layers', 'crewneck sweatshirt': 'Layers', 'quarter zip': 'Layers', 'hoodie': 'Layers', 'tank top': 'Tops', 'jersey': 'Tops',
   'jacket': 'Layers', 'coat': 'Layers', 'blazer': 'Layers', 'flannel overshirt': 'Layers', 'puffer jacket': 'Layers', 'denim jacket': 'Layers', 'leather jacket': 'Layers', 'bomber jacket': 'Layers', 'track jacket': 'Layers', 'zip-up hoodie': 'Layers', 'cardigan': 'Layers', 'vest': 'Layers',
   'jeans': 'Bottoms', 'trousers': 'Bottoms', 'chinos': 'Bottoms', 'cargo pants': 'Bottoms', 'sweatpants': 'Bottoms', 'joggers': 'Bottoms', 'track pants': 'Bottoms', 'shorts': 'Bottoms', 'jorts': 'Bottoms', 'skirt': 'Bottoms',
   'sneakers': 'Shoes', 'running shoes': 'Shoes', 'boots': 'Shoes', 'loafers': 'Shoes', 'dress shoes': 'Shoes', 'clogs': 'Shoes', 'slides': 'Shoes', 'sandals': 'Shoes', 'slippers': 'Shoes',
@@ -318,7 +318,10 @@ const KINDS = {
 Object.assign(KINDS, S.profile?.kinds ?? {}); // types you added yourself ("varsity jacket")
 const catGuess = (k, fallback) => /jacket|coat|vest|parka|puffer|blazer|cardigan|overshirt|shacket|windbreaker|anorak|fleece|gilet/.test(k) ? 'Layers'
   : /pant|jean|\bshorts\b|skirt|cargo|trouser|jogger|legging|jort/.test(k) ? 'Bottoms' : /shoe|boot|sneaker|loafer|slide|sandal|clog|mule|trainer|runner/.test(k) ? 'Shoes'
-  : /hat|cap|beanie|bag|chain|necklace|ring|watch|belt|glasses|scarf|bracelet|earring|sock|glove/.test(k) ? 'Accessories' : /shirt|tee|top|hoodie|sweater|polo|jersey|tank|crewneck|zip|knit/.test(k) ? 'Tops' : fallback;
+  : /hat|cap|beanie|bag|chain|necklace|ring|watch|belt|glasses|scarf|bracelet|earring|sock|glove/.test(k) ? 'Accessories' : /hoodie|sweater|crewneck|sweatshirt|zip|knit|cardigan/.test(k) ? 'Layers' : /shirt|tee|top|polo|jersey|tank/.test(k) ? 'Tops' : fallback;
+// Once: hoodies, sweaters, crewnecks and quarter zips you filed under Tops move to Layers (v5.20).
+if (!S.profile?.midLayers) { let n = 0; for (const it of S.items.filter(i => i.cat === 'Tops' && KINDS[i.kind] === 'Layers' && !/\btees?\b|\bt-?shirt|\bpolo\b|jersey|\btank\b|button|long ?sleeve/i.test(i.name ?? ''))) { it.cat = 'Layers'; put('items', it); n++; }
+  S.profile = { k: 'me', ...S.profile, midLayers: true }; put('profile', S.profile); if (n) setTimeout(() => toast(`Moved ${n} hoodie${n > 1 ? 's' : ''}, sweater${n > 1 ? 's' : ''} and zips to layers`), 2500); }
 { let moved = 0; for (const [k, cat] of Object.entries(S.profile?.kinds ?? {})) {
     if (cat !== 'Bottoms' || !/short/.test(k) || /\bshorts\b/.test(k)) continue; const now = catGuess(k, 'Tops'); if (now === 'Bottoms') continue;
     KINDS[k] = now; S.profile.kinds[k] = now; for (const it of S.items.filter(i => i.kind === k && i.cat === 'Bottoms')) { it.cat = now; put('items', it); moved++; } }
