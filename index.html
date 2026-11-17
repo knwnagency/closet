@@ -7,9 +7,10 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#ffffff">
-<meta name="apple-mobile-web-app-title" content="Closet">
+<meta name="apple-mobile-web-app-title" content="Fitted">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Closet</title>
+<title>Fitted</title>
+<script>try { document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light'; } catch { document.documentElement.dataset.theme = 'light'; }</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -41,7 +42,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.21'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.22'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -901,7 +902,7 @@ const wxWhy = o => { const w = weatherNow(); if (!w) return '';
   const later = w.lo != null && w.lo < w.t - 6 && w.t >= 12 ? ', bring a layer for later' : '';
   return `${tempText(w.t)}${rain ? ' and rain' : ''} · ${why}${rain ? ', no suede' : ''}${later}`; };
 const actionsHtml = o => { const k = keyOf(o), worn = wornOn(dayKey(), k), off = complete(o) ? '' : 'disabled';
-  return `<div class="actions" id="bactions"><button class="btn ${isFav(k) ? '' : 'ghost'} sm" data-save="${k}" ${off}>${heart} ${isFav(k) ? 'Saved' : 'Save'}</button><button class="btn ghost sm" data-action="planthis" ${off}>Plan</button><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${k}" ${off}>${worn ? 'Logged today ✓' : 'Wear today'}</button></div>`; };
+  return `<div class="actions" id="bactions"><button class="btn ghost sm ${isFav(k) ? 'on' : ''}" data-save="${k}" ${off}>${heart} ${isFav(k) ? 'Saved' : 'Save'}</button><button class="btn ghost sm" data-action="planthis" ${off}>Plan</button><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${k}" ${off}>${worn ? 'Logged today ✓' : 'Wear today'}</button></div>`; };
 // Find brands (Me): reads each piece's photo once for a logo or team, then lists what it found for you to confirm.
 let brandScan = false;
 async function findBrands() {
@@ -1053,7 +1054,7 @@ async function shareLook(ps) {
     x.shadowColor = 'rgba(0,0,0,.22)'; x.shadowBlur = 18; x.shadowOffsetY = 10; x.drawImage(b, bx + (bw - b.width * k) / 2, byy + (bh - b.height * k) / 2, b.width * k, b.height * k); }
   x.shadowColor = 'transparent'; const [title] = vibeOf({ items: ps, mode: bestMode(ps)?.mode });
   x.fillStyle = '#141414'; x.font = '500 64px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText(title[0].toUpperCase() + title.slice(1), pad, top + ch + 140);
-  x.fillStyle = '#66665f'; x.font = '600 26px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText('CLOSET', W - pad - 120, top + ch + 140);
+  x.fillStyle = '#66665f'; x.font = '600 26px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText('FITTED', W - pad - 120, top + ch + 140);
   const f = new File([await new Promise(r => c.toBlob(r, 'image/png'))], 'look.png', { type: 'image/png' });
   if (navigator.canShare?.({ files: [f] })) { try { await navigator.share({ files: [f], text: ps.map(p => p.brand && !p.name.includes(p.brand) ? `${p.brand} ${p.name}` : p.name).join(' + ') }); } catch {} } else download(f); // the piece names ride along (Messages shows both)
 }
@@ -1350,6 +1351,8 @@ function meView() {
       <ol class="steps"><li>Open the <b>Shortcuts</b> app › <b>Automation</b> › <b>+</b> › <b>Time of Day</b>. Pick your time, Daily, <b>Run Immediately</b>.</li>
       <li>Add the action <b>Open URLs</b> and paste the app's link (button below).</li><li>Done. Each morning your phone opens Today.</li></ol>
       <button type="button" class="btn ghost sm" data-action="copylink">Copy the app's link</button></details>
+    <h3><span>Look</span></h3>
+    <div class="seg themeseg">${[['light', 'Light'], ['dark', 'Dark'], ['auto', 'Match my phone']].map(([k, l]) => `<button type="button" class="${(document.documentElement.dataset.theme || 'light') === k ? 'on' : ''}" data-themeset="${k}">${l}</button>`).join('')}</div>
     <h3><span>How you wear things</span></h3>
     <label class="chk"><input type="checkbox" data-pref="hoodieAlone" ${p.hoodieAlone ? 'checked' : ''}> Suggest hoodies, sweaters and quarter zips on their own (no tee under)</label>
     <h3><span>Your hair</span><span>outfits play off it near your face</span></h3>
@@ -1734,7 +1737,7 @@ async function exportBackup() {
 const download = f => { const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(f), download: f.name }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); };
 async function backedUp() { S.profile = { k: 'me', ...S.profile, lastBackup: Date.now() }; await put('profile', S.profile); toast('Backup saved'); render(); }
 async function shareBackup() {
-  try { await navigator.share({ files: [S.backupFile], title: 'Closet backup' }); sheet.close(); await backedUp(); }
+  try { await navigator.share({ files: [S.backupFile], title: 'Fitted backup' }); sheet.close(); await backedUp(); }
   catch (e) { if (e.name !== 'AbortError') { download(S.backupFile); sheet.close(); await backedUp(); } }
 }
 // Copy the closet + your style rules as text, to paste into Claude on any device (the phone app included).
@@ -1945,6 +1948,10 @@ document.addEventListener('change', async e => {
 document.addEventListener('pointerdown', e => { if (!e.target.closest('.clearname')) return; e.preventDefault(); const h = e.target.closest('.phead')?.querySelector('[data-rename]'); if (h) { h.textContent = ''; h.focus(); } });
 // iPhone: the keyboard scrolls the page behind a sheet to show the field, and leaves it there when it closes, so the sheet sits too high
 // and the menu floats mid-screen. When the keyboard goes away, put the page back where it was.
+// The phone's top bar follows the theme. A theme saved in the profile wins over this browser's memory (a restored backup brings it back).
+const paintTheme = () => { const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#ffffff'; };
+if (S.profile?.theme && S.profile.theme !== document.documentElement.dataset.theme) { document.documentElement.dataset.theme = S.profile.theme; try { localStorage.setItem('theme', S.profile.theme); } catch {} }
+paintTheme(); matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', paintTheme);
 const settle = () => { if (sheet.open && sheet.back) window.scrollTo(0, sheet.back.y); else window.scrollTo(window.scrollX, window.scrollY); };
 document.addEventListener('focusout', e => { if (e.target.matches?.('input, textarea, select, [contenteditable]')) setTimeout(settle, 80); });
 window.visualViewport?.addEventListener('resize', () => { if (visualViewport.height > innerHeight * 0.85) setTimeout(settle, 80); });
@@ -1991,6 +1998,7 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'tipsok') { S.profile = { k: 'me', ...S.profile, tipsSeen: true }; await put('profile', S.profile); render(); }
   else if (ds.untold) { const [k, i] = ds.untold.split('|'), p = S.profile; if (Array.isArray(p[k])) p[k] = p[k].filter((_, j) => j !== +i); else delete p[k];
     await put('profile', p); syncTaste(); S.deck = null; S.ideas = null; render(); toast('Undone'); }
+  else if (ds.themeset) { document.documentElement.dataset.theme = ds.themeset; try { localStorage.setItem('theme', ds.themeset); } catch {} S.profile = { k: 'me', ...S.profile, theme: ds.themeset }; await put('profile', S.profile); paintTheme(); render(); }
   else if (ds.action === 'copylink') { try { await navigator.clipboard.writeText(location.origin + location.pathname.replace(/index\.html$/, '')); toast('Link copied'); } catch { toast(location.origin + location.pathname); } }
   else if (ds.planask) { const days = ds.planask.split(','), wx = S.profile?.wx?.daily ?? {}, ps = pool(), notes = S.profile?.notes ?? [];
     const text = `Plan my outfits for these 7 days. Use only the pieces listed, by id. Each day needs a top (a hoodie or sweater can be the top), bottoms and shoes; add a layer, hat or accessory when it helps. Don't repeat a top in the week, and dress for each day's weather.
