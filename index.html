@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v5.14'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v5.15'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -315,6 +315,11 @@ const KINDS = {
   'sneakers': 'Shoes', 'running shoes': 'Shoes', 'boots': 'Shoes', 'loafers': 'Shoes', 'dress shoes': 'Shoes', 'clogs': 'Shoes', 'slides': 'Shoes', 'sandals': 'Shoes', 'slippers': 'Shoes',
   'baseball cap': 'Accessories', 'beanie': 'Accessories', 'bucket hat': 'Accessories', 'bag': 'Accessories', 'watch': 'Accessories', 'chain necklace': 'Accessories', 'bracelet': 'Accessories', 'ring': 'Accessories', 'sunglasses': 'Accessories', 'belt': 'Accessories', 'scarf': 'Accessories',
 };
+Object.assign(KINDS, S.profile?.kinds ?? {}); // types you added yourself ("varsity jacket")
+const catGuess = (k, fallback) => /jacket|coat|vest|parka|puffer|blazer|cardigan|overshirt|shacket|windbreaker|anorak|fleece|gilet/.test(k) ? 'Layers'
+  : /pant|jean|short|skirt|cargo|trouser|jogger|legging|jort/.test(k) ? 'Bottoms' : /shoe|boot|sneaker|loafer|slide|sandal|clog|mule|trainer|runner/.test(k) ? 'Shoes'
+  : /hat|cap|beanie|bag|chain|necklace|ring|watch|belt|glasses|scarf|bracelet|earring|sock|glove/.test(k) ? 'Accessories' : /shirt|tee|top|hoodie|sweater|polo|jersey|tank|crewneck|zip|knit/.test(k) ? 'Tops' : fallback;
+async function rememberKind(k, cat) { if (!k || KINDS[k]) return; KINDS[k] = cat; S.profile = { k: 'me', ...S.profile, kinds: { ...(S.profile?.kinds ?? {}), [k]: cat } }; await put('profile', S.profile); }
 const VIBES = { streetwear: 'streetwear', formal: 'formal dress clothing', casual: 'casual everyday clothing', athletic: 'athletic sportswear' };
 // Fit prompts, index = fit value (0 slim/sleek, 1 regular, 2 baggy/chunky)
 const FIT_PROMPTS = { Shoes: ['sleek low-profile', 'regular', 'chunky thick-soled'], Bottoms: ['slim skinny', 'straight leg', 'baggy wide-leg'], default: ['slim fitted', 'regular fit', 'oversized baggy boxy'] };
@@ -1418,7 +1423,7 @@ async function addAccent(it, h) { it.accents = [...(it.accents ?? []).filter(x =
 function openQuick() {
   const list = S.items.filter(i => i.review).slice(0, 20); if (!list.length) return toast('Nothing left to review');
   const opts = it => { const top = [...new Set([it.kind, ...(it.kinds ?? [])].filter(k => KINDS[k]))];
-    return `${top.map(k => `<option value="${k}" ${k === it.kind ? 'selected' : ''}>${k}</option>`).join('')}<option disabled>──</option>${CATS.map(c => `<optgroup label="${c}">${Object.keys(KINDS).filter(k => KINDS[k] === c && !top.includes(k)).map(k => `<option value="${k}">${k}</option>`).join('')}</optgroup>`).join('')}`; };
+    return `${top.map(k => `<option value="${k}" ${k === it.kind ? 'selected' : ''}>${k}</option>`).join('')}<option disabled>──</option>${CATS.map(c => `<optgroup label="${c}">${Object.keys(KINDS).filter(k => KINDS[k] === c && !top.includes(k)).map(k => `<option value="${k}">${k}</option>`).join('')}</optgroup>`).join('')}<option value="__new">+ Add a type…</option>`; };
   showSheet(`<div class="pad quick"><div class="pickhead"><div><div class="eyebrow">${S.items.filter(i => i.review).length} to go</div><h2>Check the types</h2></div>${closeBtn}</div>
     <p class="sub">Fix any type that's wrong, then confirm the page. Tap a photo for everything else.</p>
     ${list.map(it => `<div class="qrow"><button data-open="${it.id}"><img src="${src(it)}" alt=""></button><b>${esc(it.name)}</b><select data-qkind="${it.id}" aria-label="Type of ${esc(it.name)}">${opts(it)}</select></div>`).join('')}
@@ -1866,6 +1871,9 @@ document.addEventListener('change', async e => {
   if (e.target.matches('[data-favsort]')) { S.favSort = e.target.value; render(); return; }
   if (e.target.matches('[data-action="fullbackup"]')) { S.profile = { k: 'me', ...S.profile, fullBackup: e.target.checked }; await put('profile', S.profile); return; }
   if (e.target.matches('[data-selmat]') && e.target.value) { for (const id of S.sel) { const it = byId(id); it.material = e.target.value; await put('items', it); } toast(`${S.sel.size} set to ${e.target.value}`); S.sel = null; S.ideas = null; render(); return; }
+  if (e.target.name === 'kindOther' && openItem) { const k = e.target.value.trim().toLowerCase(), it = byId(openItem); if (k && it) { await rememberKind(k, it.cat); toast(`Added "${k}" to your types`); } } // the category you picked in Details
+  if (e.target.matches('[data-qkind]') && e.target.value === '__new') { const it = byId(e.target.dataset.qkind), k = (prompt('New type (e.g. varsity jacket, jorts)') ?? '').trim().toLowerCase().slice(0, 30);
+    if (!k || !it) { e.target.value = it?.kind ?? ''; return; } await rememberKind(k, catGuess(k, it.cat)); const o = new Option(k, k, true, true); e.target.add(o, 0); e.target.value = k; }
   if (e.target.matches('[data-qkind]')) { const it = byId(e.target.dataset.qkind), k = e.target.value; if (it && KINDS[k]) { const generic = KINDS[it.name.toLowerCase()] || it.name.toLowerCase() === (it.kind ?? '').toLowerCase();
     it.kind = k; it.cat = KINDS[k]; if (generic) it.name = k[0].toUpperCase() + k.slice(1); await put('items', it); e.target.closest('.qrow').querySelector('b').textContent = it.name; } return; }
   if (e.target.matches('[data-selset]') && e.target.value) { const [k, v] = e.target.value.split(':');

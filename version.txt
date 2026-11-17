@@ -1,2 +1,2 @@
-2026.11.16 · v5.14
-The page goes back in place after typing (no more floating menu) · × to clear a name while renaming
+2026.11.16 · v5.15
+Add your own types (+ Add a type…) and they stay in every list
