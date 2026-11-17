@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.17'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.18'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -499,11 +499,12 @@ const backfillFp = () => fpDone ??= (async () => { for (const it of S.items) {
 const dupOf = it => !it.dupOk && it.cfp && S.items.find(o => o !== it && o.cfp && ((o.createdAt ?? 0) < (it.createdAt ?? 0) || ((o.createdAt ?? 0) === (it.createdAt ?? 0) && o.id < it.id)) && fpDist(o.cfp, it.cfp) <= CFP_SAME);
 
 let running = false, skipped = 0, added = 0;
+let soon = null; const renderSoon = () => { soon ??= setTimeout(() => { soon = null; if (!sheet.open) render(); else upPill(); }, 2500); }; // batched redraws during uploads
 // Every picked photo is saved (shrunk) to the queue store first, so a crash, a call or a locked phone never loses the batch:
 // the next open picks up where it stopped. A photo that was mid-way through twice in a row is dropped, so it can't crash the app forever.
 async function addFiles(files, left = []) {
   const jobs = [...left, ...[...files].map(f => ({ id: uid(), file: f, name: f.name, url: URL.createObjectURL(f), status: 'Saving…', at: Date.now() }))];
-  S.upTotal = (S.pending.length ? S.upTotal ?? 0 : 0) + jobs.length; S.pending.push(...jobs); S.view = 'closet'; render();
+  S.upTotal = (S.pending.length ? S.upTotal ?? 0 : 0) + jobs.length; S.pending.push(...jobs); const moved = S.view !== 'closet'; S.view = 'closet'; render(); if (moved || files.length) { scrollTo(0, 0); setTimeout(settle, 120); } // after the photo picker, iOS can leave the page shifted
   for (const j of jobs) if (!j.saved) try { const small = await shrink(j.file); await putQuiet('queue', { id: j.id, file: small, name: j.name, at: j.at, tries: 0 }); Object.assign(j, { file: small, saved: true }); if (!S.pending.includes(j)) await del('queue', j.id); }
     catch (e) { console.warn(e); } finally { if (j.status === 'Saving…') j.status = 'Waiting…'; document.querySelector(`[data-pending="${j.id}"] span`)?.replaceChildren(j.status); }
   if (running) return; // one queue: two models at once would eat a phone's memory
@@ -525,10 +526,11 @@ async function addOne(j) {
     if (tags && (tags.pattern === 'graphic' || tags.pattern === 'allover') && !accents?.length) Object.assign(tags, { pattern: 'solid', patterned: false }); // no print colors found: a blank tee, not a print
     if (hard) toast('Tricky background. Light clothes cut out best on a dark, plain surface');
     const item = { ...(tags ? { ai: { kind: tags.kind, fit: tags.fit, pattern: tags.pattern } } : {}), id: j.id, img, photo, frame, fp, cfp, color, accents, orientChecked: true, ...(turn ? { turnHint: turn } : {}), ...(tags ?? { cat: 'Tops', name: 'New item', kind: '', vibe: 'casual', patterned: false, fit: 1 }), review: !tags || !!tags.unsure?.length, wears: 0, lastWorn: null, createdAt: Date.now() };
+    try { item.thumb = await thumbOf(img); } catch (e) { console.warn(e); } // small preview now: full-size cut-outs in the grid eat the memory the AI needs
     await put('items', item); S.items.push(item); S.ideas = null; added++;
     if (S.coll) { const c = collById(S.coll); c.ids.push(item.id); await put('colls', c); toast(`Added to ${c.name}`); } // adding while inside a collection files it there too
   } catch (e) { console.warn(e); toast(`Couldn't read ${j.name}. Try a JPG`); } // one bad file never stops the batch
-  finally { del('queue', j.id).catch(() => {}); URL.revokeObjectURL(j.url); S.pending = S.pending.filter(p => p !== j); render(); }
+  finally { del('queue', j.id).catch(() => {}); URL.revokeObjectURL(j.url); S.pending = S.pending.filter(p => p !== j); S.pending.length ? renderSoon() : render(); }
 }
 
 // Picture turned q × 90° clockwise. PNG, so turning 4× gives back the same picture.
@@ -1892,6 +1894,7 @@ document.addEventListener('pointerdown', e => { if (!e.target.closest('.clearnam
 const settle = () => { if (sheet.open && sheet.back) window.scrollTo(0, sheet.back.y); else window.scrollTo(window.scrollX, window.scrollY); };
 document.addEventListener('focusout', e => { if (e.target.matches?.('input, textarea, select, [contenteditable]')) setTimeout(settle, 80); });
 window.visualViewport?.addEventListener('resize', () => { if (visualViewport.height > innerHeight * 0.85) setTimeout(settle, 80); });
+addEventListener('focus', () => setTimeout(settle, 120)); document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(settle, 120); });
 // Tap a piece's name to rename it ("Lakers jersey"). Return or tapping away saves.
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('[data-rename]')) { e.preventDefault(); e.target.blur(); } });
 document.addEventListener('focusout', async e => { const el = e.target; if (!el.matches?.('[data-rename]')) return; const it = byId(el.dataset.rename); if (!it) return;
