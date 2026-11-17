@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.25'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.26'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -65,7 +65,7 @@ const pack = async (name, v) => { const o = { ...v };
 const isBytes = x => x != null && !(x instanceof Blob) && x.bytes instanceof ArrayBuffer;
 const unpack = (name, v) => { for (const k of BLOBS[name] ?? []) if (isBytes(v?.[k])) v[k] = new Blob([v[k].bytes], { type: v[k].type }); return v; };
 const all = name => store(name, 'readonly', s => s.getAll()).then(list => list.map(v => unpack(name, v)));
-const put = async (name, v) => { if (name === 'items') { v.updatedAt = Date.now(); if (v.dirty) v.dirtyAt ??= Date.now(); else delete v.dirtyAt; } return putQuiet(name, v); }; // updatedAt: small "changes only" backups
+const put = async (name, v) => { v.updatedAt = Date.now(); if (name === 'items') { if (v.dirty) v.dirtyAt ??= Date.now(); else delete v.dirtyAt; } return putQuiet(name, v); }; // updatedAt: small "changes only" backups
 const putQuiet = async (name, v) => { // housekeeping saves (previews, format) aren't "changes"
   if (name === 'items') { // a piece's photo and original live in their own stores: opening the app reads only tags + small previews
     if (v.img instanceof Blob && !onDisk.has(v.img)) { await putQuiet('full', { id: v.id, img: v.img }); onDisk.add(v.img); }
@@ -76,7 +76,8 @@ const onDisk = new WeakSet(); // photos already saved, so a tag edit doesn't rew
 const loadPic = async (name, id) => { const r = unpack(name, await store(name, 'readonly', s => s.get(id))); return r?.img ?? r?.photo; };
 const imgOf = async it => { if (!it.img) { const b = await loadPic('full', it.id); if (b) { onDisk.add(b); it.img ??= b; } } return it.img; }; // the full photo, loaded on first use
 const origOf = async it => it.photo ?? loadPic('orig', it.id); // the photo as taken, for Remove background
-const del = (name, k) => store(name, 'readwrite', s => s.delete(k));
+const SYNCED = new Set(['items', 'outfits', 'log', 'wish', 'colls', 'inspo']); // deletes of these are remembered, so a backup from another device doesn't bring them back
+const del = async (name, k) => { await store(name, 'readwrite', s => s.delete(k)); if (SYNCED.has(name)) { S.gone[`${name}|${k}`] = Date.now(); await putQuiet('profile', { k: 'gone', at: S.gone }); } };
 
 // ---------- state ----------
 const S = {
@@ -86,7 +87,7 @@ const S = {
   items: await all('items'), saved: await all('outfits'), log: await all('log'), wish: await all('wish'),
   colls: await all('colls'), inspo: await all('inspo'), ...await (async () => { const ps = await all('profile');
     return { profile: ps.find(p => p.k === 'me') ?? null, history: ps.find(p => p.k === 'history')?.list ?? [],
-      plan: ps.find(p => p.k === 'plan') ?? { k: 'plan', days: {}, weekly: {} }, deck: ps.find(p => p.k === 'deck') ?? null, nope: ps.find(p => p.k === 'nope')?.list ?? [], draft: ps.find(p => p.k === 'draft')?.ids ?? null }; })(), // plan: { days: {date: look}, weekly: {0-6: look} } // history: looks you swiped past, newest first
+      plan: ps.find(p => p.k === 'plan') ?? { k: 'plan', days: {}, weekly: {} }, deck: ps.find(p => p.k === 'deck') ?? null, nope: ps.find(p => p.k === 'nope')?.list ?? [], draft: ps.find(p => p.k === 'draft')?.ids ?? null, gone: ps.find(p => p.k === 'gone')?.at ?? {} }; })(), // plan: { days: {date: look}, weekly: {0-6: look} } // history: looks you swiped past, newest first
 };
 S.build = null; // the builder starts blank; a half-built look waits behind "Resume" (S.draft)
 S.closetView = S.profile?.closetView ?? 'shelf';
@@ -1354,7 +1355,8 @@ function meView() {
     <p class="sub">${kept ? 'This browser has agreed to keep your closet.' : 'Your closet lives only in this browser and can be cleared. Safari wipes sites you skip for 7 days, so add the app to your Home Screen and save a backup now and then.'}</p>
     ${p.lastBackup ? `<button class="btn ghost sm" data-action="exportnew">Save changes only · ${S.items.filter(i => (i.updatedAt ?? i.createdAt ?? 0) > p.lastBackup).length} pieces</button>` : ''}
     <label class="chk"><input type="checkbox" data-action="fullbackup" ${p.fullBackup ? 'checked' : ''}> Include original photos (bigger file, so Remove background still works after a restore)</label>
-    <div class="row"><button class="btn ghost sm" data-action="export">Save backup</button><button class="btn ghost sm" data-action="import">Restore backup</button></div>
+    <div class="row"><button class="btn ghost sm" data-action="export">Save backup</button><button class="btn ghost sm" data-action="import">Restore or sync</button></div>
+    <p class="sub">Using Fitted on your phone and computer? Save a backup on one, then Restore or sync on the other. The newer edit wins, deletes carry over, nothing else is lost.</p>
     <details class="more remind"><summary><span>Daily outfit reminder</span><span class="mono">2 minutes in Shortcuts</span></summary>
       <ol class="steps"><li>Open the <b>Shortcuts</b> app › <b>Automation</b> › <b>+</b> › <b>Time of Day</b>. Pick your time, Daily, <b>Run Immediately</b>.</li>
       <li>Add the action <b>Open URLs</b> and paste the app's link (button below).</li><li>Done. Each morning your phone opens Today.</li></ol>
@@ -1730,7 +1732,7 @@ async function exportBackup() {
     return { ...i, img: await toDataUrl(img ?? await loadPic('full', it.id)), ...(o ? { photo: await toDataUrl(o) } : {}), ...(angles.length ? { angles } : {}) }; }));
   const inspo = await Promise.all(S.inspo.map(async i => ({ ...i, img: await toDataUrl(i.img) })));
   const log = await Promise.all(S.log.map(async l => hasPic(l) ? { ...l, selfie: await toDataUrl(l.selfie) } : (({ selfie, ...r }) => r)(l)));
-  const blob = new Blob([JSON.stringify({ app: 'closet', v: 3, items, outfits: S.saved, log, wish: S.wish, colls: S.colls, inspo, profile: S.profile, history: S.history, plan: S.plan })], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ app: 'closet', v: 3, items, outfits: S.saved, log, wish: S.wish, colls: S.colls, inspo, profile: S.profile, history: S.history, plan: S.plan, gone: S.gone })], { type: 'application/json' });
   S.backupFile = new File([blob], `closet-backup-${dayKey()}${S.backupSince ? '-changes' : ''}.json`, { type: 'application/json' });
   // iPhone: the share sheet's "Save to Files" puts it straight in iCloud Drive (where Claude's closet connector looks). It needs a fresh tap, so ask.
   if (navigator.canShare?.({ files: [S.backupFile] })) return showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${items.length} pieces ready</div><h2>Save backup</h2></div>${closeBtn}</div>
@@ -1767,41 +1769,49 @@ MY STYLE RULES
   try { await navigator.clipboard.writeText(text); toast('Copied. Paste it into Claude'); }
   catch { showSheet(`<div class="pad"><div class="pickhead"><h2>Copy this</h2>${closeBtn}</div><textarea class="copybox" readonly>${esc(text)}</textarea></div>`); sheet.querySelector('textarea').select(); }
 }
-// Merges into what's here (same id = replaced). Untrusted file: only well-formed records get in.
+// Restore = sync: merges a backup from this or another device, newer edit wins. Untrusted file: only well-formed records get in.
 async function importBackup(file) {
   try {
     const b = JSON.parse(await file.text()), arr = x => Array.isArray(x) ? x : [], str = x => typeof x === 'string';
     if (b.app !== 'closet' || !Array.isArray(b.items)) throw new Error('not a closet backup');
     const hex = x => /^#[0-9a-f]{6}$/i.test(x), pic = x => /^data:image\//.test(x), blob = async u => (await fetch(u)).blob();
-    // Merge, phone wins: anything already here (same id, same day, same key) stays as it is. A backup only adds what's missing.
+    // Sync: for each piece, look, day and wish, the newer edit wins (same age: this device wins). Deletes carry over both ways.
+    const stamp = r => +r?.updatedAt || 0, killedHere = (name, k, r) => (S.gone[`${name}|${k}`] ?? 0) > 0 && S.gone[`${name}|${k}`] >= stamp(r);
     const haveId = new Set(S.items.map(i => i.id));
-    const items = b.items.filter(i => str(i?.id) && CATS.includes(i.cat) && hex(i.color) && pic(i.img) && !haveId.has(i.id));
-    // Repair: a piece that's here but whose photo this phone lost gets the photo back from the backup (everything else stays as it is here)
+    let added = 0, updated = 0, removed = 0, other = 0;
+    // Repair: a piece that's here but whose photo this phone lost gets the photo back from the backup
     let fixed = 0;
     for (const i of b.items) { const here = str(i?.id) && haveId.has(i.id) && byId(i.id); if (!here || !pic(i.img)) continue;
       let ok = true; try { const b = await imgOf(here); if (!b?.size) throw 0; (await createImageBitmap(b)).close?.(); } catch { ok = false; }
       if (ok) continue;
       here.img = await blob(i.img); if (pic(i.photo)) here.photo = await blob(i.photo); delete here.broken; delete here.thumb; await putQuiet('items', here); fixed++; }
-    for (const i of items) { const { photo, angles, more: _, ...rest } = i, more = [];
-      for (const a of arr(angles).filter(pic)) { const k = `${i.id}#${uid().slice(0, 8)}`; await putQuiet('orig', { id: k, photo: await blob(a) }); more.push(k); }
-      await put('items', { ...rest, name: String(i.name ?? 'Item'), img: await blob(i.img), ...(pic(photo) ? { photo: await blob(photo) } : {}), ...(more.length ? { more } : {}) }); }
-    const have = { outfits: new Set(S.saved.map(r => r.key)), log: new Set(S.log.map(r => r.day)), wish: new Set(S.wish.map(r => r.id)) };
-    for (const [s, k] of [['outfits', 'key'], ['log', 'day'], ['wish', 'id']]) for (const r of arr(b[s])) if (str(r?.[k]) && !have[s].has(r[k])) {
-      const { selfie, ...rest } = r; await put(s, s === 'log' && pic(selfie) ? { ...rest, selfie: await blob(selfie) } : rest); }
+    for (const i of b.items) { if (!(str(i?.id) && CATS.includes(i.cat) && hex(i.color) && pic(i.img))) continue;
+      const here = byId(i.id); if (here ? stamp(i) <= stamp(here) : killedHere('items', i.id, i)) continue;
+      const { photo, angles, more: _, img, ...rest } = i, more = here?.more ? [...here.more] : [];
+      if (!here) for (const a of arr(angles).filter(pic)) { const k = `${i.id}#${uid().slice(0, 8)}`; await putQuiet('orig', { id: k, photo: await blob(a) }); more.push(k); }
+      await putQuiet('items', { ...rest, name: String(i.name ?? 'Item'), img: await blob(img), ...(pic(photo) ? { photo: await blob(photo) } : {}), ...(more.length ? { more } : {}) }); // putQuiet keeps the backup's edit time
+      here ? updated++ : added++; }
+    const local = { items: byId, outfits: k => S.saved.find(r => r.key === k), log: k => S.log.find(r => r.day === k), wish: k => S.wish.find(r => r.id === k), colls: k => S.colls.find(c => c.id === k), inspo: k => S.inspo.find(r => r.id === k) };
+    const wins = (name, k, r) => { const here = local[name](k); return here ? stamp(r) > stamp(here) : !killedHere(name, k, r); };
+    for (const [s, k] of [['outfits', 'key'], ['log', 'day'], ['wish', 'id']]) for (const r of arr(b[s])) if (str(r?.[k]) && wins(s, r[k], r)) {
+      const { selfie, ...rest } = r; await putQuiet(s, s === 'log' && pic(selfie) ? { ...rest, selfie: await blob(selfie) } : rest); other++; }
     const ids = x => arr(x).filter(str), look = r => str(r?.key) && { key: r.key, ids: ids(r.ids) };
-    for (const c of arr(b.colls)) if (str(c?.id) && !collById(c.id)) await put('colls', { id: c.id, name: String(c.name ?? 'Collection').slice(0, 40), ids: ids(c.ids), at: +c.at || Date.now(), packed: ids(c.packed),
-      ...(c.trip ? { trip: { days: Math.min(21, Math.max(1, +c.trip.days || 1)), fits: arr(c.trip.fits).map(ids), ...(str(c.trip.city) ? { city: c.trip.city.slice(0, 60), temp: +c.trip.temp || null, rain: !!c.trip.rain } : {}) } } : {}) });
+    for (const c of arr(b.colls)) if (str(c?.id) && !c.id.startsWith('smart:') && wins('colls', c.id, c)) { other++; await putQuiet('colls', { id: c.id, name: String(c.name ?? 'Collection').slice(0, 40), ids: ids(c.ids), at: +c.at || Date.now(), packed: ids(c.packed), updatedAt: stamp(c),
+      ...(c.trip ? { trip: { days: Math.min(21, Math.max(1, +c.trip.days || 1)), fits: arr(c.trip.fits).map(ids), ...(str(c.trip.city) ? { city: c.trip.city.slice(0, 60), temp: +c.trip.temp || null, rain: !!c.trip.rain } : {}) } } : {}) }); }
     const piece = g => CATS.includes(g?.cat) && hex(g.color) && { cat: g.cat, color: g.color, kind: String(g.kind ?? ''), fit: [0, 1, 2].includes(g.fit) ? g.fit : 1, name: String(g.name ?? 'Piece').slice(0, 60) };
-    for (const i of arr(b.inspo)) if (str(i?.id) && pic(i.img) && !S.inspo.some(x => x.id === i.id)) await put('inspo', { id: i.id, img: await blob(i.img), palette: arr(i.palette).filter(hex), off: arr(i.off).filter(hex), at: +i.at || Date.now(),
+    for (const i of arr(b.inspo)) if (str(i?.id) && pic(i.img) && wins('inspo', i.id, i) && ++other) await putQuiet('inspo', { id: i.id, img: await blob(i.img), palette: arr(i.palette).filter(hex), off: arr(i.off).filter(hex), at: +i.at || Date.now(), updatedAt: stamp(i),
       ...(Array.isArray(i.pieces) ? { pieces: i.pieces.map(piece).filter(Boolean) } : {}) });
     if (b.plan?.days) { const days = { ...S.plan.days }, weekly = { ...S.plan.weekly };
       for (const [k, r] of Object.entries(b.plan.days)) if (/^\d{4}-\d\d-\d\d$/.test(k) && str(r?.key) && !days[k]) days[k] = { key: r.key, ids: ids(r.ids) };
       for (const [k, r] of Object.entries(b.plan.weekly ?? {})) if (/^[0-6]$/.test(k) && look(r) && !weekly[k]) weekly[k] = look(r);
       await put('profile', { k: 'plan', days, weekly }); }
-    if (b.profile?.k === 'me' && !S.profile) await put('profile', { k: 'me', done: true, styles: arr(b.profile.styles).filter(str), goals: arr(b.profile.goals).filter(str),
-      measure: Object.fromEntries(Object.entries(b.profile.measure ?? {}).filter(([, v]) => str(v)).map(([k, v]) => [k, v.slice(0, 80)])),
-      colors: { good: arr(b.profile.colors?.good).filter(str), avoid: arr(b.profile.colors?.avoid).filter(str) }, fullBackup: !!b.profile.fullBackup });
-    toast([items.length && `Added ${items.length} new piece${items.length > 1 ? 's' : ''}`, fixed && `restored ${fixed} missing photo${fixed > 1 ? 's' : ''}`].filter(Boolean).join(' · ') || 'Nothing new in that backup'); setTimeout(() => location.reload(), 1600);
+    if (b.profile?.k === 'me' && typeof b.profile === 'object' && (!S.profile || stamp(b.profile) > stamp(S.profile))) { await putQuiet('profile', { ...b.profile, k: 'me', done: true, lastBackup: S.profile?.lastBackup ?? b.profile.lastBackup }); other++; } // settings, taste, custom types
+    // Deletes made on the other device (only if made after the last edit here)
+    for (const [key, t] of Object.entries(b.gone && typeof b.gone === 'object' ? b.gone : {})) { const n = key.indexOf('|'), name = key.slice(0, n), k = key.slice(n + 1); if (!SYNCED.has(name) || !(+t > 0)) continue;
+      const here = local[name](k); if (here && +t > stamp(here)) { await del(name, k); name === 'items' ? removed++ : other++; } S.gone[key] = Math.max(S.gone[key] ?? 0, +t); }
+    await putQuiet('profile', { k: 'gone', at: S.gone });
+    const pcs = n => `${n} piece${n > 1 ? 's' : ''}`;
+    toast([added && `Added ${pcs(added)}`, updated && `updated ${pcs(updated)}`, removed && `removed ${pcs(removed)}`, other && `${other} other change${other > 1 ? 's' : ''}`, fixed && `restored ${fixed} missing photo${fixed > 1 ? 's' : ''}`].filter(Boolean).join(' · ') || 'Already up to date'); setTimeout(() => location.reload(), 1600);
   } catch (e) { console.warn(e); toast("That file isn't a closet backup"); }
 }
 const picker = (accept, multiple, fn) => { const i = Object.assign(document.createElement('input'), { type: 'file', accept, multiple }); i.onchange = () => { if (i.files.length) fn([...i.files]); i.value = ''; }; return i; };
