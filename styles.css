@@ -1,10 +1,22 @@
 /* Closet app styles (moved out of index.html so the page and its code stay readable). */
   /* Fashion house: warm stone neutrals, Helvetica, uppercase tracking, square corners, no shadows. The clothes are the only color. */
-  :root {
-    --bg: #ebe7e0; --s1: #f4f1ec; --tile: #e0dbd2; --ink: #1d1a17; --muted: #655e55; /* 5.2:1 on bg, 4.6:1 on tiles — WCAG AA */ --hair: rgb(29 26 23 / .12);
-    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif; --r: 2px;
+  :root { /* one set of colors and sizes (v5.24: merged from four stacked design layers) */
+    --bg: #faf8f5;
+    --s1: #f4f1ec;
+    --tile: #efebe5;
+    --ink: #1a1917;
+    --muted: #6e6a63;
+    --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --r: 0px;
     color-scheme: light;
-  }
+    --hair: rgb(26 25 23 / .1);
+    --accent: #141414;
+    --bad: #a8321d;
+    --display: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --mono: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --grain: none;
+    --shadow: drop-shadow(0 6px 10px rgb(0 0 0 / .12));
+    --rad: 16px; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   [hidden] { display: none !important; }
   body { margin: 0; min-height: 100dvh; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
@@ -349,10 +361,7 @@
   /* ============ V3 · STREETWEAR ARCHIVE ============
      Heavy condensed display (Anton, iPhone's condensed black as fallback), hard edges, near-black on off-white,
      monospace sticker tags for labels, one safety-orange accent for "live" things. Body copy stays readable sentence case. */
-  :root { --bg: #f0efeb; --s1: #fafaf7; --tile: #e2e1dc; --ink: #0c0c0c; --muted: #55554f; --hair: rgb(12 12 12 / .14); --accent: #ff4d00; --bad: #c2341b;
-    --display: Anton, "HelveticaNeue-CondensedBlack", "Arial Narrow", Impact, sans-serif; --mono: ui-monospace, "SF Mono", Menlo, monospace; --r: 0px;
-    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    --shadow: drop-shadow(0 5px 6px rgb(0 0 0 / .2)); color-scheme: light; } /* light only: the user turned dark mode off */
+  /* (merged into the first :root) */ /* light only: the user turned dark mode off */
   
   body { font-size: 15px; }
   h1, .display { font-family: var(--display); font-weight: 400; text-transform: uppercase; letter-spacing: .005em; line-height: .92; }
@@ -467,8 +476,7 @@
      Creative direction: the clothes are the only thing with weight or color. White page, one consistent soft-grey studio
      surface under every piece, small precise grotesk type, black text only, hairlines instead of boxes, no black panels.
      Black appears only as text and as the one primary button per screen. Taps stay 44px+, text 11px+. */
-  :root { --bg: #ffffff; --s1: #f7f7f5; --tile: #f0efec; --ink: #141414; --muted: #66665f; --hair: rgb(20 20 20 / .1); --accent: #141414; --bad: #a8321d;
-    --display: "Helvetica Neue", Helvetica, Arial, sans-serif; --mono: "Helvetica Neue", Helvetica, Arial, sans-serif; --grain: none; --shadow: drop-shadow(0 6px 10px rgb(0 0 0 / .12)); }
+  /* (merged into the first :root) */
   body { background: var(--bg); font-size: 15px; }
   h1, .display { font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; line-height: 1.05; }
   h1 { font-size: 26px; } .pickhead h2 { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .03em; }
@@ -527,7 +535,7 @@
   /* ============ THE BLEND: Yeezy's restraint, Rhode's softness ============
      Structure stays product-first (clothes lead, one action per screen, controls tucked away). The finish is warm milk instead of
      stark white, rounded tiles and cards, pill buttons, soft lowercase type. Still no black panels; black is text and the one button. */
-  :root { --bg: #faf8f5; --s1: #f4f1ec; --tile: #efebe5; --ink: #1a1917; --muted: #6e6a63; --hair: rgb(26 25 23 / .1); --rad: 16px; }
+  /* (merged into the first :root) */
   body { background: var(--bg); }
   h1 { font-size: 30px; font-weight: 500; letter-spacing: -.01em; text-transform: lowercase; } .pickhead h2 { text-transform: lowercase; font-weight: 500; letter-spacing: 0; font-size: 22px; }
   .eyebrow, .mono, .lab, .sec, h3, .looks-h, .chip, .tag, .btn, .pill, .seg button, nav .tabs button, .cell > span:first-child, .weekbar, .bc .lab, .plus, .capsel b, details.more > summary { text-transform: lowercase; letter-spacing: .02em; }
@@ -663,3 +671,9 @@
   .themeseg { display: flex; gap: 18px; margin: 0 0 8px; } .themeseg button { min-height: 44px; }
   .btn.sm:not(.go):not(.ghost):not(.danger):not(.done) { background: var(--ink); color: var(--bg); } /* small buttons in lists stay ink: one green per screen */ .btn.ghost.on svg { fill: currentColor; }
   .popsw { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; } .popsw button, .popsw label { width: 36px; height: 36px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--hair); position: relative; } .popsw .on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink); } .popsw label { overflow: hidden; background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); } .popsw input { position: absolute; inset: 0; opacity: 0; } .popsw button::after, .popsw label::after { content: ''; position: absolute; inset: -4px; }
+  /* v5.24 QA */
+  .dcard .flatwrap { width: min(100%, calc(42dvh * .8)); } /* bigger look; the per-look buttons moved into ••• so the space is there */
+  .dcard .dtags { justify-content: space-between; } .dcard .lookmore { min-width: 44px; min-height: 44px; height: 44px; letter-spacing: .1em; flex: none; }
+  .lmacts { display: grid; gap: 8px; margin-bottom: 14px; } .lmacts .btn svg { width: 16px; height: 16px; margin-right: 6px; }
+  .plist.open button { min-height: 44px; }
+  .seg button { min-width: 44px; padding-left: 6px; padding-right: 6px; } .chip { min-width: 44px; justify-content: center; } button.tag { min-width: 44px; justify-content: center; }

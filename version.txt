@@ -1,2 +1,2 @@
-2026.11.17 · v5.23
-Pick your own pop color (Me › Look) · stone grey behind clothes in dark mode · merge doubles yourself (select › Set… › Merge into one)
+2026.11.17 · v5.24
+Bigger looks on Today with one ••• menu each · Wear today always on screen · Me split into Your closet and Settings · cleaner icon

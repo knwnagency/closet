@@ -1,6 +1,3 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#f5f1e8"/>
-<text x="56" y="92" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="500" font-size="22" letter-spacing="4" fill="#004225">“CLOSET”</text>
-<text x="456" y="92" text-anchor="end" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="500" font-size="22" letter-spacing="4" fill="#004225">001</text>
-<path d="M256 168 322 234 256 300 190 234z" fill="#004225"/>
-<text x="256" y="400" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="800" font-size="78" letter-spacing="2" fill="#004225">FITTED</text>
-<text x="256" y="446" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="500" font-size="20" letter-spacing="6" fill="#004225">FOR WEARING</text></svg>
+<path d="M256 112 346 202 256 292 166 202z" fill="#004225"/>
+<text x="256" y="404" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="800" font-size="92" letter-spacing="2" fill="#004225">FITTED</text></svg>
