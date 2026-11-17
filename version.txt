@@ -1,2 +1,2 @@
-2026.11.16 · v5.12
-Not for me on every Today look (tell it what is off) · type-first review · fix all types from names · paste names from Claude · add prices in one go
+2026.11.16 · v5.13
+Several outfits a day · undo anything you told it (Me) · quick type check for new pieces · swap one look · why each look works · backup reminder on Today

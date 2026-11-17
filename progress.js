@@ -1,5 +1,5 @@
 // Streaks + badges. Pure, no DOM — tested by match.test.mjs.
-// log entry: { day: 'YYYY-MM-DD', key, ids, mode } — one per day (re-logging the same day replaces it).
+// log entry: { day: 'YYYY-MM-DD' (or 'YYYY-MM-DD#2' for a second outfit that day), key, ids, mode }.
 import { isNeutral, colorName } from './match.js';
 
 const pad = n => String(n).padStart(2, '0');
@@ -8,7 +8,7 @@ export const prevDay = k => { const d = new Date(k + 'T12:00'); d.setDate(d.getD
 
 // cur stays alive until the end of today even if today isn't logged yet.
 export function streaks(log, today = dayKey()) {
-  const days = new Set(log.map(l => l.day));
+  const days = new Set(log.map(l => l.day.slice(0, 10))); // a second outfit (2026-11-16#2) is the same day
   let cur = 0;
   for (let k = days.has(today) ? today : prevDay(today); days.has(k); k = prevDay(k)) cur++;
   let best = 0, run = 0, last;

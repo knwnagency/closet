@@ -152,6 +152,7 @@ export const MODES = {
     score(ps) {
       const shoes = ps.find(p => p.cat === 'Shoes');
       if (vibe(ps, 'formal') || shoes && !/sneaker|boot|trainer|dunk|jordan/i.test(`${shoes.name} ${shoes.kind}`)) return null;
+      if (colored(ps.filter(p => p.cat !== 'Accessories')).length >= 3) return null; // three bold colors in the clothes is a costume, not a statement (a red cap is fine)
       const pr = prints(ps);
       const { up, down } = proportion(ps);
       return (up === 2 || down === 2 ? 0.5 : 0) + vibe(ps, 'streetwear') * 1.5 + vibe(ps, 'athletic') * 0.4 + (ps.some(p => p.cat === 'Layers') ? 0.5 : 0)
@@ -532,6 +533,8 @@ export function forWeather(items, t, rain = false) {
   if (t < 12) return items.filter(p => !/short|tank|sandal|slipper|flip/i.test(k(p)));
   return items.filter(p => !/puffer|parka/i.test(k(p)));
 }
+// Pieces that suit rain: a hood or shell up top, boots below. Rainy days lean toward looks that have them.
+export const rainy = p => /hood|rain|shell|parka|windbreaker|anorak|puffer|trench/i.test(`${p.kind ?? ''} ${p.name ?? ''}`) || p.cat === 'Shoes' && /boot/i.test(`${p.kind ?? ''} ${p.name ?? ''}`);
 // Today: n varied outfits from every style, a little random so each visit (or Shuffle) is different. Cold days want a layer.
 // Occasions: how dressed up (0-2) and which vibe fits. A look scores by how close it lands.
 export const OCCASIONS = { work: { label: 'Work', dress: 2 }, date: { label: 'Date', dress: 1.5 }, club: { label: 'Club', dress: 1, vibe: 'streetwear' }, errands: { label: 'Errands', dress: 0.8 }, gym: { label: 'Gym', dress: 0, vibe: 'athletic' }, event: { label: 'Event', dress: 2 } };
@@ -545,7 +548,7 @@ export function today(items, { t = null, rain = false, occasion = null, n = 5, r
   const pool = forWeather(items, t, rain).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
   const list = collect(pool, { rand, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
   // a new top every card; pants, shoes, a layer, the same cap or chain at most twice each.
-  return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
+  return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + (rain ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
 }
 
 // Why no style rule takes a look, and which piece to change: the one whose removal lets a rule pass. The builder shows this instead
