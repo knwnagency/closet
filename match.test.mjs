@@ -366,6 +366,12 @@ console.log('variety ok');
   const count = () => { let n = 0; for (let k = 0; k < 20; k++) n += m.today(closet, { n: 5 }).filter(o => o.items.includes(boots)).length; return n; };
   const before = count(); boots.rate = -1; const after = count(); boots.rate = 1; const more = count();
   assert.ok(after <= 20 && after < before, `suggest less: boots in ${before} → ${after} of 100 cards`); assert.ok(more >= before, `suggest more: ${before} → ${more}`); }
+{ const m = await import('./match.js'), it = (id, cat, color, x = {}) => ({ id, cat, color, name: id, vibe: 'casual', ...x });
+  const pal = ['#1b1a19', '#7d7b78', '#5b3e2a', '#22402c', '#1e2a45', '#b2874e', '#d8c7a6', '#c9c7c3', '#f6f5f1', '#4d6a8c'];
+  const closet = [...pal.map((c, i) => it('t' + i, 'Tops', c, { kind: 't-shirt' })), ...pal.slice(0, 5).map((c, i) => it('b' + i, 'Bottoms', c, { kind: 'jeans' })), ...pal.slice(0, 5).map((c, i) => it('s' + i, 'Shoes', c, { kind: 'sneakers' })),
+    ...pal.slice(0, 7).map((c, i) => it('l' + i, 'Layers', c, { kind: 'jacket' }))];
+  for (let r = 0; r < 5; r++) { const deck = m.today(closet, { t: 4, n: 12 }), c = {}; for (const o of deck) for (const p of o.items) if (p.cat === 'Layers') c[p.id] = (c[p.id] ?? 0) + 1;
+    assert.ok(Math.max(...Object.values(c)) <= 2, `cold day, 7 layers: one jacket on ${Math.max(...Object.values(c))} of ${deck.length} looks`); } }
 console.log('v3 rules ok');
 { const c = await import('./cutout.js'), w = 10, h = 10, d = new Uint8ClampedArray(w * h * 4);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) d[(y * w + x) * 4 + 3] = x < 5 ? 255 : 0;
