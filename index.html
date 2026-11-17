@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v5.10'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v5.11'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -165,7 +165,8 @@ const issueOf = it => {
   const g = guessKind(it); // "Washed black tee" typed as hoodie: only flagged when it changes the layering (tee vs hoodie), not jacket vs overshirt
   if (g && g !== it.kind && KINDS[it.kind] === it.cat && level({ ...it, kind: g }) !== level(it)) return { text: `Named like a ${g}, but the type says ${it.kind}`, fix: `kind:${g}`, label: `Set type to ${g}` };
   const k = knownFit(it), F = FITS[it.cat] ?? FITS.default; if (k != null && k !== (it.fit ?? 1)) return { text: `${it.cat === 'Shoes' ? 'These are' : 'This brand is'} usually ${F[k].toLowerCase()}, not ${F[it.fit ?? 1].toLowerCase()}`, fix: `fit:${k}`, label: `Set to ${F[k]}` };
-  const twin = S.items.find(o => o !== it && o.cat === it.cat && o.kind === it.kind && colorDist(o.color, it.color) < 22 && o.name.toLowerCase().replace(/\W/g, '') === it.name.toLowerCase().replace(/\W/g, ''));
+  const plain = n => n.toLowerCase().replace(/\W/g, ''), generic = KINDS[it.name.toLowerCase()] || plain(it.name) === plain(it.kind ?? '') || /^(new item|item|piece)$/i.test(it.name); // "T-shirt" and "T-shirt" are just the AI's default name, not proof of a double
+  const twin = !generic && S.items.find(o => o !== it && o.cat === it.cat && o.kind === it.kind && colorDist(o.color, it.color) < 22 && plain(o.name) === plain(it.name));
   if (twin && !it.dupOk) return { text: `Looks like a duplicate of another "${twin.name}"`, fix: `dup:${twin.id}`, label: 'Merge into one' };
   return null; };
 // Doubles, side by side: the piece you added first (kept) and the copy. Merge, or say they're different pieces.
@@ -311,6 +312,25 @@ const VIBES = { streetwear: 'streetwear', formal: 'formal dress clothing', casua
 // Fit prompts, index = fit value (0 slim/sleek, 1 regular, 2 baggy/chunky)
 const FIT_PROMPTS = { Shoes: ['sleek low-profile', 'regular', 'chunky thick-soled'], Bottoms: ['slim skinny', 'straight leg', 'baggy wide-leg'], default: ['slim fitted', 'regular fit', 'oversized baggy boxy'] };
 
+// Brand / team from the photo. Tested on 28 haul photos: clear logos read right (Amiri .84, Gucci .54, A's cap .62), lookalikes don't
+// (an LA cap read as A's at .59, Cole Buxton as Red Sox at .33). So it's only ever a suggestion you confirm, and only from .45 up.
+const BRANDS = { Nike: 'Nike', Jordan: 'Jordan', Adidas: 'Adidas', 'New Balance': 'New Balance', Converse: 'Converse', Vans: 'Vans', Puma: 'Puma', Supreme: 'Supreme', Stussy: 'Stüssy', Palace: 'Palace',
+  Bape: 'Bape', Kith: 'Kith', 'Off-White': 'Off-White', 'Essentials Fear of God': 'Essentials', Amiri: 'Amiri', 'Gallery Dept': 'Gallery Dept', Balenciaga: 'Balenciaga', 'Louis Vuitton': 'Louis Vuitton',
+  Gucci: 'Gucci', 'Chrome Hearts': 'Chrome Hearts', Carhartt: 'Carhartt', Dickies: 'Dickies', Patagonia: 'Patagonia', 'The North Face': 'The North Face', "Arc'teryx": "Arc'teryx", 'Ralph Lauren': 'Ralph Lauren',
+  "Levi's": "Levi's", Champion: 'Champion', 'Anti Social Social Club': 'ASSC', Represent: 'Represent', Rhude: 'Rhude', 'Denim Tears': 'Denim Tears', Corteiz: 'Corteiz', Hellstar: 'Hellstar', Trapstar: 'Trapstar',
+  Moncler: 'Moncler', 'Stone Island': 'Stone Island', Burberry: 'Burberry', Dior: 'Dior', Yeezy: 'Yeezy', 'New Era': 'New Era', Lacoste: 'Lacoste', 'Tommy Hilfiger': 'Tommy Hilfiger',
+  'Los Angeles Lakers': 'Lakers', 'Houston Rockets': 'Rockets', 'Chicago Bulls': 'Bulls', 'Golden State Warriors': 'Warriors', 'Boston Celtics': 'Celtics', 'Miami Heat': 'Heat', 'New York Knicks': 'Knicks',
+  'Brooklyn Nets': 'Nets', 'San Antonio Spurs': 'Spurs', 'Dallas Mavericks': 'Mavericks', 'Phoenix Suns': 'Suns', 'Toronto Raptors': 'Raptors', 'Philadelphia 76ers': '76ers', 'Milwaukee Bucks': 'Bucks',
+  'New York Yankees': 'Yankees', 'Los Angeles Dodgers': 'Dodgers', 'Boston Red Sox': 'Red Sox', 'Chicago Cubs': 'Cubs', 'Oakland Athletics': "A's", 'Houston Astros': 'Astros', 'San Francisco Giants': 'Giants',
+  'Chicago White Sox': 'White Sox', 'Atlanta Braves': 'Braves', 'Dallas Cowboys': 'Cowboys', 'Houston Texans': 'Texans', 'Las Vegas Raiders': 'Raiders', 'Kansas City Chiefs': 'Chiefs', 'San Francisco 49ers': '49ers' };
+async function brandOf(dataUrl) {
+  const r = await (await loadClf())(dataUrl, [...Object.keys(BRANDS), 'no brand, plain clothing'], { hypothesis_template: 'a photo of {} clothing' });
+  return BRANDS[r[0].label] && r[0].score >= 0.45 ? { brand: BRANDS[r[0].label], score: +r[0].score.toFixed(2) } : null;
+}
+// "Amiri t-shirt", "Lakers jersey": the brand in front, unless the name already has it.
+const brandName = (it, b) => { const plain = n => String(n ?? '').toLowerCase().replace(/\W/g, ''), n = it.name ?? '';
+  if (new RegExp(b.replace(/[^\w ]/g, '.'), 'i').test(n)) return n; // already says it
+  return KINDS[n.toLowerCase()] || plain(n) === plain(it.kind) || /^(new item|item)$/i.test(n) ? `${b} ${(it.kind || it.cat).toLowerCase()}` : `${b} ${n}`; }; // the AI's generic name gets replaced, yours gets the brand in front
 async function tag(dataUrl) {
   const c = await loadClf();
   const unsure = []; // tags where the runner-up came close: only these get asked about
@@ -326,9 +346,10 @@ async function tag(dataUrl) {
   const fit = cat === 'Accessories' ? 1 : fp.indexOf(await top(fp, 'a photo of {}', 'fit'));
   const material = /denim|jean/.test(kind) ? 'denim' : cat === 'Accessories' ? undefined : await top(MATERIALS.map(m => `${m} ${kind}`), 'a close-up photo of a {}').then(l => l.split(' ')[0]);
   if (Array.isArray(vibe)) unsure.push('dress');
+  const brandGuess = await brandOf(dataUrl).catch(() => null);
   return sane({
     kind, cat, fit, name: kind[0].toUpperCase() + kind.slice(1),
-    vibe, pattern: pat, patterned: pat === 'graphic' || pat === 'allover', ...(person ? { person: true } : {}), ...(material ? { material } : {}), unsure,
+    vibe, pattern: pat, patterned: pat === 'graphic' || pat === 'allover', ...(person ? { person: true } : {}), ...(material ? { material } : {}), unsure, ...(brandGuess ? { brandGuess } : {}),
   });
 }
 // Vibes the AI gets wrong that the type settles: loafers aren't sporty, a hoodie isn't dressy. A big graphic on a knit is usually
@@ -738,7 +759,7 @@ function todayView() {
   if (!looks.length) return top + `<div class="empty"><h2>No ${MODES[S.mode]?.label ?? ''} matches</h2><p>${d.blocked ? `Most combos break a proportion rule: <b>${esc(d.blocked.toLowerCase())}</b>. If a fit tag is wrong, fix it on the piece.` : 'Your closet needs more colors for this rule. Try another filter.'}</p><button class="btn" data-action="filters">Change filter</button></div>`;
   const cur = looks[Math.min(at, looks.length - 1)];
   const lh = lessHint();
-  return top + capBar() + (lh ? `<div class="nudge glass"><div><span class="mono">You keep passing on looks with it</span><b>Suggest the ${esc(lh.name.toLowerCase())} less?</b></div><button class="tag" data-rate="${lh.id}|-1">Less</button><button class="tag o" data-rate="${lh.id}|0">Keep</button></div>` : '')
+  return top + (lh ? `<div class="nudge glass"><div><span class="mono">You keep passing on looks with it</span><b>Suggest the ${esc(lh.name.toLowerCase())} less?</b></div><button class="tag" data-rate="${lh.id}|-1">Less</button><button class="tag o" data-rate="${lh.id}|0">Keep</button></div>` : '')
     + `<div class="deck" aria-label="Today's looks, slide for more">${(used => looks.map((o, k) => deckCard(o, k, looks.length, 'slide', used)).join(''))(new Set())}${moreWays()}</div>
     <div class="dbtns"><button class="round" data-deck="prev" aria-label="Previous look">${svg('M15 5l-7 7 7 7')}</button><button class="round ${isFav(cur.key) ? 'on' : ''}" data-deck="fav" aria-label="Save look">${heart}</button><button class="btn go" data-deck="wear">Wear this ${ic('arrow')}</button><button class="round" data-deck="next" aria-label="Next look">${svg('M9 5l7 7-7 7')}</button></div>
     <p class="mono swipehint">Slide for more · tap a look to open it</p>`;
@@ -790,6 +811,28 @@ const wxWhy = o => { const w = weatherNow(); if (!w) return '';
   return `${tempText(w.t)}${rain ? ' and rain' : ''} · ${why}${rain ? ', no suede' : ''}${later}`; };
 const actionsHtml = o => { const k = keyOf(o), worn = S.log.find(l => l.day === dayKey())?.key === k, off = complete(o) ? '' : 'disabled';
   return `<div class="actions" id="bactions"><button class="btn ${isFav(k) ? '' : 'ghost'} sm" data-save="${k}" ${off}>${heart} ${isFav(k) ? 'Saved' : 'Save'}</button><button class="btn ghost sm" data-action="planthis" ${off}>Plan</button><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${k}" ${off}>${worn ? 'Logged today ✓' : 'Wear today'}</button></div>`; };
+// Find brands (Me): reads each piece's photo once for a logo or team, then lists what it found for you to confirm.
+let brandScan = false;
+async function findBrands() {
+  if (brandScan) return toast('Still looking for logos…'); brandScan = true; try { await scanBrands(); } finally { brandScan = false; }
+}
+async function scanBrands() {
+  const todo = S.items.filter(i => !i.brand && i.brandGuess === undefined && !i.broken);
+  if (!todo.length) return openBrands();
+  toast(`Looking for logos on ${todo.length} pieces…`); let n = 0, k = 0;
+  for (const it of todo) { try { const b = it.thumb instanceof Blob ? it.thumb : await imgOf(it); it.brandGuess = (await brandOf(await toDataUrl(b))) ?? false; await putQuiet('items', it); if (it.brandGuess) n++; } catch (e) { console.warn(e); }
+    if (++k % 20 === 0) toast(`Looking for logos… ${k} of ${todo.length}`); }
+  toast(n ? `Found ${n} brand${n > 1 ? 's' : ''}` : 'No clear logos found'); openBrands();
+}
+function openBrands() {
+  const list = S.items.filter(i => i.brandGuess && !i.brand);
+  if (!list.length) { if (sheet.open) sheet.close(); return toast('No brand suggestions left'); }
+  showSheet(`<div class="pad brandlist"><div class="pickhead"><div><div class="eyebrow">${list.length} found</div><h2>Brands</h2></div>${closeBtn}</div>
+    <p class="sub">The AI reads clear logos well and lookalikes badly, so check each one. Tap a photo to open the piece.</p>
+    ${S.items.some(i => !i.brand && i.brandGuess === undefined) ? `<button class="tag o" data-action="scanbrands">Look at new pieces too</button>` : ''}
+    ${list.length > 1 ? `<button class="btn wide" data-brandall="1">Use all ${list.length}</button>` : ''}
+    ${list.map(it => `<div class="brow"><button data-open="${it.id}"><img src="${src(it)}" alt=""></button><div><b>${esc(brandName(it, it.brandGuess.brand))}</b><span class="mono">was "${esc(it.name)}"</span></div><button class="btn sm" data-brandok="${it.id}">Use</button><button class="btn ghost sm" data-brandno="${it.id}">No</button></div>`).join('')}</div>`);
+}
 // Rule check (Me): every look you saved or wore should pass the style rules. One that doesn't points at a rule that's wrong
 // (light jeans counted as a color, a cap tagged athletic), so it's listed with the reason, not hidden.
 const ruleCheck = () => { const looks = [...S.saved, ...wornLooks()].filter((r, k, a) => a.findIndex(x => x.key === r.key) === k).map(r => ({ r, ps: r.ids.map(byId).filter(Boolean) })).filter(x => complete(x.ps));
@@ -1147,6 +1190,9 @@ function meView() {
       <p class="mono legend">${colors.slice(0, 6).map(([n, x]) => `${n} ${Math.round(x.n / items.length * 100)}%`).join(' · ')}</p>` : ''}
     ${items.some(stale) ? `<h3><span>Haven't worn in a while</span></h3>${strip(items.filter(stale).slice(0, 20))}` : ''}
     ${ruleCheck()}
+    <h3><span>Brands</span><span>${S.items.filter(i => i.brand).length} of ${S.items.length} named</span></h3>
+    <p class="sub">Find logos and team names in your photos ("Lakers jersey", "Amiri t-shirt"). You confirm each one. Or tap any piece's name to rename it yourself.</p>
+    <button class="btn ghost wide" data-action="findbrands">${S.items.some(i => i.brandGuess && !i.brand) ? 'See brand suggestions' : 'Find brands in my photos'}</button>
     <details class="sizes"><summary><h3><span>Sizes &amp; measurements</span><span>${MEASURE.filter(([k]) => m[k]).length} of ${MEASURE.length}</span></h3></summary>
     <form id="measure" class="group">${MEASURE.map(([k, label, ph]) => `<label class="cell"><span>${label}</span><input name="${k}" value="${esc(m[k] ?? '')}" placeholder="${ph}"></label>`).join('')}</form></details>
     <h3><span>Backup</span><span>${p.lastBackup ? `last ${ago(p.lastBackup)}` : 'never'}</span></h3>
@@ -1270,12 +1316,13 @@ function openSheet(id) {
   const n = S.items.filter(i => i.review).indexOf(it) + 1;
   showSheet(`<div class="hero spot"><i class="grab" aria-hidden="true"></i><button type="button" class="zoomer" data-zoom="${it.id}" aria-label="See the photo full screen"><img data-full="${it.id}" src="${srcFull(it)}" alt=""></button>${closeBtn}</div>
   ${anglesHtml(it)}<form>
-    <div class="phead"><h2 class="display pname">${esc(it.name)}</h2>
+    <div class="phead"><h2 class="display pname" contenteditable="plaintext-only" spellcheck="false" enterkeyhint="done" aria-label="Name, tap to edit" data-rename="${it.id}">${esc(it.name)}</h2>
       <div class="sees" aria-label="What your stylist sees">${[['color', `<i style="background:${it.color}"></i>${colorName(it.color)}`], ['material', it.material ?? 'material?'],
         ...(PRINTABLE.includes(it.cat) ? [['pattern', { solid: 'solid', logo: 'small logo', graphic: 'big graphic', allover: 'all-over pattern' }[patternOf(it)]]] : []), ...(it.cat === 'Accessories' ? [] : [['fit', (FITS[it.cat] ?? FITS.default)[it.fit ?? 1].toLowerCase()], ['dress', ['sporty', 'everyday', 'dressy'][dress(it)]]]), ['kind', it.kind || 'type?']]
         .map(([f, l]) => `<button type="button" class="see${it.review && it.unsure?.includes(f) ? ' unsure' : ''}" data-field="${f}">${l}${it.review && it.unsure?.includes(f) ? ' ?' : ''}</button>`).join('')}</div>
       <div class="tags">${it.review ? `<span class="tag hot">New${left > 1 ? ` · ${n} of ${left}` : ''}</span>` : ''}${it.dirty ? '<span class="tag hot">In the laundry</span>' : ''}${stale(it) ? `<span class="tag o">Haven't worn in a while</span>` : ''}${it.price > 0 ? `<span class="tag o">${(x => '$' + (x < 10 ? x.toFixed(2) : Math.round(x)))(it.price / Math.max(1, it.wears ?? 0))} per wear</span>` : ''}${it.bought ? `<span class="tag o">Bought ${ago(new Date(it.bought).getTime())}${it.from ? ` · ${esc(it.from)}` : ''}</span>` : ''}${(it.tags ?? []).map(t => `<span class="tag o">#${esc(t)}</span>`).join('')}</div></div>
     ${it.review ? `<div class="review"><p>${it.unsure?.length ? `The AI wasn't sure about the tags marked ?. Right?` : 'The AI tagged it as above. Right?'}</p><div class="row"><button type="button" class="btn go" data-confirm="${it.id}">Looks right${left > 1 ? ' · next' : ''}</button><button type="button" class="btn ghost" data-action="opendetails">Fix tags</button></div></div>` : ''}
+    ${it.brandGuess && !it.brand ? `<div class="issue"><span>Looks like <b>${esc(it.brandGuess.brand)}</b>. Name it "${esc(brandName(it, it.brandGuess.brand))}"?</span><span class="row"><button type="button" class="btn sm" data-brandok="${it.id}">Use it</button><button type="button" class="btn ghost sm" data-brandno="${it.id}">No</button></span></div>` : ''}
     ${issueOf(it) ? `<div class="issue"><span>${esc(issueOf(it).text)}</span><span class="row"><button type="button" class="btn sm" data-fixtag="${it.id}|${issueOf(it).fix}">${issueOf(it).label}</button><button type="button" class="btn ghost sm" data-tagok="${it.id}">${issueOf(it).fix.startsWith('dup:') ? 'Not the same' : "It's right"}</button></span></div>` : ''}
     <div class="photofix"><span class="mono">Fix the photo</span><button type="button" class="tag o" data-replace="${it.id}">${ic('camera')} New photo</button><button type="button" class="tag o" data-recut="${it.id}">Remove background</button><button type="button" class="tag o" data-touchup="${it.id}">Erase</button><button type="button" class="tag o" data-angleadd="${it.id}">${ic('plus')} More photos</button></div>
     <div class="photofix rate"><span class="mono">Suggest it</span>${[[-1, 'Less'], [0, 'Normal'], [1, 'More']].map(([v, l]) => `<button type="button" class="tag o${(it.rate ?? 0) === v ? ' on' : ''}" aria-pressed="${(it.rate ?? 0) === v}" data-rate="${it.id}|${v}">${l}</button>`).join('')}
@@ -1696,6 +1743,11 @@ document.addEventListener('change', async e => {
     toast(`Updated ${S.sel.size} piece${S.sel.size > 1 ? 's' : ''}`); S.sel = null; S.ideas = null; S.deck = null; S.cs = {}; render(); return; }
   if (e.target.matches('[data-selcoll]') && e.target.value) { const c = collById(e.target.value); c.ids = [...new Set([...c.ids, ...S.sel])]; await put('colls', c); toast(`Added ${S.sel.size} to ${c.name}`); S.sel = null; render(); return; }
 });
+// Tap a piece's name to rename it ("Lakers jersey"). Return or tapping away saves.
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('[data-rename]')) { e.preventDefault(); e.target.blur(); } });
+document.addEventListener('focusout', async e => { const el = e.target; if (!el.matches?.('[data-rename]')) return; const it = byId(el.dataset.rename); if (!it) return;
+  const v = el.textContent.replace(/\s+/g, ' ').trim().slice(0, 60); if (!v || v === it.name) { el.textContent = it.name; return; }
+  it.name = v; await put('items', it); const f = sheet.querySelector('input[name=name]'); if (f) f.value = v; S.deck = null; render(); toast('Renamed'); });
 document.addEventListener('click', async e => {
   const t = e.target.closest('button'); if (!t) return;
   const ds = t.dataset;
@@ -1860,6 +1912,11 @@ document.addEventListener('click', async e => {
   else if (ds.wearpick) { const [slot, id] = ds.wearpick.split(':'); sheet.onclose = null; sheet.close(); S.dropped = slot; const rest = S.build.filter(p => !inS(slot)(p)); if (slot === 'Outer') S.outer = id; setBuild([...rest, byId(id)]); }
   else if (ds.rotate) { const it = byId(ds.rotate); await rotate(it); const im = sheet.querySelector('.hero img'); if (im) im.src = src(it); S.ideas = null; }
   else if (ds.replace) { replacing = ds.replace; replaceInput.click(); }
+  else if (ds.brandok) { const it = byId(ds.brandok), b = it.brandGuess?.brand; if (b) { it.name = brandName(it, b); it.brand = b; } delete it.brandGuess; await put('items', it); S.deck = null; if (t.closest('.brandlist')) openBrands(); else openSheet(it.id); toast(`Named ${it.name}`); }
+  else if (ds.brandno) { const it = byId(ds.brandno); it.brandGuess = false; await put('items', it); if (t.closest('.brandlist')) openBrands(); else openSheet(it.id); }
+  else if (ds.brandall) { let n = 0; for (const it of S.items.filter(i => i.brandGuess && !i.brand)) { it.name = brandName(it, it.brandGuess.brand); it.brand = it.brandGuess.brand; delete it.brandGuess; await put('items', it); n++; } S.deck = null; sheet.close(); render(); toast(`Named ${n} piece${n === 1 ? '' : 's'}`); }
+  else if (ds.action === 'findbrands') S.items.some(i => i.brandGuess && !i.brand) ? openBrands() : findBrands();
+  else if (ds.action === 'scanbrands') findBrands();
   else if (ds.rate) { const [id, v] = ds.rate.split('|'), it = byId(id); if (+v) it.rate = +v; else delete it.rate; it.rateAsked = true; await put('items', it); S.ideas = null; S.deck = null; S.cs = {};
     if (t.closest('#sheet')) openSheet(id); else { render(); toast(+v < 0 ? `${it.name} saved for special occasions` : 'Kept as is'); } }
   else if (ds.recut) {

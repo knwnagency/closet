@@ -1,2 +1,2 @@
-2026.11.16 · v5.10
-New pieces show up in Today right away · no blank screen after switching tabs · Wear this stays above the menu
+2026.11.16 · v5.11
+Tap a name to rename it · brand and team suggestions (Me › Find brands) · fewer false "duplicate" alerts
