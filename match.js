@@ -66,6 +66,7 @@ export const patternOf = p => p.pattern ?? (p.patterned ? 'graphic' : 'solid');
 export const PRINTABLE = ['Tops', 'Layers', 'Bottoms'];
 const prints = ps => ps.filter(p => PRINTABLE.includes(p.cat) && (patternOf(p) === 'graphic' || patternOf(p) === 'allover')).length;
 const vibe = (ps, v) => ps.filter(p => [].concat(p.vibe).includes(v)).length; // an item can carry several vibes
+const mainVibe = (ps, v) => ps.filter(p => [].concat(p.vibe ?? [])[0] === v).length; // only the main vibe can rule a look out: "also works as" tags only add
 const pairs = a => a.flatMap((x, i) => a.slice(i + 1).map(y => [x, y]));
 
 // Best complementary pair: how far (degrees) it is from a perfect 180° split. Infinity if none.
@@ -132,7 +133,7 @@ export const MODES = {
     label: 'Classic', blurb: 'Neutral foundation, one accent max, nothing loud.',
     score(ps) {
       const c = colored(ps).length;
-      if (c > 1 || prints(ps) > 1 || vibe(ps.filter(p => ['Tops', 'Layers', 'Bottoms'].includes(p.cat)), 'athletic')) return null; // gym clothes, not a cap or sneakers
+      if (c > 1 || prints(ps) > 1 || mainVibe(ps.filter(p => ['Tops', 'Layers', 'Bottoms'].includes(p.cat)), 'athletic')) return null; // gym clothes, not a cap or sneakers
       const { up, down } = proportion(ps);
       return (up === 2 && down === 2 ? -1.5 : 0) + 3 - c + vibe(ps, 'formal') * 0.5 + vibe(ps, 'casual') * 0.3 - prints(ps) - vibe(ps, 'streetwear') * 0.5;
     },
@@ -151,7 +152,7 @@ export const MODES = {
     label: 'Streetwear', blurb: 'Sneakers, layers, one statement piece.',
     score(ps) {
       const shoes = ps.find(p => p.cat === 'Shoes');
-      if (vibe(ps, 'formal') || shoes && !/sneaker|boot|trainer|dunk|jordan/i.test(`${shoes.name} ${shoes.kind}`)) return null;
+      if (mainVibe(ps, 'formal') || shoes && !/sneaker|boot|trainer|dunk|jordan/i.test(`${shoes.name} ${shoes.kind}`)) return null;
       if (colored(ps.filter(p => p.cat !== 'Accessories')).length >= 3) return null; // three bold colors in the clothes is a costume, not a statement (a red cap is fine)
       const pr = prints(ps);
       const { up, down } = proportion(ps);
@@ -431,6 +432,7 @@ export function rankSwaps(items, outfit, slot, modes = Object.keys(MODES).filter
     const ps = [...rest, item];
     let best = null;
     for (const m of modes) { /* half-built outfits score too: only the rules whose pieces are there count */ const r = scoreOutfit(ps, m); if (r && (!best || r.score > best.score)) best = { ...r, mode: m }; }
+    if (!best && !rest.length) return { item, score: -9, mode: null, note: null }; // nothing else picked: nothing to clash with (it just ranks last)
     return { item, score: best?.score ?? null, mode: best?.mode, note: best?.note ?? (proportion(ps).veto ? proportion(ps).note : null) }; // a clash says why when it's the shape
   }).sort((a, b) => (b.score ?? -99) - (a.score ?? -99));
 }
@@ -568,7 +570,7 @@ export function whyNot(ps) {
   for (const p of order) {
     if (!ok(ps.filter(q => q !== p))) continue;
     const v = [].concat(p.vibe ?? []), swap = (q, x) => ps.map(o => o === p ? { ...o, ...x } : o);
-    if (v.includes('athletic') && ok(swap(p, { vibe: 'casual' }))) return { note: `${p.name} is tagged sporty, which rules out the dressier looks. Tagged wrong?`, piece: p, fix: 'tag' };
+    if (v[0] === 'athletic' && ok(swap(p, { vibe: 'casual' }))) return { note: `${p.name} is tagged sporty, which rules out the dressier looks. Tagged wrong?`, piece: p, fix: 'tag' };
     if (prints(ps) > 1 && ['graphic', 'allover'].includes(patternOf(p))) return { note: `Two prints compete. Swap the ${p.name.toLowerCase()} for something plain`, piece: p, fix: 'swap' };
     if (p.cat === 'Shoes' && !/sneaker|boot|trainer|dunk|jordan/i.test(`${p.name} ${p.kind}`)) return { note: `${p.name} work in classic looks, but not with these colors. Try sneakers or a neutral pair`, piece: p, fix: 'swap' };
     if (!isNeutral(p.color) && !isDenim(p)) return { note: `The ${colorName(p.color)} ${p.name.toLowerCase()} doesn't go with the other colors`, piece: p, fix: 'swap' };

@@ -378,3 +378,16 @@ console.log('v3 rules ok');
   c.smoothEdges(d, w, h, 1); assert.equal(d[(5 * w + 1) * 4 + 3], 255, 'inside stays solid'); assert.equal(d[(5 * w + 8) * 4 + 3], 0, 'outside stays clear');
   assert.ok(d[(5 * w + 4) * 4 + 3] < 255 && d[(5 * w + 5) * 4 + 3] > 0, 'the edge softens'); }
 console.log('edges ok');
+
+// A piece picked first can't "clash": an empty outfit has nothing to clash with (Work Jacket tagged athletic + formal, 2026-11-17)
+{ const { rankSwaps: rs } = await import('./match.js');
+  const odd = { id: 'wj', name: 'Work Jacket', cat: 'Layers', kind: 'jacket', color: '#c9b48f', fit: 1, vibe: ['athletic', 'formal'] };
+  const r = rs([odd], [], 'Layers'); if (r[0].score == null) throw new Error('empty outfit marked a piece as clashing'); console.log('empty build ok'); }
+
+// "Also works as" tags only add: a streetwear jacket that also works as formal/casual/athletic still fits Classic and Streetwear (2026-11-17)
+{ const { scoreOutfit: so } = await import('./match.js');
+  const wj = { id: 'wj2', name: 'Work Jacket', cat: 'Layers', kind: 'jacket', color: '#c9b48f', fit: 1, vibe: ['streetwear', 'formal', 'casual', 'athletic'] };
+  const tee = { id: 't', name: 'White tee', cat: 'Tops', kind: 't-shirt', color: '#f2f2f0', fit: 1, vibe: 'casual' }, jeans = { id: 'j', name: 'Black jeans', cat: 'Bottoms', kind: 'jeans', color: '#1c1c1c', fit: 1, vibe: 'casual' }, sn = { id: 's', name: 'White sneakers', cat: 'Shoes', kind: 'sneakers', color: '#f4f4f2', fit: 1, vibe: 'casual' };
+  for (const m of ['classic', 'street']) if (so([wj, tee, jeans, sn], m) == null) throw new Error(`extra vibes blocked ${m}`);
+  const gym = { ...tee, id: 'g', vibe: ['athletic'] }; if (so([gym, jeans, sn], 'classic') != null) throw new Error('main athletic vibe should still keep a look out of Classic');
+  console.log('extra vibes ok'); }

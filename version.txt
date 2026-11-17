@@ -1,2 +1,2 @@
-2026.11.17 · v5.26
-Phone and computer sync: Save backup on one, Restore or sync on the other. The newer edit wins and deletes carry over
+2026.11.17 · v5.27
+"Also works as" styles now only help a piece, never block it (Work Jacket shows up again) · first pick in a new build is never called a clash
