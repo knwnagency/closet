@@ -1,2 +1,2 @@
-2026.11.16 · v5.11
-Tap a name to rename it · brand and team suggestions (Me › Find brands) · fewer false "duplicate" alerts
+2026.11.16 · v5.12
+Not for me on every Today look (tell it what is off) · type-first review · fix all types from names · paste names from Claude · add prices in one go

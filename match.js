@@ -321,20 +321,24 @@ export function fixTip(ps) {
 // ---------- your taste: learned from favorites, wears and "not for me" ----------
 // Pairs of pieces you keep putting together score higher; pairs from looks you rejected score lower; a rejected look never comes back.
 // ponytail: module-level state set by the app (setTaste) so every scorer sees it without threading opts through. Fine for one user.
-let TASTE = { pair: new Map(), nope: new Set(), good: [], avoid: [], hair: null, cpair: new Map() };
+let TASTE = { pair: new Map(), nope: new Set(), good: [], avoid: [], hair: null, cpair: new Map(), never: new Set(), colorNo: new Set(), dressBias: 0 };
 // liked/worn/nope: lists of piece-id arrays. good/avoid: color names. hair: black|brown|blonde|red|grey. likedColors: color-name lists of looks you saved or wore.
-export function setTaste({ liked = [], worn = [], nope = [], good = [], avoid = [], hair = null, likedColors = [] } = {}) {
+export function setTaste({ liked = [], worn = [], nope = [], good = [], avoid = [], hair = null, likedColors = [], never = [], colorNo = [], dressBias = 0 } = {}) {
   const pair = new Map(), bump = (ids, w) => { for (const [a, b] of pairs([...ids].sort())) pair.set(a + '|' + b, (pair.get(a + '|' + b) ?? 0) + w); };
   liked.forEach(ids => bump(ids, 1)); worn.forEach(ids => bump(ids, 0.5)); nope.forEach(ids => bump(ids, -1));
   const cpair = new Map(); // color pairs you keep choosing (black + olive), not just piece pairs
   for (const ns of likedColors) for (const [a, b] of pairs([...new Set(ns)].sort())) cpair.set(a + '|' + b, (cpair.get(a + '|' + b) ?? 0) + 1);
-  TASTE = { pair, nope: new Set(nope.map(ids => [...ids].sort().join())), good, avoid, hair, cpair };
+  TASTE = { pair, nope: new Set(nope.map(ids => [...ids].sort().join())), good, avoid, hair, cpair, never: new Set(never.map(p => [...p].sort().join('|'))), colorNo: new Set(colorNo.map(p => [...p].sort().join('|'))), dressBias };
 }
 const taste = ps => {
   const ids = ps.map(p => p.id).sort(); if (TASTE.nope.has(ids.join())) return null;
+  if (pairs(ids).some(([a, b]) => TASTE.never.has(a + '|' + b))) return null; // you said these two don't go
+  const cn = [...new Set(ps.filter(p => p.cat !== 'Accessories').map(p => colorName(p.color)))].sort();
+  const colorPen = pairs(cn).some(([a, b]) => TASTE.colorNo.has(a + '|' + b)) ? -2 : 0; // you said these colors don't work together
+  const cl = ps.filter(p => CLOTHES.includes(p.cat)), dressPen = TASTE.dressBias && cl.length ? -Math.abs(cl.reduce((t, p) => t + dress(p), 0) / cl.length - (1 + TASTE.dressBias)) * 0.8 : 0; // too dressy / too sporty
   const t = pairs(ids).reduce((s, [a, b]) => s + (TASTE.pair.get(a + '|' + b) ?? 0), 0);
   const cs = pairs([...new Set(ps.filter(p => p.cat !== 'Accessories').map(p => colorName(p.color)))].sort()).reduce((s, [a, b]) => s + (TASTE.cpair.get(a + '|' + b) ?? 0), 0);
-  return Math.max(-1.5, Math.min(1.5, t * 0.25 + Math.min(0.6, cs * 0.1)));
+  return Math.max(-1.5, Math.min(1.5, t * 0.25 + Math.min(0.6, cs * 0.1))) + colorPen + dressPen;
 };
 
 // Known sneakers have a known shape: the AI's fit guess shouldn't call Air Force 1s sleek. null = not a model we know.
@@ -505,6 +509,7 @@ function varied(list, n, base = { Tops: 2, Layers: 2, Bottoms: 2, Shoes: 2, Acce
     if (out.includes(o)) continue;
     const main = o.items.filter(p => p !== o.anchor);
     if (cap && main.some(p => (used.get(p.id) ?? 0) >= (p.rate < 0 ? 1 : cap[p.cat] ?? 2))) continue; // "less" pieces: one card at most
+    if (cap && out.some(x => main.filter(p => p.cat !== 'Accessories' && x.items.includes(p)).length >= 2)) continue; // same jacket AND same shoes as an earlier card: too close
     out.push(o); main.forEach(p => used.set(p.id, (used.get(p.id) ?? 0) + 1));
   }
   return out;
@@ -539,9 +544,8 @@ export function today(items, { t = null, rain = false, occasion = null, n = 5, r
   if (OCCASIONS[occasion]?.dress >= 1.5) items = items.map(p => p.rate < 0 ? { ...p, rate: 0 } : p); // dressing up: pieces saved for special occasions come back
   const pool = forWeather(items, t, rain).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
   const list = collect(pool, { rand, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
-  // a new top every card, pants and shoes at most twice, the same cap or chain at most twice. A jacket on up to a third of the cards:
-  // enough to say "this coat works all week", not so many that one favorite crowds out every other layer (varied() lifts it when you own few).
-  return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + rand() * 1.5 })), n, { Tops: 1, Layers: Math.max(2, Math.ceil(n / 3)), Bottoms: 2, Shoes: 2, Accessories: 2 });
+  // a new top every card; pants, shoes, a layer, the same cap or chain at most twice each.
+  return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
 }
 
 // Why no style rule takes a look, and which piece to change: the one whose removal lets a rule pass. The builder shows this instead

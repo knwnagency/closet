@@ -80,7 +80,7 @@ const TOOLS = {
     inputSchema: { type: 'object', properties: { pieces: { type: 'array', items: { type: 'string' }, maxItems: 6 } }, required: ['pieces'] },
     run({ pieces }) { const b = load(), ps = pieces.slice(0, 6).map(q => find(b.items, q));
       return { content: ps.flatMap(p => { const m = /^data:(image\/[a-z+]+);base64,(.*)$/.exec(cache.imgs.get(p.id) ?? '');
-        return [{ type: 'text', text: `${p.name} (${colorName(p.color)} ${p.kind || p.cat})` }, ...(m ? [{ type: 'image', mimeType: m[1], data: m[2] }] : [])]; }) }; },
+        return [{ type: 'text', text: `${p.name} (${colorName(p.color)} ${p.kind || p.cat}) · id ${p.id}` }, ...(m ? [{ type: 'image', mimeType: m[1], data: m[2] }] : [])]; }) }; },
   },
   best_for_slot: {
     description: 'Given the pieces picked so far, rank what to add for one slot (Tops, Layers, Bottoms, Shoes, Hat, Accessory), best match first, with the reason.',

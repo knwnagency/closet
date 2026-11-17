@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v5.11'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v5.12'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -93,7 +93,7 @@ S.coll = S.profile?.capsule && (S.colls.some(c => c.id === S.profile.capsule) ||
 S.cs = {}; S.past = []; S.q = ''; S.sort = 'type'; S.calOff = 0; S.locks = new Set(); S.sel = null; S.occ = null;
 // What you favorite, wear and reject teaches the scorer (match.js setTaste).
 const syncTaste = () => setTaste({ liked: S.saved.map(s => s.ids), worn: S.log.map(l => l.ids), nope: S.nope, good: S.profile?.colors?.good ?? [], avoid: S.profile?.colors?.avoid ?? [],
-  hair: S.profile?.hair ?? null, likedColors: [...S.saved, ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean).map(p => colorName(p.color))) });
+  hair: S.profile?.hair ?? null, never: S.profile?.never ?? [], colorNo: S.profile?.colorNo ?? [], dressBias: S.profile?.dressBias ?? 0, likedColors: [...S.saved, ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean).map(p => colorName(p.color))) });
 syncTaste();
 S.mode = MODES[S.profile?.mode] ? S.profile.mode : 'today'; // the style you picked last time; Today (a mix of every style) by default
 // Ask the browser to keep the closet. Safari clears sites unused for 7 days unless they're on the Home Screen, so Me shows the answer.
@@ -193,6 +193,8 @@ async function mergeInto(gone, keep) {
   if (S.build) S.build = S.build.map(p => p.id === gone.id ? keep : p); if (S.anchor === gone.id) S.anchor = keep.id;
   S.ideas = null; S.deck = null; S.cs = {}; syncTaste();
 }
+// "Named like a jacket, but the type says coat" and friends: the fixes the name settles, safe to apply in bulk.
+const nameFix = it => { const i = issueOf(it); return !!i && /^(kind|cat):/.test(i.fix) && /^(Named like|Type says)/.test(i.text); };
 const fitLabel = it => it.cat === 'Accessories' ? '' : (FITS[it.cat] ?? FITS.default)[it.fit ?? 1];
 const lum = hex => { const n = parseInt(hex.slice(1), 16); return [16, 8, 0].map(b => (n >> b & 255) / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((t, v, i) => t + v * [.2126, .7152, .0722][i], 0); };
 const inkOn = hex => (lum(hex) + .05) / .057 > 1.05 / (lum(hex) + .05) ? '#141414' : '#fff';
@@ -272,7 +274,9 @@ function askWeather() {
 // one line per kind of weather, shown under Today's stickers
 const wxLine = w => RAINY(w.code) ? 'Rain day: boots or dark sneakers, a shell on top, no suede.' : w.code >= 71 && w.code <= 77 ? 'Snow: boots, a real coat, layers you can peel.' : w.t >= 28 ? 'Hot: short sleeves, light colors, nothing heavy.' : w.t < 5 ? 'Cold: a coat over a knit, closed shoes.' : w.t < 12 ? 'Crisp: one good layer does it.' : w.lo != null && w.lo < w.t - 6 ? 'Mild now, cooler later: bring a layer.' : 'Mild: anything goes.';
 const RAINY = c => (c >= 51 && c <= 67) || (c >= 80 && c <= 99);
-const todayPicks = (items, t) => today(items, { t, like: S.like?.map(byId).filter(Boolean), rain: RAINY(S.profile?.wx?.code ?? 0), occasion: S.occ, n: 12, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
+// The temperature to dress for: from 4pm on, tonight's low counts too ("30°F later"); "too cold / too warm" feedback shifts it (S.profile.tempBias).
+const dressTemp = t => { if (t == null) return t; const w = weatherNow(), eve = new Date().getHours() >= 16 && w?.lo != null; return (eve ? Math.min(t, w.lo) : t) - (S.profile?.tempBias ?? 0); };
+const todayPicks = (items, t) => today(items, { t: dressTemp(t), like: S.like?.map(byId).filter(Boolean), rain: RAINY(S.profile?.wx?.code ?? 0), occasion: S.occ, n: 12, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
 
 // Gaps are slow-ish to compute, so cache until something about the closet changes.
 const sig = () => S.items.map(i => [i.id, i.cat, i.color, i.fit, i.vibe, i.patterned, i.name, i.kind].join()).join('|');
@@ -335,7 +339,8 @@ async function tag(dataUrl) {
   const c = await loadClf();
   const unsure = []; // tags where the runner-up came close: only these get asked about
   const top = async (labels, t, f) => { const r = await c(dataUrl, labels, { hypothesis_template: t }); if (f && r[1]?.score > r[0].score * 0.6) unsure.push(f); return r[0].label; };
-  const kind = await top(Object.keys(KINDS), 'a product photo of {}', 'kind');
+  const kr = await c(dataUrl, Object.keys(KINDS), { hypothesis_template: 'a product photo of {}' }), kind = kr[0].label, kinds = kr.slice(0, 3).map(x => x.label);
+  if (kr[1]?.score > kr[0].score * 0.6) unsure.push('kind');
   const cat = KINDS[kind];
   const vs = await c(dataUrl, Object.values(VIBES), { hypothesis_template: 'a photo of {}' }), vk = l => Object.keys(VIBES).find(k => VIBES[k] === l);
   const vibe = vs[1].score > vs[0].score * 0.6 ? [vk(vs[0].label), vk(vs[1].label)] : vk(vs[0].label); // close call: both, you untick the wrong one
@@ -349,7 +354,7 @@ async function tag(dataUrl) {
   const brandGuess = await brandOf(dataUrl).catch(() => null);
   return sane({
     kind, cat, fit, name: kind[0].toUpperCase() + kind.slice(1),
-    vibe, pattern: pat, patterned: pat === 'graphic' || pat === 'allover', ...(person ? { person: true } : {}), ...(material ? { material } : {}), unsure, ...(brandGuess ? { brandGuess } : {}),
+    vibe, pattern: pat, patterned: pat === 'graphic' || pat === 'allover', ...(person ? { person: true } : {}), ...(material ? { material } : {}), unsure, kinds, ...(brandGuess ? { brandGuess } : {}),
   });
 }
 // Vibes the AI gets wrong that the type settles: loafers aren't sporty, a hoodie isn't dressy. A big graphic on a knit is usually
@@ -507,7 +512,7 @@ async function addOne(j) {
     if (S.items.some(i => i.cfp && fpDist(i.cfp, cfp) <= CFP_SAME)) { skipped++; return; }
     if (tags && (tags.pattern === 'graphic' || tags.pattern === 'allover') && !accents?.length) Object.assign(tags, { pattern: 'solid', patterned: false }); // no print colors found: a blank tee, not a print
     if (hard) toast('Tricky background. Light clothes cut out best on a dark, plain surface');
-    const item = { id: j.id, img, photo, frame, fp, cfp, color, accents, orientChecked: true, ...(turn ? { turnHint: turn } : {}), ...(tags ?? { cat: 'Tops', name: 'New item', kind: '', vibe: 'casual', patterned: false, fit: 1 }), review: !tags || !!tags.unsure?.length, wears: 0, lastWorn: null, createdAt: Date.now() };
+    const item = { ...(tags ? { ai: { kind: tags.kind, fit: tags.fit, pattern: tags.pattern } } : {}), id: j.id, img, photo, frame, fp, cfp, color, accents, orientChecked: true, ...(turn ? { turnHint: turn } : {}), ...(tags ?? { cat: 'Tops', name: 'New item', kind: '', vibe: 'casual', patterned: false, fit: 1 }), review: !tags || !!tags.unsure?.length, wears: 0, lastWorn: null, createdAt: Date.now() };
     await put('items', item); S.items.push(item); S.ideas = null; added++;
     if (S.coll) { const c = collById(S.coll); c.ids.push(item.id); await put('colls', c); toast(`Added to ${c.name}`); } // adding while inside a collection files it there too
   } catch (e) { console.warn(e); toast(`Couldn't read ${j.name}. Try a JPG`); } // one bad file never stops the batch
@@ -599,7 +604,8 @@ function closetView() {
   const toReview = S.items.filter(i => i.review).length;
   const best = !c && !toReview && !S.pending.length && S.items.length >= 3 && getGaps()?.find(g => !isNeutral(g.ghost.color));
   return head(`${S.items.length} pieces`, 'Closet') + `
-    ${[S.items.some(dupOf) && `<button class="nudge glass" data-action="doubles"><div><span class="mono">Same photo added twice</span><b>Merge ${S.items.filter(dupOf).length} double${S.items.filter(dupOf).length > 1 ? 's' : ''}</b></div><span class="plus">Review →</span></button>`,
+    ${[S.items.some(nameFix) && `<button class="nudge glass" data-action="fixnames"><div><span class="mono">Type doesn't match the name</span><b>Fix ${S.items.filter(nameFix).length} piece${S.items.filter(nameFix).length > 1 ? 's' : ''} in one tap</b></div><span class="plus">Fix all →</span></button>`,
+    S.items.some(dupOf) && `<button class="nudge glass" data-action="doubles"><div><span class="mono">Same photo added twice</span><b>Merge ${S.items.filter(dupOf).length} double${S.items.filter(dupOf).length > 1 ? 's' : ''}</b></div><span class="plus">Review →</span></button>`,
     toReview && `<button class="nudge glass" data-action="review"><div><span class="mono"><span class="nc">AI</span> guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>`,
     S.items.some(i => i.broken) && `<button class="nudge glass" data-action="import"><div><span class="mono">This phone lost ${S.items.filter(i => i.broken).length} photos</span><b>Restore them from a backup</b></div><span class="plus">Pick file →</span></button>`,
     S.items.some(i => !i.pattern && PRINTABLE.includes(i.cat)) && `<button class="nudge glass" data-action="patreview"><div><span class="mono">Quick check · makes print warnings accurate</span><b>Is it plain or printed? ${S.items.filter(i => !i.pattern && PRINTABLE.includes(i.cat)).length} pieces</b></div><span class="plus">Start →</span></button>`,
@@ -705,7 +711,7 @@ function openCapsules() {
 // The deck is saved per day + filters + weather band, so leaving and coming back shows the same looks. Shuffle makes a new one.
 const greet = () => { const h = new Date().getHours(); return h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
 const band = w => w ? (w.t < 12 ? 'cold' : w.t >= 24 ? 'hot' : 'mild') + (RAINY(w.code) ? '-rain' : '') : 'none';
-const deckSig = () => ['v2', dayKey(), S.items.length, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
+const deckSig = () => ['v2', dayKey(), S.items.length, new Date().getHours() >= 16, S.profile?.tempBias ?? 0, S.profile?.dressBias ?? 0, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
 function getDeck(items) {
   if (S.deck?.sig === deckSig()) return S.deck;
   const recs = S.src === 'saved' ? S.saved : S.src === 'worn' ? wornLooks() : null; // looks you already know, instead of fresh picks
@@ -719,13 +725,50 @@ const DEFAULT_NOTE = 'Balanced, regular proportions';
 const tintOf = ps => colored(ps)[0]?.color ?? 'var(--tile)';
 const colored = ps => ps.filter(p => p.cat !== 'Accessories' && !isNeutral(p.color));
 // The card's headline is its vibe ("unapologetic"), from your style notes when a combo hits, else the style rule.
-const vibeOf = (o, used) => { const c = combo(o.items), opts = [c?.label, MODES[o.mode]?.label, c?.text, (([t, b]) => t && b ? `${colorName(t.color)} ${t.kind || 'top'} + ${colorName(b.color)} ${b.kind || 'bottoms'}` : '')(['Tops', 'Bottoms'].map(k => o.items.find(p => p.cat === k)))].filter(Boolean); // each color with its own piece: never "black trousers" for a black top over beige trousers
+// Look titles. The color combo is read from top, layer and bottoms (green Dunks don't make a look "mysterious"); warm-weather names skip
+// cold days ("poolside" at 41°F); dressy moods ("classy", "refined") only go on looks that are actually dressy.
+const WARM_MOOD = /poolside|yacht|heatwave|coastal|maritime|nomadic heat|refreshing|easy going|optimistic|cloud 9|pop star|fresh/i, DRESSY_MOOD = /classy|refined|elegant|upscale|sophisticat|regal|old money|country club|expensive|luxe|luxury|authority|alluring|polished/i;
+const vibeOf = (o, used) => { const c = combo(o.items.filter(p => p.cat !== 'Shoes')), w = weatherNow(), cl = o.items.filter(p => p.cat !== 'Accessories'), avgDress = cl.reduce((t, p) => t + dress(p), 0) / (cl.length || 1);
+  const mood = c?.label && !(WARM_MOOD.test(c.label) && w && dressTemp(w.t) < 15) && !(DRESSY_MOOD.test(c.label) && avgDress < 1.4) ? c.label : null;
+  const [t0, b0] = ['Tops', 'Bottoms'].map(k => o.items.find(p => p.cat === k)), fb = t0 && b0 ? `${colorName(t0.color)} ${t0.kind || 'top'} + ${(fitLabel(b0) || '').split('/')[0].trim().toLowerCase()} ${colorName(b0.color)} ${b0.kind || 'bottoms'}`.replace(/\s+/g, ' ') : '';
+  const opts = [mood, MODES[o.mode]?.label, c?.text, fb].filter(Boolean);
   const t = (used && opts.find(x => !used.has(x.toLowerCase()))) ?? opts[0] ?? 'Your pick'; used?.add(t.toLowerCase()); return [t, c?.text ?? null]; }; // a deck never says "Mellow" twice
 // The deck's last card: when none of the picks land, other ways in. Ask-Claude copies your closet + the question.
 const moreWays = () => `<article class="dcard slide moreways"><div class="dtop"><span class="mono">more ways to get dressed</span></div>
   <div class="ways">${[S.src && ['', 'Fresh picks', 'new combos for today'], S.src !== 'saved' && ['saved', 'Your favorites', 'looks you kept'], S.src !== 'worn' && ['worn', 'Recently worn', 'wear one again']].filter(Boolean).map(([k, l, d]) => `<button data-src="${k}"><b>${l}</b><span>${d}</span></button>`).join('')}
     <button data-go="build"><b>Build your own</b><span>pick piece by piece</span></button><button data-action="addinspo"><b>From a pic</b><span>match an inspo photo</span></button></div>
   <span class="mono">ask Claude</span><div class="tags">${["What to wear today", "What's missing from my closet", 'Pack a 3-day trip', 'Dinner outfits'].map(q => `<button class="tag o" data-askclaude="${esc(q)}">${esc(q)}</button>`).join('')}</div></article>`;
+// "Not for me" on a Today look: say what's off, and each answer changes one thing the picker uses.
+const OFF = [['piece', "I don't wear one of these"], ['pair', "Two of these don't go"], ['colors', "The colors don't work"], ['dressy', 'Too dressy'], ['sporty', 'Too sporty'], ['cold', 'Too cold for today'], ['warm', 'Too warm for today'], ['today', 'Just not today']];
+function openOff(key, kind = null, picked = []) {
+  const look = S.deck?.looks.find(l => l.key === key); if (!look) return;
+  const ps = look.ids.map(byId).filter(Boolean), note = sheet.querySelector('[name=offnote]')?.value ?? S.offNote ?? '';
+  const pick = kind === 'colors' ? [...new Set(ps.filter(p => p.cat !== 'Accessories').map(p => colorName(p.color)))].map(n => [n, `<i class="dot" style="background:${ps.find(p => colorName(p.color) === n).color}"></i>${n}`])
+    : ps.map(p => [p.id, `<img src="${src(p)}" alt="">${esc(p.name)}`]);
+  showSheet(`<div class="pad offsheet"><div class="pickhead"><div><div class="eyebrow">Not for me</div><h2>${kind ? { piece: 'Which one?', pair: 'Which two?', colors: 'Which two colors?' }[kind] : "What's off?"}</h2></div>${closeBtn}</div>
+    <div class="offlook">${flat(ps)}</div>
+    ${kind ? `<div class="offpick ${kind === 'colors' ? 'colors' : ''}">${pick.map(([v, h]) => `<button class="${picked.includes(v) ? 'on' : ''}" data-offpick="${key}|${kind}|${esc(v)}">${h}</button>`).join('')}</div>
+      <button class="btn ghost wide" data-off="${key}">Back</button>`
+    : `<div class="offs">${OFF.map(([k, l]) => `<button class="tag o" data-offwhy="${key}|${k}">${l}</button>`).join('')}</div>
+      <label class="cell offnote"><span>Anything else?</span><textarea name="offnote" rows="2" placeholder="saved for Claude, e.g. I never tuck tees">${esc(note)}</textarea></label>`}</div>`);
+  S.offPick = { key, kind, picked }; S.offNote = note;
+}
+async function applyOff(key, kind, vals = []) {
+  const look = S.deck?.looks.find(l => l.key === key); if (!look) return;
+  const ps = look.ids.map(byId).filter(Boolean), p0 = S.profile ?? { k: 'me' }, note = (S.offNote ?? '').trim(); let msg;
+  if (kind === 'piece') { const it = byId(vals[0]); it.rate = -1; it.rateAsked = true; await put('items', it); msg = `${it.name} saved for special occasions`; }
+  if (kind === 'pair') { p0.never = [...(p0.never ?? []), vals.slice(0, 2)]; msg = `${vals.map(id => byId(id)?.name).join(' and ')} won't be paired again`; }
+  if (kind === 'colors') { p0.colorNo = [...(p0.colorNo ?? []), vals.slice(0, 2)]; msg = `Fewer looks with ${vals.join(' + ')}`; }
+  if (kind === 'dressy' || kind === 'sporty') { p0.dressBias = Math.max(-1, Math.min(1, (p0.dressBias ?? 0) + (kind === 'dressy' ? -0.3 : 0.3))); msg = kind === 'dressy' ? 'Got it: more casual looks' : 'Got it: dressier looks'; }
+  if (kind === 'cold' || kind === 'warm') { p0.tempBias = Math.max(-9, Math.min(9, (p0.tempBias ?? 0) + (kind === 'cold' ? 3 : -3))); msg = kind === 'cold' ? 'Got it: warmer looks from now on' : 'Got it: lighter looks from now on'; }
+  if (kind === 'today') msg = 'Hidden for today';
+  if (note) p0.notes = [...(p0.notes ?? []), { at: dayKey(), why: kind, look: ps.map(p => p.name).join(' + '), text: note.slice(0, 300) }].slice(-50); // your words, for Claude
+  if (kind !== 'today') { S.nope = [...S.nope, look.ids].slice(-200); await put('profile', { k: 'nope', list: S.nope }); } // this exact look never comes back
+  S.profile = p0; await put('profile', S.profile); syncTaste(); S.offNote = ''; S.offPick = null;
+  S.deck.looks = S.deck.looks.filter(l => l.key !== key); S.deck.at = Math.min(S.deck.at, Math.max(0, S.deck.looks.length - 1)); put('profile', S.deck);
+  if (['dressy', 'sporty', 'cold', 'warm'].includes(kind)) S.deck = null; // a new feel for the whole set
+  sheet.close(); render(); toast(msg);
+}
 function deckCard(o, i, n, cls, used) {
   const [title, cmb] = vibeOf(o, used), w = weatherNow(), worn = S.log.find(l => l.day === dayKey())?.key === o.key;
   const tags = cmb && cmb.toLowerCase() !== title.toLowerCase() ? `<span class="tag">${esc(cmb)}</span>` : ''; // the colors, unless the title already says them; the weather card up top covers the weather
@@ -733,7 +776,7 @@ function deckCard(o, i, n, cls, used) {
     <div class="dtop"><span class="mono">${pad2(i + 1)} / ${pad2(n)}</span>${worn ? '<span class="tag hot">Worn today</span>' : isFav(o.key) ? '<span class="tag">Saved</span>' : ''}</div>
     <h2 class="display dtitle">${esc(title)}</h2>
     <button class="flatwrap" data-buildkey="${o.key}" aria-label="Open this look in the builder">${flat(o.items)}</button>
-    <div class="tags">${tags}<button class="tag o morelike" data-like="${o.key}">More like this</button></div></article>`;
+    <div class="tags">${tags}<button class="tag o morelike" data-like="${o.key}">More like this</button><button class="tag o morelike" data-off="${o.key}">Not for me</button></div></article>`;
 }
 // A piece in 4+ looks you passed on ("Not for me") and in none you saved or wore: offer to suggest it less. Asked once per piece.
 const lessHint = () => { const liked = new Set([...S.saved, ...S.log].flatMap(r => r.ids)), n = new Map();
@@ -833,6 +876,12 @@ function openBrands() {
     ${list.length > 1 ? `<button class="btn wide" data-brandall="1">Use all ${list.length}</button>` : ''}
     ${list.map(it => `<div class="brow"><button data-open="${it.id}"><img src="${src(it)}" alt=""></button><div><b>${esc(brandName(it, it.brandGuess.brand))}</b><span class="mono">was "${esc(it.name)}"</span></div><button class="btn sm" data-brandok="${it.id}">Use</button><button class="btn ghost sm" data-brandno="${it.id}">No</button></div>`).join('')}</div>`);
 }
+// How the AI's tags hold up once you've reviewed: per tag, how often you changed it when it said "?" vs when it seemed sure.
+const aiCheck = () => { const done = S.items.filter(i => i.ai && !i.review); if (done.length < 5) return '';
+  const row = (f, label) => { const asked = done.filter(i => i.unsure?.includes(f)), sure = done.filter(i => !asked.includes(i)), ch = l => l.filter(i => i[f] !== i.ai[f]).length;
+    return `<div><span class="mono">${label}</span><b>${ch(sure)} of ${sure.length}</b><small>changed when it was sure · ${ch(asked)} of ${asked.length} when it asked</small></div>`; };
+  return `<h3><span>How the AI is tagging</span><span>${done.length} reviewed</span></h3><div class="tiles aitiles">${row('kind', 'Type')}${row('fit', 'Fit')}${row('pattern', 'Print')}</div>
+    <p class="sub">If it's often wrong when it was sure, it should ask more. If it's rarely wrong when it asks, it asks too much.</p>`; };
 // Rule check (Me): every look you saved or wore should pass the style rules. One that doesn't points at a rule that's wrong
 // (light jeans counted as a color, a cap tagged athletic), so it's listed with the reason, not hidden.
 const ruleCheck = () => { const looks = [...S.saved, ...wornLooks()].filter((r, k, a) => a.findIndex(x => x.key === r.key) === k).map(r => ({ r, ps: r.ids.map(byId).filter(Boolean) })).filter(x => complete(x.ps));
@@ -1182,7 +1231,8 @@ function meView() {
     ${styleReport()}
     <h3><span>Closet value</span><span>${priced.length} of ${items.length} priced</span></h3>
     ${priced.length ? `<div class="tiles"><div><span class="mono">Total</span><b>${money(value)}</b></div><div><span class="mono">Cost per wear</span><b>${pricedWears ? money(value / pricedWears) : '$0'}</b>${pricedWears ? '' : '<small class="sub">Log a wear to see it</small>'}</div></div>`
-      : `<p class="sub">Tap a piece and add what you paid to see what your closet is worth and your cost per wear.</p>`}
+      : `<p class="sub">Add what you paid to see what your closet is worth and your cost per wear.</p>`}
+    ${items.some(i => !(i.price > 0)) ? `<button class="btn ghost wide" data-action="prices">Add prices · ${items.filter(i => !(i.price > 0)).length} without one</button>` : ''}
     <h3><span>By category</span></h3>
     <div class="bars">${byCat.map(([c, n]) => `<div><span>${c}</span><i><b style="width:${n / maxC * 100}%"></b></i><em>${n}</em></div>`).join('')}</div>
     <h3><span>Colors in your closet</span></h3>
@@ -1190,8 +1240,10 @@ function meView() {
       <p class="mono legend">${colors.slice(0, 6).map(([n, x]) => `${n} ${Math.round(x.n / items.length * 100)}%`).join(' · ')}</p>` : ''}
     ${items.some(stale) ? `<h3><span>Haven't worn in a while</span></h3>${strip(items.filter(stale).slice(0, 20))}` : ''}
     ${ruleCheck()}
+    ${aiCheck()}
     <h3><span>Brands</span><span>${S.items.filter(i => i.brand).length} of ${S.items.length} named</span></h3>
     <p class="sub">Find logos and team names in your photos ("Lakers jersey", "Amiri t-shirt"). You confirm each one. Or tap any piece's name to rename it yourself.</p>
+    <div class="row"><button class="btn ghost sm" data-action="asknames">Ask Claude to name them</button><button class="btn ghost sm" data-action="pastenames">Paste names from Claude</button></div>
     <button class="btn ghost wide" data-action="findbrands">${S.items.some(i => i.brandGuess && !i.brand) ? 'See brand suggestions' : 'Find brands in my photos'}</button>
     <details class="sizes"><summary><h3><span>Sizes &amp; measurements</span><span>${MEASURE.filter(([k]) => m[k]).length} of ${MEASURE.length}</span></h3></summary>
     <form id="measure" class="group">${MEASURE.map(([k, label, ph]) => `<label class="cell"><span>${label}</span><input name="${k}" value="${esc(m[k] ?? '')}" placeholder="${ph}"></label>`).join('')}</form></details>
@@ -1310,6 +1362,15 @@ async function setMainColor(it, h) { it.color = h; if (it.accents) it.accents = 
   const f = sheet.querySelector('[name=color]'); if (f) { f.value = h; showColor(it); } const box = sheet.querySelector('#accbox'); if (box) box.innerHTML = accHtml(it); S.ideas = null; S.deck = null; await put('items', it); }
 async function addAccent(it, h) { it.accents = [...(it.accents ?? []).filter(x => x !== h), h].slice(-6); it.accPicked = [...new Set([...(it.accPicked ?? []), h])]; S.accPick = null; await put('items', it); S.ideas = null; S.deck = null;
   const box = sheet.querySelector('#accbox'); if (box) box.innerHTML = accHtml(it); toast(`Added ${colorName(h)}`); }
+// Review asks the type first: the AI's 3 best guesses as big buttons. Pieces from before v5.12 get their guesses the first time they open.
+const askF = (it, f) => it.review && it.unsure?.includes(f) && (!it.ai || it[f] === it.ai[f]); // the AI wasn't sure, and you haven't answered yet
+const kindRow = it => { const ks = [...new Set([it.kind, ...(it.kinds ?? [])].filter(k => KINDS[k]))].slice(0, 3);
+  return ks.map(k => `<button type="button" class="tag ${k === it.kind ? '' : 'o'}" data-setkind="${it.id}|${k}">${k}</button>`).join('') + `<button type="button" class="tag o" data-action="opendetails">Something else</button>`; };
+async function guessKinds(it) {
+  if (it.kinds || !it.review) return;
+  try { const c = await loadClf(), b = it.thumb instanceof Blob ? it.thumb : await imgOf(it); it.kinds = (await c(await toDataUrl(b), Object.keys(KINDS), { hypothesis_template: 'a product photo of {}' })).slice(0, 3).map(x => x.label); await putQuiet('items', it);
+    const row = openItem === it.id && sheet.querySelector('#kindrow'); if (row) row.innerHTML = kindRow(it); } catch (e) { console.warn(e); }
+}
 function openSheet(id) {
   const again = sheet.open && openItem === id ? { y: sheet.scrollTop, open: sheet.querySelector('details.more')?.open } : null;
   const it = byId(id), left = S.items.filter(i => i.review).length; S.dropping = null; setTimeout(() => fillAngles(it));
@@ -1319,8 +1380,9 @@ function openSheet(id) {
     <div class="phead"><h2 class="display pname" contenteditable="plaintext-only" spellcheck="false" enterkeyhint="done" aria-label="Name, tap to edit" data-rename="${it.id}">${esc(it.name)}</h2>
       <div class="sees" aria-label="What your stylist sees">${[['color', `<i style="background:${it.color}"></i>${colorName(it.color)}`], ['material', it.material ?? 'material?'],
         ...(PRINTABLE.includes(it.cat) ? [['pattern', { solid: 'solid', logo: 'small logo', graphic: 'big graphic', allover: 'all-over pattern' }[patternOf(it)]]] : []), ...(it.cat === 'Accessories' ? [] : [['fit', (FITS[it.cat] ?? FITS.default)[it.fit ?? 1].toLowerCase()], ['dress', ['sporty', 'everyday', 'dressy'][dress(it)]]]), ['kind', it.kind || 'type?']]
-        .map(([f, l]) => `<button type="button" class="see${it.review && it.unsure?.includes(f) ? ' unsure' : ''}" data-field="${f}">${l}${it.review && it.unsure?.includes(f) ? ' ?' : ''}</button>`).join('')}</div>
+        .map(([f, l]) => `<button type="button" class="see${askF(it, f) ? ' unsure' : ''}" data-field="${f}">${l}${askF(it, f) ? ' ?' : ''}</button>`).join('')}</div>
       <div class="tags">${it.review ? `<span class="tag hot">New${left > 1 ? ` · ${n} of ${left}` : ''}</span>` : ''}${it.dirty ? '<span class="tag hot">In the laundry</span>' : ''}${stale(it) ? `<span class="tag o">Haven't worn in a while</span>` : ''}${it.price > 0 ? `<span class="tag o">${(x => '$' + (x < 10 ? x.toFixed(2) : Math.round(x)))(it.price / Math.max(1, it.wears ?? 0))} per wear</span>` : ''}${it.bought ? `<span class="tag o">Bought ${ago(new Date(it.bought).getTime())}${it.from ? ` · ${esc(it.from)}` : ''}</span>` : ''}${(it.tags ?? []).map(t => `<span class="tag o">#${esc(t)}</span>`).join('')}</div></div>
+    ${it.review ? `<div class="kindq"><span class="mono">What is it?</span><div class="row" id="kindrow">${kindRow(it)}</div></div>` : ''}
     ${it.review ? `<div class="review"><p>${it.unsure?.length ? `The AI wasn't sure about the tags marked ?. Right?` : 'The AI tagged it as above. Right?'}</p><div class="row"><button type="button" class="btn go" data-confirm="${it.id}">Looks right${left > 1 ? ' · next' : ''}</button><button type="button" class="btn ghost" data-action="opendetails">Fix tags</button></div></div>` : ''}
     ${it.brandGuess && !it.brand ? `<div class="issue"><span>Looks like <b>${esc(it.brandGuess.brand)}</b>. Name it "${esc(brandName(it, it.brandGuess.brand))}"?</span><span class="row"><button type="button" class="btn sm" data-brandok="${it.id}">Use it</button><button type="button" class="btn ghost sm" data-brandno="${it.id}">No</button></span></div>` : ''}
     ${issueOf(it) ? `<div class="issue"><span>${esc(issueOf(it).text)}</span><span class="row"><button type="button" class="btn sm" data-fixtag="${it.id}|${issueOf(it).fix}">${issueOf(it).label}</button><button type="button" class="btn ghost sm" data-tagok="${it.id}">${issueOf(it).fix.startsWith('dup:') ? 'Not the same' : "It's right"}</button></span></div>` : ''}
@@ -1364,6 +1426,7 @@ function openSheet(id) {
   </form>`);
   if (again) { sheet.scrollTop = again.y; const d = sheet.querySelector('details.more'); if (d && again.open) d.open = true; } // a refresh after an edit keeps your place
   openItem = id; // after showSheet, which clears it
+  guessKinds(it);
   const cp = sheet.querySelector('#cpick'), on = cp.querySelector('.on'); if (on) cp.scrollLeft = on.offsetLeft - (cp.clientWidth - on.offsetWidth) / 2; // chosen color in view
   sheet.querySelector('form').oninput = async e => {
     const f = e.currentTarget.elements, price = parseFloat(f.price.value.replace(/[^0-9.]/g, ''));
@@ -1557,6 +1620,7 @@ ${CATS.map(c => S.items.filter(i => i.cat === c).map(line).join('\n')).filter(Bo
 ${S.colls.length ? `\nCOLLECTIONS\n${S.colls.map(c => `- ${c.name}: ${c.ids.map(byId).filter(Boolean).map(i => i.name).join(', ')}`).join('\n')}` : ''}
 ${S.saved.length ? `\nLOOKS I SAVED\n${S.saved.slice(0, 15).map(r => `- ${r.ids.map(byId).filter(Boolean).map(i => i.name).join(' + ')}`).join('\n')}` : ''}
 
+${S.profile?.notes?.length ? `\nWHAT I'VE SAID I DON'T LIKE\n${S.profile.notes.slice(-15).map(n => `- ${n.text} (on: ${n.look})`).join('\n')}\n` : ''}
 MY STYLE RULES
 - Pants and shoes: baggy pants need chunky shoes, never sleek ones; slim pants want sleek shoes; straight goes with anything.
 - Layering: loose over fitted, open over closed, short over long. No hoodie over a hoodie, no two jackets.
@@ -1780,11 +1844,19 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'shuffle') { S.ideas = null; S.deck = null; render(); }
   else if (ds.action === 'filters') openFilters();
   else if (ds.like) { S.like = outfitByKey(ds.like)?.items.map(p => p.id) ?? null; S.deck = null; render(); toast('More looks like that', { label: 'Back to mixed', fn: () => { S.like = null; S.deck = null; render(); } }); }
+  else if (ds.off) openOff(ds.off);
+  else if (ds.offwhy) { const [key, kind] = ds.offwhy.split('|'); S.offNote = sheet.querySelector('[name=offnote]')?.value ?? ''; if (['piece', 'pair', 'colors'].includes(kind)) openOff(key, kind); else await applyOff(key, kind); }
+  else if (ds.offpick) { const [key, kind, v] = ds.offpick.split('|'), { picked = [] } = S.offPick ?? {}, next = picked.includes(v) ? picked.filter(x => x !== v) : [...picked, v];
+    if (next.length >= (kind === 'piece' ? 1 : 2)) await applyOff(key, kind, next); else openOff(key, kind, next); }
   else if (ds.deck === 'back') { S.deck.at = 0; put('profile', S.deck); render(); }
   else if (ds.deck) deckAct(ds.deck === 'next' ? 'next' : ds.deck);
   else if (ds.action === 'unanchor') { S.anchor = null; S.ideas = null; render(); }
   else if (ds.action === 'close') sheet.close();
   else if (ds.field) { const d = sheet.querySelector('details.more'); d.open = true; const el = ds.field === 'color' ? sheet.querySelector('#cpick') : sheet.querySelector(`[name=${ds.field}]`); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => el?.focus?.(), 350); }
+  else if (ds.setkind) { const [id, k] = ds.setkind.split('|'), it = byId(id), generic = KINDS[it.name.toLowerCase()] || it.name.toLowerCase() === (it.kind ?? '').toLowerCase();
+    it.kind = k; it.cat = KINDS[k]; if (generic) it.name = k[0].toUpperCase() + k.slice(1); it.tagOk = false; await put('items', it); S.ideas = null; S.deck = null; S.cs = {}; openSheet(id); toast(`Set to ${k}`); }
+  else if (ds.action === 'fixnames') { const fix = S.items.filter(nameFix); for (const it of fix) { const [k, v] = issueOf(it).fix.split(':'); if (k === 'kind') { it.kind = v; it.cat = KINDS[v] ?? it.cat; } else it.cat = v; await put('items', it); }
+    S.ideas = null; S.deck = null; S.cs = {}; render(); toast(`Fixed the type on ${fix.length} piece${fix.length === 1 ? '' : 's'}`); }
   else if (ds.action === 'opendetails') { const d = sheet.querySelector('details.more'); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   else if (ds.action === 'build') startBuild();
   else if (ds.action === 'clearbuild') setBuild([]);
@@ -1915,6 +1987,25 @@ document.addEventListener('click', async e => {
   else if (ds.brandok) { const it = byId(ds.brandok), b = it.brandGuess?.brand; if (b) { it.name = brandName(it, b); it.brand = b; } delete it.brandGuess; await put('items', it); S.deck = null; if (t.closest('.brandlist')) openBrands(); else openSheet(it.id); toast(`Named ${it.name}`); }
   else if (ds.brandno) { const it = byId(ds.brandno); it.brandGuess = false; await put('items', it); if (t.closest('.brandlist')) openBrands(); else openSheet(it.id); }
   else if (ds.brandall) { let n = 0; for (const it of S.items.filter(i => i.brandGuess && !i.brand)) { it.name = brandName(it, it.brandGuess.brand); it.brand = it.brandGuess.brand; delete it.brandGuess; await put('items', it); n++; } S.deck = null; sheet.close(); render(); toast(`Named ${n} piece${n === 1 ? '' : 's'}`); }
+  else if (ds.action === 'asknames') { const list = S.items.filter(i => !i.brand).slice(0, 60);
+    const text = `Please name the pieces in my closet. Use the closet connector: call show_pieces on the ids below (6 at a time) and look at each photo. For each piece, read any brand, logo, team or printed text, and pick its type.
+Reply with one JSON line per piece, nothing else, like:
+{"id": "…", "name": "Lakers jersey", "brand": "Lakers", "kind": "jersey"}
+Only use a brand you can actually read or recognize; otherwise leave "brand" out and name it by color and type. "kind" must be one of: ${Object.keys(KINDS).join(', ')}.
+
+${list.map(i => `${i.id} · now called "${i.name}" · ${i.kind || i.cat} · ${colorName(i.color)}`).join('\n')}`;
+    try { await navigator.clipboard.writeText(text); toast(`Copied a request for ${list.length} pieces. Save a fresh backup first so Claude sees them`); } catch { toast("Couldn't copy"); } }
+  else if (ds.action === 'pastenames') { let text = ''; try { text = await navigator.clipboard.readText(); } catch { return toast('Allow paste, then try again'); }
+    let n = 0; for (const m of text.match(/\{[^{}]*\}/g) ?? []) { let r; try { r = JSON.parse(m); } catch { continue; } const it = r && typeof r.id === 'string' && byId(r.id); if (!it) continue;
+      if (typeof r.name === 'string' && r.name.trim()) it.name = r.name.trim().slice(0, 60); if (typeof r.brand === 'string' && r.brand.trim()) { it.brand = r.brand.trim().slice(0, 40); delete it.brandGuess; }
+      if (KINDS[r.kind]) { it.kind = r.kind; it.cat = KINDS[r.kind]; } await put('items', it); n++; }
+    S.ideas = null; S.deck = null; render(); toast(n ? `Named ${n} piece${n > 1 ? 's' : ''} from Claude` : 'No names found. Copy Claude\'s whole reply, then try again'); }
+  else if (ds.action === 'prices') { const list = S.items.filter(i => !(i.price > 0)).slice(0, 60);
+    showSheet(`<form class="pad prices" id="priceform"><div class="pickhead"><div><div class="eyebrow">${list.length} without a price</div><h2>Add prices</h2></div>${closeBtn}</div>
+      <p class="sub">Type what you paid. Skip any you don't know.</p>${list.map(i => `<label class="brow"><img src="${src(i)}" alt=""><span><b>${esc(i.name)}</b></span><input name="p_${i.id}" inputmode="decimal" placeholder="$" aria-label="Price for ${esc(i.name)}"></label>`).join('')}
+      <button type="button" class="btn wide" data-action="saveprices">Save prices</button></form>`); }
+  else if (ds.action === 'saveprices') { e.preventDefault?.(); let n = 0; for (const el of sheet.querySelectorAll('#priceform input')) { const v = parseFloat(el.value.replace(/[^\d.]/g, '')); if (v > 0) { const it = byId(el.name.slice(2)); if (it) { it.price = Math.round(v * 100) / 100; await put('items', it); n++; } } }
+    sheet.close(); render(); toast(n ? `Saved ${n} price${n > 1 ? 's' : ''}` : 'No prices entered'); }
   else if (ds.action === 'findbrands') S.items.some(i => i.brandGuess && !i.brand) ? openBrands() : findBrands();
   else if (ds.action === 'scanbrands') findBrands();
   else if (ds.rate) { const [id, v] = ds.rate.split('|'), it = byId(id); if (+v) it.rate = +v; else delete it.rate; it.rateAsked = true; await put('items', it); S.ideas = null; S.deck = null; S.cs = {};

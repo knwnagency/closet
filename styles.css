@@ -582,7 +582,7 @@
   .pname, .pickgrid span, .recap b, .capsel b, .cvs.empty span, .pal div, .palrow button { text-transform: none; letter-spacing: 0; }
   .pname::first-letter { text-transform: uppercase; } .nc { text-transform: none; }
   /* update banner: a light pill at the top, never over the buttons */
-  .update { top: calc(env(safe-area-inset-top) + 8px); bottom: auto; background: var(--bg); color: var(--ink); border-radius: 999px; box-shadow: 0 6px 24px rgb(0 0 0 / .12), inset 0 0 0 1px var(--hair); font: 500 13px/1 var(--display, inherit); padding: 6px 6px 6px 16px; }
+  .update { top: auto; bottom: calc(env(safe-area-inset-bottom) + 78px); background: var(--bg); color: var(--ink); border-radius: 999px; box-shadow: 0 6px 24px rgb(0 0 0 / .12), inset 0 0 0 1px var(--hair); font: 500 13px/1 var(--display, inherit); padding: 6px 6px 6px 16px; }
   .update button { color: var(--bg); background: var(--ink); box-shadow: none; border-radius: 999px; height: 36px; padding: 0 16px; }
   /* Me: quiet bars */
   .bars i { height: 4px; border-radius: 2px; background: var(--s1); } .bars i b { background: var(--muted); border-radius: 2px; } .bars div { font-weight: 500; }
@@ -625,3 +625,9 @@
   .sheet .hero img { filter: none; } .hero .zoomer { transform: translateZ(0); } /* iPhone drops a big filtered photo after the sheet is dragged: no drop-shadow on the piece page photo */
   .pname[contenteditable] { outline: none; border-radius: 8px; cursor: text; } .pname[contenteditable]:focus { box-shadow: 0 0 0 2px var(--ink); padding: 0 4px; } .pname[contenteditable]::after { content: ' ✎'; font-size: .5em; color: var(--muted); vertical-align: middle; } .pname[contenteditable]:focus::after { content: ''; }
   .brow { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--hair); } .brow img { width: 64px; height: 64px; object-fit: contain; background: var(--s1); border-radius: 12px; } .brow b { display: block; font-size: 14px; } .brow .mono { text-transform: none; }
+  .offlook { width: min(60%, 220px); margin: 0 auto 14px; } .offs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; } .offnote textarea { width: 100%; border: 0; background: transparent; font: inherit; font-size: 16px; resize: none; }
+  .offpick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; } .offpick button { display: grid; gap: 4px; justify-items: center; padding: 8px; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--hair); font-size: 12px; min-height: 44px; } .offpick button.on { box-shadow: inset 0 0 0 2px var(--ink); } .offpick img { width: 100%; aspect-ratio: 1; object-fit: contain; }
+  .offpick.colors { grid-template-columns: repeat(2, 1fr); } .offpick.colors button { grid-auto-flow: column; justify-content: start; align-items: center; } .offpick .dot { width: 18px; height: 18px; border-radius: 50%; display: inline-block; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .1); }
+  .kindq { margin: 12px 0 0; } .kindq .row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; } .kindq .tag { min-height: 44px; padding: 0 16px; font-size: 13px; }
+  .aitiles small { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .prices .brow { grid-template-columns: 56px minmax(0, 1fr) 90px; } .prices .brow img { width: 56px; height: 56px; } .prices input { height: 44px; border: 1px solid var(--hair); border-radius: 999px; padding: 0 12px; background: var(--s1); font-size: 16px; width: 100%; }
