@@ -1,2 +1,2 @@
-2026.11.16 · v5.13
-Several outfits a day · undo anything you told it (Me) · quick type check for new pieces · swap one look · why each look works · backup reminder on Today
+2026.11.16 · v5.14
+The page goes back in place after typing (no more floating menu) · × to clear a name while renaming

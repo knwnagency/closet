@@ -636,3 +636,4 @@
   .qrow { display: grid; grid-template-columns: 64px minmax(0, 1fr) 150px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hair); } .qrow img { width: 64px; height: 64px; object-fit: contain; background: var(--s1); border-radius: 12px; } .qrow b { font-size: 13px; font-weight: 500; } .qrow select { height: 44px; border: 1px solid var(--hair); border-radius: 999px; padding: 0 10px; background: var(--s1); font-size: 16px; width: 100%; }
   .dwhy { margin: -6px 0 10px; font-size: 13px; color: var(--muted); }
   .wcount { display: block; margin: 2px 0 6px; }
+  .phead { position: relative; } .clearname { display: none; position: absolute; right: 0; top: 0; width: 44px; height: 44px; border-radius: 999px; font-size: 22px; color: var(--muted); place-items: center; } .phead:focus-within .clearname { display: grid; } .phead:focus-within .pname { padding-right: 48px; }

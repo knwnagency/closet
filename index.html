@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v5.13'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v5.14'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -1440,7 +1440,7 @@ function openSheet(id) {
   const n = S.items.filter(i => i.review).indexOf(it) + 1;
   showSheet(`<div class="hero spot"><i class="grab" aria-hidden="true"></i><button type="button" class="zoomer" data-zoom="${it.id}" aria-label="See the photo full screen"><img data-full="${it.id}" src="${srcFull(it)}" alt=""></button>${closeBtn}</div>
   ${anglesHtml(it)}<form>
-    <div class="phead"><h2 class="display pname" contenteditable="plaintext-only" spellcheck="false" enterkeyhint="done" aria-label="Name, tap to edit" data-rename="${it.id}">${esc(it.name)}</h2>
+    <div class="phead"><h2 class="display pname" contenteditable="plaintext-only" spellcheck="false" enterkeyhint="done" aria-label="Name, tap to edit" data-rename="${it.id}">${esc(it.name)}</h2><button type="button" class="clearname" aria-label="Clear the name">×</button>
       <div class="sees" aria-label="What your stylist sees">${[['color', `<i style="background:${it.color}"></i>${colorName(it.color)}`], ['material', it.material ?? 'material?'],
         ...(PRINTABLE.includes(it.cat) ? [['pattern', { solid: 'solid', logo: 'small logo', graphic: 'big graphic', allover: 'all-over pattern' }[patternOf(it)]]] : []), ...(it.cat === 'Accessories' ? [] : [['fit', (FITS[it.cat] ?? FITS.default)[it.fit ?? 1].toLowerCase()], ['dress', ['sporty', 'everyday', 'dressy'][dress(it)]]]), ['kind', it.kind || 'type?']]
         .map(([f, l]) => `<button type="button" class="see${askF(it, f) ? ' unsure' : ''}" data-field="${f}">${l}${askF(it, f) ? ' ?' : ''}</button>`).join('')}</div>
@@ -1873,6 +1873,13 @@ document.addEventListener('change', async e => {
     toast(`Updated ${S.sel.size} piece${S.sel.size > 1 ? 's' : ''}`); S.sel = null; S.ideas = null; S.deck = null; S.cs = {}; render(); return; }
   if (e.target.matches('[data-selcoll]') && e.target.value) { const c = collById(e.target.value); c.ids = [...new Set([...c.ids, ...S.sel])]; await put('colls', c); toast(`Added ${S.sel.size} to ${c.name}`); S.sel = null; render(); return; }
 });
+// × while renaming: empties the name and keeps the keyboard up (pointerdown, so the name field never loses focus and saves early).
+document.addEventListener('pointerdown', e => { if (!e.target.closest('.clearname')) return; e.preventDefault(); const h = e.target.closest('.phead')?.querySelector('[data-rename]'); if (h) { h.textContent = ''; h.focus(); } });
+// iPhone: the keyboard scrolls the page behind a sheet to show the field, and leaves it there when it closes, so the sheet sits too high
+// and the menu floats mid-screen. When the keyboard goes away, put the page back where it was.
+const settle = () => { if (sheet.open && sheet.back) window.scrollTo(0, sheet.back.y); else window.scrollTo(window.scrollX, window.scrollY); };
+document.addEventListener('focusout', e => { if (e.target.matches?.('input, textarea, select, [contenteditable]')) setTimeout(settle, 80); });
+window.visualViewport?.addEventListener('resize', () => { if (visualViewport.height > innerHeight * 0.85) setTimeout(settle, 80); });
 // Tap a piece's name to rename it ("Lakers jersey"). Return or tapping away saves.
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('[data-rename]')) { e.preventDefault(); e.target.blur(); } });
 document.addEventListener('focusout', async e => { const el = e.target; if (!el.matches?.('[data-rename]')) return; const it = byId(el.dataset.rename); if (!it) return;
