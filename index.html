@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v5.8'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.16 · v5.9'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -834,7 +834,7 @@ function buildView() {
     <div class="build"><div class="tbar">${capBtn()}<span class="sp"></span>${o.length ? `<button class="tag o" data-action="clearbuild">Start over</button>` : ''}</div>${capBar()}
       ${stage(o, items)}
       ${o.length ? `<div class="srows">${['Hat', 'Outer', 'Layers', 'Tops', 'Bottoms', 'Shoes', 'Accessory'].map(row).join('')}</div>` : '<p class="sub stagehint">Tap a shape to pick that piece. Best matches show first.</p>'}
-      <div class="addopt">${['Layers', 'Outer', 'Hat', 'Accessory'].filter(sl => sl === 'Outer' ? o.some(inS('Layers')) && !S.outer && items.filter(canS(sl)).length > 1 : !o.some(inS(sl)) && items.some(canS(sl))).map(sl => `<button class="tag o" data-swap="${sl}">+ ${SLOT_LABEL[sl].toLowerCase()}</button>`).join('')}</div>
+      <div class="addopt">${['Layers', 'Hat', 'Accessory'].filter(sl => !o.some(inS(sl)) && items.some(canS(sl))).map(sl => `<button class="tag o" data-swap="${sl}">+ ${SLOT_LABEL[sl].toLowerCase()}</button>`).join('')}</div>
       ${ok ? (v.score == null ? (w => `<p class="verdict bad">Doesn't work · ${esc(w.note)}</p>${w.piece ? `<div class="tools whyfix"><button class="tag" ${w.fix === 'tag' ? `data-open="${w.piece.id}"` : `data-swap="${slotOf(w.piece)}"`}>${w.fix === 'tag' ? `Check its tags` : `Swap the ${esc(SLOT_LABEL[slotOf(w.piece)].toLowerCase())}`}</button></div>` : ''}`)(whyNot(o))
         : `<p class="verdict">Works as ${MODES[v.mode].label} · ${esc(v.note)}</p>`) : ''}
       ${tags || tip ? `<div class="tags whytags">${tags}${tip ? `<span class="tag bad">${esc(tip)}</span>` : ''}</div>` : ''}
@@ -917,7 +917,7 @@ function openSwap(slot) {
   const good = opts.filter(r => r.score != null), rest = opts.filter(r => r.score == null), best = S.build.length && good[0];
   const wearing = S.build.some(inS(slot));
   showSheet(`<div class="pickhead"><div><div class="eyebrow">Outfit</div><h2>${PICK_TITLE[slot]}</h2></div>${closeBtn}</div>
-    ${wearing ? `<div class="tags slotops"><button class="tag ${S.locks.has(slot) ? '' : 'o'}" data-lock="${slot}">${ic(S.locks.has(slot) ? 'lock' : 'unlock')} ${S.locks.has(slot) ? 'Locked' : 'Lock'}</button><button class="tag o" data-unwear="${slot}">Remove</button></div>` : ''}
+    ${wearing ? `<div class="tags slotops"><button class="tag ${S.locks.has(slot) ? '' : 'o'}" data-lock="${slot}">${ic(S.locks.has(slot) ? 'lock' : 'unlock')} ${S.locks.has(slot) ? 'Locked' : 'Lock'}</button><button class="tag o" data-unwear="${slot}">Remove</button>${slot === 'Layers' && !S.outer && buildItems().filter(canS('Outer')).length > 1 ? `<button class="tag o" data-swap="Outer">+ Layer on top</button>` : ''}</div>` : ''}
     <div class="picksearch"><input type="search" data-pickq placeholder="search: black, cargo, nike" aria-label="Search this list"></div>
     ${best && rest0 ? `<p class="pickbest"><b>Best match: ${esc(nm(best.item))}</b><span class="sub">${esc(best.note === DEFAULT_NOTE ? '' : best.note ?? '')}</span></p>` : ''}
     ${good.length ? `<p class="pickh">${rest0 ? 'Goes with this outfit' : 'Your best picks'}</p><div class="pickgrid">${good.map(tile).join('')}</div>` : ''}
@@ -1779,7 +1779,7 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'patreview') patReview();
   else if (ds.patset) { const [id, v] = ds.patset.split('|'), it = byId(id); it.pattern = v; it.patterned = v === 'graphic' || v === 'allover'; await put('items', it); S.ideas = null; S.deck = null; patReview(); }
   else if (ds.action === 'recolor') recolor();
-  else if (ds.action === 'possible') { S.made = possibilities(buildItems(), S.build, 6);
+  else if (ds.action === 'possible') { const outer = S.build.find(inS('Outer')); S.made = possibilities(buildItems(), S.build.filter(p => p !== outer), 6).map(o => outer ? { ...o, items: [...o.items, outer], key: [...o.items, outer].map(p => p.id).sort().join() } : o);
     showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">Keeps your ${S.build.length} piece${S.build.length > 1 ? 's' : ''}</div><h2>Outfit possibilities</h2></div>${closeBtn}</div>
       ${S.made.length ? `<div class="picklooks big">${S.made.map(m => `<button data-buildkey="${m.key}" aria-label="Use this look">${flat(m.items)}<span class="sub">${esc(m.note.replace(/ · .*/, ''))}</span></button>`).join('')}</div>` : '<p class="sub">Nothing complete works with those pieces yet. Swap one, or add more clothes.</p>'}</div>`); }
   else if (ds.action === 'sharelook') shareLook(S.build);
