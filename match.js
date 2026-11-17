@@ -417,6 +417,7 @@ export function bySlot(ps, outerId = null) {
   for (const p of ps) { const sl = slotOf(p); if (sl && sl !== 'Layers') by[sl] ??= p; }
   const out = ls.length > 1 ? ls.find(p => p.id === outerId) ?? [...ls].sort((a, b) => level(b) - level(a))[0] : null;
   if (ls.length) by.Layers = ls.find(p => p !== out); if (out) by.Outer = out;
+  if (!by.Tops && by.Layers && !by.Outer && level(by.Layers) <= 2) { by.Tops = by.Layers; delete by.Layers; } // a hoodie on its own is the top
   return by;
 }
 // A wearable look: something on top, bottoms, shoes. Hoodies, sweaters and quarter zips live in Layers but still count as the top
@@ -465,8 +466,9 @@ export function extractPalette(px, k = 5, min = 0.06) {
 }
 
 // ponytail: random sampling, not exhaustive search. Fine for a few hundred items; enumerate if results get repetitive.
-export function generate(items, mode, { anchor, fixed = [], palette, inspo, n = 12, tries = 1500, rand = Math.random, layerOdds = 0.5, maxUse = null } = {}) {
+export function generate(items, mode, { anchor, fixed = [], palette, inspo, n = 12, tries = 1500, rand = Math.random, layerOdds = 0.5, maxUse = null, alone = false } = {}) {
   const by = Object.fromEntries(Object.keys(SLOTS).map(s => [s, items.filter(SLOTS[s])]));
+  if (alone) by.Tops = items.filter(isTopish); // "wear hoodies alone": a hoodie or sweater can be the top
   const pinned = [anchor, ...fixed].filter(Boolean), forced = new Set(pinned.map(slotOf));
   for (const p of pinned) by[slotOf(p)] = [p];
   if (!by.Tops.length || !by.Bottoms.length || !by.Shoes.length) return [];
@@ -474,7 +476,7 @@ export function generate(items, mode, { anchor, fixed = [], palette, inspo, n = 
   const seen = new Map(), blocked = new Map();
   for (let t = 0; t < tries; t++) {
     const ps = [pick(by.Tops), pick(by.Bottoms), pick(by.Shoes)];
-    const add = (slot, odds) => { if (by[slot].length && (forced.has(slot) || rand() < odds)) ps.push(pick(by[slot])); };
+    const add = (slot, odds) => { const left = by[slot].filter(p => !ps.includes(p)); if (left.length && (forced.has(slot) || rand() < odds)) ps.push(pick(left)); }; // never the same piece twice
     add('Layers', layerOdds); add('Hat', 0.8); add('Accessory', 0.5); // hats + chains/bags in most fits, not all
     const key = ps.map(p => p.id).sort().join();
     if (seen.has(key)) continue;
@@ -548,11 +550,11 @@ export const occasionFit = (ps, occ) => { const o = OCCASIONS[occ]; if (!o) retu
   return -Math.abs(avg - o.dress) * 1.5 + (o.vibe ? vibe(ps, o.vibe) * 0.3 : 0); };
 const likeness = (ps, like) => { if (!like?.length) return 0; const cn = p => colorName(p.color), lc = new Set(like.filter(p => p.cat !== 'Accessories').map(cn)), lk = new Set(like.map(p => p.kind));
   return Math.min(1.2, ps.filter(p => p.cat !== 'Accessories' && lc.has(cn(p))).length * 0.25 + ps.filter(p => lk.has(p.kind)).length * 0.15); };
-export function today(items, { t = null, rain = false, occasion = null, n = 5, rand = Math.random, skip = [], like = null } = {}) {
+export function today(items, { t = null, rain = false, occasion = null, n = 5, rand = Math.random, skip = [], like = null, alone = false } = {}) {
   // skip: what you wore yesterday. Tops and layers rest a day; pants and shoes can repeat.
   if (OCCASIONS[occasion]?.dress >= 1.5) items = items.map(p => p.rate < 0 ? { ...p, rate: 0 } : p); // dressing up: pieces saved for special occasions come back
   const pool = forWeather(items, t, rain).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
-  const list = collect(pool, { rand, maxUse: 3, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
+  const list = collect(pool, { rand, maxUse: 3, alone, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
   // a new top every card; pants, shoes, a layer, the same cap or chain at most twice each.
   return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + (rain ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
 }
