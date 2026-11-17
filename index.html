@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.18'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.19'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -622,6 +622,7 @@ function closetView() {
     S.items.some(dupOf) && `<button class="nudge glass" data-action="doubles"><div><span class="mono">Same photo added twice</span><b>Merge ${S.items.filter(dupOf).length} double${S.items.filter(dupOf).length > 1 ? 's' : ''}</b></div><span class="plus">Review →</span></button>`,
     toReview >= 6 && `<button class="nudge glass" data-action="quickreview"><div><span class="mono">Fastest way through ${toReview} new pieces</span><b>Check just the types, 20 at a time</b></div><span class="plus">Go →</span></button>`,
     toReview && `<button class="nudge glass" data-action="review"><div><span class="mono"><span class="nc">AI</span> guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>`,
+    S.items.filter(plainName).length >= 10 && `<button class="nudge glass" data-action="rename"><div><span class="mono">${S.items.filter(plainName).length} pieces named just by type</span><b>Rename them fast, 20 at a time</b></div><span class="plus">Go →</span></button>`,
     S.items.some(i => i.broken) && `<button class="nudge glass" data-action="import"><div><span class="mono">This phone lost ${S.items.filter(i => i.broken).length} photos</span><b>Restore them from a backup</b></div><span class="plus">Pick file →</span></button>`,
     S.items.some(i => !i.pattern && PRINTABLE.includes(i.cat)) && `<button class="nudge glass" data-action="patreview"><div><span class="mono">Quick check · makes print warnings accurate</span><b>Is it plain or printed? ${S.items.filter(i => !i.pattern && PRINTABLE.includes(i.cat)).length} pieces</b></div><span class="plus">Start →</span></button>`,
     issues && `<button class="nudge glass" data-action="fixtags"><div><span class="mono">Tags that don't add up</span><b>Check ${issues} piece${issues > 1 ? 's' : ''}</b></div><span class="plus">Fix →</span></button>`,
@@ -637,7 +638,7 @@ function closetView() {
     ${groups.length > 1 ? `<div class="chips sticky">${groups.map(([k, l]) => `<button class="chip" data-jump="${k}">${k}<small>${l.length}</small></button>`).join('')}</div>` : ''}
     ${c && !inColl.length ? `<div class="empty"><h2>${esc(c.name)} is empty</h2><p>Pick its pieces once. Then Today, the builder and packing only use them.</p><button class="btn" data-action="collpick">Add pieces</button></div>` : ''}
     ${S.pending.length ? `<div class="grid">${S.pending.slice(0, 3).map(p => `<div class="item pending" data-pending="${p.id}"><div class="ph"><img src="${p.url}" alt=""></div><b>Processing</b><span>${p.status}</span></div>`).join('')}${S.pending.length > 3 ? `<div class="item pending"><div class="ph"></div><b>+${S.pending.length - 3} waiting</b><span>Keep the app open</span></div>` : ''}</div>` : '' /* only a few full-size photos on screen: 174 at once ran the phone out of memory */}
-    ${S.sel ? `<div class="selbar"><span>${S.sel.size} selected</span><span class="row2">${S.sel.size ? `<select data-selcoll aria-label="Add to a capsule"><option value="">Add to capsule…</option>${S.colls.map(k => `<option value="${k.id}">${esc(k.name)}</option>`).join('')}</select><select data-selset aria-label="Change the selected pieces"><option value="">Set…</option><optgroup label="Category">${CATS.map(c => `<option value="cat:${c}">${c}</option>`).join('')}</optgroup><optgroup label="Vibe">${Object.keys(VIBES).map(v => `<option value="vibe:${v}">${v}</option>`).join('')}</optgroup><optgroup label="Suggest it">${[['-1', 'Less'], ['0', 'Normal'], ['1', 'More']].map(([v, l]) => `<option value="rate:${v}">${l}</option>`).join('')}</optgroup><optgroup label="New pieces"><option value="review:ok">Tags look right</option></optgroup></select><select data-selmat aria-label="Set material"><option value="">Material…</option>${MATERIALS.map(m => `<option>${m}</option>`).join('')}</select><button class="btn ghost sm" data-action="selwash">Laundry</button><button class="btn ghost sm" data-action="seldel">Delete</button>` : ''}</span></div>` : ''}
+    ${S.sel ? `<div class="selbar"><span>${S.sel.size} selected</span><span class="row2">${S.sel.size ? `<select data-selcoll aria-label="Add to a capsule"><option value="">Add to capsule…</option>${S.colls.map(k => `<option value="${k.id}">${esc(k.name)}</option>`).join('')}</select><select data-selset aria-label="Change the selected pieces"><option value="">Set…</option><optgroup label="Category">${CATS.map(c => `<option value="cat:${c}">${c}</option>`).join('')}</optgroup><optgroup label="Vibe">${Object.keys(VIBES).map(v => `<option value="vibe:${v}">${v}</option>`).join('')}</optgroup><optgroup label="Suggest it">${[['-1', 'Less'], ['0', 'Normal'], ['1', 'More']].map(([v, l]) => `<option value="rate:${v}">${l}</option>`).join('')}</optgroup><optgroup label="New pieces"><option value="review:ok">Tags look right</option></optgroup><optgroup label="Names"><option value="rename:1">Rename these…</option></optgroup></select><select data-selmat aria-label="Set material"><option value="">Material…</option>${MATERIALS.map(m => `<option>${m}</option>`).join('')}</select><button class="btn ghost sm" data-action="selwash">Laundry</button><button class="btn ghost sm" data-action="seldel">Delete</button>` : ''}</span></div>` : ''}
     ${!S.q && !S.sel && !S.pending.length ? (fresh => fresh.length ? `<h3 class="sec">New this week<small>${fresh.length}</small></h3><div class="shelf">${fresh.slice(0, 24).map(itemCard).join('')}</div>` : '')(owned().filter(i => Date.now() - (i.createdAt ?? 0) < 7 * 864e5).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))) : ''}
     ${groups.map(([k, l]) => `<h3 class="sec" id="sec-${k}">${k}<small>${l.length}</small></h3><div class="${shelf ? 'shelf' : 'grid'}">${l.map(itemCard).join('')}</div>`).join('')}`;
 }
@@ -1305,6 +1306,7 @@ function meView() {
     ${aiCheck()}
     <h3><span>Brands</span><span>${S.items.filter(i => i.brand).length} of ${S.items.length} named</span></h3>
     <p class="sub">Find logos and team names in your photos ("Lakers jersey", "Amiri t-shirt"). You confirm each one. Or tap any piece's name to rename it yourself.</p>
+    <button class="btn ghost wide" data-action="rename">Rename pieces · ${S.items.filter(plainName).length} with a plain name</button>
     <div class="row"><button class="btn ghost sm" data-action="asknames">Ask Claude to name them</button><button class="btn ghost sm" data-action="pastenames">Paste names from Claude</button></div>
     <button class="btn ghost wide" data-action="findbrands">${S.items.some(i => i.brandGuess && !i.brand) ? 'See brand suggestions' : 'Find brands in my photos'}</button>
     <details class="sizes"><summary><h3><span>Sizes &amp; measurements</span><span>${MEASURE.filter(([k]) => m[k]).length} of ${MEASURE.length}</span></h3></summary>
@@ -1425,6 +1427,20 @@ async function setMainColor(it, h) { it.color = h; if (it.accents) it.accents = 
   const f = sheet.querySelector('[name=color]'); if (f) { f.value = h; showColor(it); } const box = sheet.querySelector('#accbox'); if (box) box.innerHTML = accHtml(it); S.ideas = null; S.deck = null; await put('items', it); }
 async function addAccent(it, h) { it.accents = [...(it.accents ?? []).filter(x => x !== h), h].slice(-6); it.accPicked = [...new Set([...(it.accPicked ?? []), h])]; S.accPick = null; await put('items', it); S.ideas = null; S.deck = null;
   const box = sheet.querySelector('#accbox'); if (box) box.innerHTML = accHtml(it); toast(`Added ${colorName(h)}`); }
+// Rename many at once: plain names first ("T-shirt", "Jacket"), each with one-tap ideas (brand it spotted, color + type). 20 per page.
+const plainName = it => { const n = (it.name ?? '').toLowerCase().replace(/[^a-z]/g, ''); return !!KINDS[(it.name ?? '').toLowerCase()] || n === (it.kind ?? '').toLowerCase().replace(/[^a-z]/g, '') || /^(newitem|item|piece)$/.test(n); };
+const nameIdeas = it => { const k = (it.kind || it.cat).toLowerCase(), c = colorName(it.color), cap = x => x[0].toUpperCase() + x.slice(1);
+  return [...new Set([it.brandGuess?.brand && brandName(it, it.brandGuess.brand), it.brand && `${it.brand} ${k}`, cap(`${c} ${k}`), it.brand && `${it.brand} ${c} ${k}`].filter(x => x && x !== it.name))].slice(0, 3); };
+function openRename(ids = null, page = 0) {
+  const pool0 = ids ? ids.map(byId).filter(Boolean) : [...S.items].sort((a, b) => plainName(b) - plainName(a) || (b.createdAt ?? 0) - (a.createdAt ?? 0));
+  const list = pool0.slice(page * 20, page * 20 + 20); if (!list.length) return toast('Nothing to rename');
+  S.renaming = { ids, page };
+  showSheet(`<form class="pad rename" id="renameform"><div class="pickhead"><div><div class="eyebrow">${ids ? `${ids.length} selected` : `${S.items.filter(plainName).length} with a plain name`}</div><h2>Rename</h2></div>${closeBtn}</div>
+    <p class="sub">Type over any name, or tap an idea. Brand first, type last works best ("Carhartt work jacket", "Lakers 24 jersey").</p>
+    ${list.map(it => `<div class="rnrow"><button type="button" data-open="${it.id}"><img src="${src(it)}" alt=""></button><div><span class="rnin"><input name="rn_${it.id}" value="${esc(it.name)}" maxlength="60" autocomplete="off" enterkeyhint="next" aria-label="Name"><button type="button" class="rnx" data-rnclear="${it.id}" aria-label="Clear">×</button></span>
+      ${nameIdeas(it).length ? `<span class="rnideas">${nameIdeas(it).map(x => `<button type="button" class="tag o" data-rnidea="${it.id}|${esc(x)}">${esc(x)}</button>`).join('')}</span>` : ''}</div></div>`).join('')}
+    <div class="row"><button type="button" class="btn" data-rnsave="1">Save${pool0.length > (page + 1) * 20 ? ' · next 20' : ''}</button></div></form>`);
+}
 // Quick review: 20 new pieces at a time, just photo + type (the tag that matters most). The AI's guesses sit at the top of each list.
 function openQuick() {
   const list = S.items.filter(i => i.review).slice(0, 20); if (!list.length) return toast('Nothing left to review');
@@ -1882,6 +1898,7 @@ document.addEventListener('change', async e => {
     if (!k || !it) { e.target.value = it?.kind ?? ''; return; } await rememberKind(k, catGuess(k, it.cat)); toast(`Added "${k}" under ${KINDS[k].toLowerCase()}. Wrong? Change it in the piece's Details`); const o = new Option(k, k, true, true); e.target.add(o, 0); e.target.value = k; }
   if (e.target.matches('[data-qkind]')) { const it = byId(e.target.dataset.qkind), k = e.target.value; if (it && KINDS[k]) { const generic = KINDS[it.name.toLowerCase()] || it.name.toLowerCase() === (it.kind ?? '').toLowerCase();
     it.kind = k; it.cat = KINDS[k]; if (generic) it.name = k[0].toUpperCase() + k.slice(1); await put('items', it); e.target.closest('.qrow').querySelector('b').textContent = it.name; } return; }
+  if (e.target.matches('[data-selset]') && e.target.value === 'rename:1') { const ids = [...S.sel]; e.target.value = ''; S.sel = null; render(); return openRename(ids); }
   if (e.target.matches('[data-selset]') && e.target.value) { const [k, v] = e.target.value.split(':');
     for (const id of S.sel) { const it = byId(id); if (k === 'rate') { if (+v) it.rate = +v; else delete it.rate; it.rateAsked = true; } else if (k === 'review') delete it.review; else it[k] = v; await put('items', it); }
     toast(`Updated ${S.sel.size} piece${S.sel.size > 1 ? 's' : ''}`); S.sel = null; S.ideas = null; S.deck = null; S.cs = {}; render(); return; }
@@ -1896,7 +1913,8 @@ document.addEventListener('focusout', e => { if (e.target.matches?.('input, text
 window.visualViewport?.addEventListener('resize', () => { if (visualViewport.height > innerHeight * 0.85) setTimeout(settle, 80); });
 addEventListener('focus', () => setTimeout(settle, 120)); document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(settle, 120); });
 // Tap a piece's name to rename it ("Lakers jersey"). Return or tapping away saves.
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('[data-rename]')) { e.preventDefault(); e.target.blur(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('[data-rename]')) { e.preventDefault(); e.target.blur(); }
+  if (e.key === 'Enter' && e.target.matches?.('#renameform input')) { e.preventDefault(); const all = [...sheet.querySelectorAll('#renameform input')], i = all.indexOf(e.target); (all[i + 1] ?? e.target).focus(); if (!all[i + 1]) e.target.blur(); } });
 document.addEventListener('focusout', async e => { const el = e.target; if (!el.matches?.('[data-rename]')) return; const it = byId(el.dataset.rename); if (!it) return;
   const v = el.textContent.replace(/\s+/g, ' ').trim().slice(0, 60); if (!v || v === it.name) { el.textContent = it.name; return; }
   it.name = v; await put('items', it); const f = sheet.querySelector('input[name=name]'); if (f) f.value = v; S.deck = null; render(); toast('Renamed'); });
@@ -1937,6 +1955,13 @@ document.addEventListener('click', async e => {
   else if (ds.untold) { const [k, i] = ds.untold.split('|'), p = S.profile; if (Array.isArray(p[k])) p[k] = p[k].filter((_, j) => j !== +i); else delete p[k];
     await put('profile', p); syncTaste(); S.deck = null; S.ideas = null; render(); toast('Undone'); }
   else if (ds.action === 'quickreview') openQuick();
+  else if (ds.action === 'rename') openRename();
+  else if (ds.rnclear) { const i = sheet.querySelector(`[name="rn_${ds.rnclear}"]`); if (i) { i.value = ''; i.focus(); } }
+  else if (ds.rnidea) { const [id, v] = ds.rnidea.split(/\|(.*)/s); const i = sheet.querySelector(`[name="rn_${id}"]`); if (i) i.value = v; }
+  else if (ds.rnsave) { let n = 0; for (const i of sheet.querySelectorAll('#renameform input[name^="rn_"]')) { const it = byId(i.name.slice(3)), v = i.value.replace(/\s+/g, ' ').trim().slice(0, 60);
+      if (!it || !v || v === it.name) continue; it.name = v; if (it.brandGuess?.brand && v.toLowerCase().includes(it.brandGuess.brand.toLowerCase())) { it.brand = it.brandGuess.brand; delete it.brandGuess; } await put('items', it); n++; }
+    const r = S.renaming ?? {}, more = (r.ids ? r.ids.length : S.items.length) > (r.page + 1) * 20; S.deck = null; S.ideas = null; render(); toast(n ? `Renamed ${n}` : 'No changes');
+    if (more) openRename(r.ids, r.page + 1); else sheet.close(); }
   else if (ds.quickok) { const ids = ds.quickok.split(','); for (const id of ids) { const it = byId(id); if (it?.review) { delete it.review; await put('items', it); } }
     S.ideas = null; S.deck = null; render(); toast(`${ids.length} confirmed`); S.items.some(i => i.review) ? openQuick() : sheet.close(); }
   else if (ds.wearhow) { const p = S.pendingWear; S.pendingWear = null; if (!p) return; sheet.onclose = null; sheet.close(); await logDay(p.day, p.o, false, ds.wearhow); render(); }

@@ -637,3 +637,6 @@
   .dwhy { margin: -6px 0 10px; font-size: 13px; color: var(--muted); }
   .wcount { display: block; margin: 2px 0 6px; }
   .phead { position: relative; } .clearname { display: none; position: absolute; right: 0; top: 0; width: 44px; height: 44px; border-radius: 999px; font-size: 22px; color: var(--muted); place-items: center; } .phead:focus-within .clearname { display: grid; } .phead:focus-within .pname { padding-right: 48px; }
+  .rnrow { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--hair); } .rnrow img { width: 64px; height: 64px; object-fit: contain; background: var(--s1); border-radius: 12px; }
+  .rnin { display: flex; align-items: center; height: 44px; border: 1px solid var(--hair); border-radius: 999px; background: var(--s1); padding-left: 14px; } .rnin input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 16px; color: var(--ink); outline: none; } .rnx { width: 44px; height: 44px; font-size: 20px; color: var(--muted); }
+  .rnideas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; } .rnideas .tag { min-height: 36px; font-size: 12px; text-transform: none; } .rename .row { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0; }

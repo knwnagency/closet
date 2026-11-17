@@ -1,2 +1,2 @@
-2026.11.17 · v5.18
-Smoother uploads: no blank screen after picking photos, lighter closet while the AI works
+2026.11.17 · v5.19
+Rename many pieces at once (Me › Brands, the closet card, or select › Set… › Rename these)
