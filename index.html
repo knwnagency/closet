@@ -41,7 +41,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.16 · v5.16'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.17'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -317,8 +317,12 @@ const KINDS = {
 };
 Object.assign(KINDS, S.profile?.kinds ?? {}); // types you added yourself ("varsity jacket")
 const catGuess = (k, fallback) => /jacket|coat|vest|parka|puffer|blazer|cardigan|overshirt|shacket|windbreaker|anorak|fleece|gilet/.test(k) ? 'Layers'
-  : /pant|jean|short|skirt|cargo|trouser|jogger|legging|jort/.test(k) ? 'Bottoms' : /shoe|boot|sneaker|loafer|slide|sandal|clog|mule|trainer|runner/.test(k) ? 'Shoes'
+  : /pant|jean|\bshorts\b|skirt|cargo|trouser|jogger|legging|jort/.test(k) ? 'Bottoms' : /shoe|boot|sneaker|loafer|slide|sandal|clog|mule|trainer|runner/.test(k) ? 'Shoes'
   : /hat|cap|beanie|bag|chain|necklace|ring|watch|belt|glasses|scarf|bracelet|earring|sock|glove/.test(k) ? 'Accessories' : /shirt|tee|top|hoodie|sweater|polo|jersey|tank|crewneck|zip|knit/.test(k) ? 'Tops' : fallback;
+{ let moved = 0; for (const [k, cat] of Object.entries(S.profile?.kinds ?? {})) {
+    if (cat !== 'Bottoms' || !/short/.test(k) || /\bshorts\b/.test(k)) continue; const now = catGuess(k, 'Tops'); if (now === 'Bottoms') continue;
+    KINDS[k] = now; S.profile.kinds[k] = now; for (const it of S.items.filter(i => i.kind === k && i.cat === 'Bottoms')) { it.cat = now; put('items', it); moved++; } }
+  if (moved) { put('profile', S.profile); setTimeout(() => toast(`Moved ${moved} piece${moved > 1 ? 's' : ''} back to ${KINDS[Object.keys(S.profile.kinds).find(k => /short/.test(k))]?.toLowerCase() ?? 'tops'}`), 1500); } }
 async function rememberKind(k, cat) { if (!k || KINDS[k]) return; KINDS[k] = cat; S.profile = { k: 'me', ...S.profile, kinds: { ...(S.profile?.kinds ?? {}), [k]: cat } }; await put('profile', S.profile); }
 const VIBES = { streetwear: 'streetwear', formal: 'formal dress clothing', casual: 'casual everyday clothing', athletic: 'athletic sportswear' };
 // Fit prompts, index = fit value (0 slim/sleek, 1 regular, 2 baggy/chunky)
@@ -1873,7 +1877,7 @@ document.addEventListener('change', async e => {
   if (e.target.matches('[data-selmat]') && e.target.value) { for (const id of S.sel) { const it = byId(id); it.material = e.target.value; await put('items', it); } toast(`${S.sel.size} set to ${e.target.value}`); S.sel = null; S.ideas = null; render(); return; }
   if (e.target.name === 'kindOther' && openItem) { const k = e.target.value.trim().toLowerCase(), it = byId(openItem); if (k && it) { await rememberKind(k, it.cat); toast(`Added "${k}" to your types`); } } // the category you picked in Details
   if (e.target.matches('[data-qkind]') && e.target.value === '__new') { const it = byId(e.target.dataset.qkind), k = (prompt('New type (e.g. varsity jacket, jorts)') ?? '').trim().toLowerCase().slice(0, 30);
-    if (!k || !it) { e.target.value = it?.kind ?? ''; return; } await rememberKind(k, catGuess(k, it.cat)); const o = new Option(k, k, true, true); e.target.add(o, 0); e.target.value = k; }
+    if (!k || !it) { e.target.value = it?.kind ?? ''; return; } await rememberKind(k, catGuess(k, it.cat)); toast(`Added "${k}" under ${KINDS[k].toLowerCase()}. Wrong? Change it in the piece's Details`); const o = new Option(k, k, true, true); e.target.add(o, 0); e.target.value = k; }
   if (e.target.matches('[data-qkind]')) { const it = byId(e.target.dataset.qkind), k = e.target.value; if (it && KINDS[k]) { const generic = KINDS[it.name.toLowerCase()] || it.name.toLowerCase() === (it.kind ?? '').toLowerCase();
     it.kind = k; it.cat = KINDS[k]; if (generic) it.name = k[0].toUpperCase() + k.slice(1); await put('items', it); e.target.closest('.qrow').querySelector('b').textContent = it.name; } return; }
   if (e.target.matches('[data-selset]') && e.target.value) { const [k, v] = e.target.value.split(':');
