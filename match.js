@@ -535,10 +535,13 @@ export const madeWith = (items, anchor, n = 5) => varied(collect(items, { anchor
 export const possibilities = (items, picked, n = 6) => varied(collect(items, { fixed: picked }).map(o => ({ ...o, anchor: null })), n, { Tops: 2, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 });
 
 // What the weather rules out. t = feels-like °C, null = unknown (nothing ruled out). rain: no suede.
-export function forWeather(items, t, rain = false) {
+// season: 'cold' (Nov-Mar) keeps shorts, tanks and sandals out unless it's really hot today; 'warm' (May-Sep) keeps heavy coats out unless it's really cold.
+export function forWeather(items, t, rain = false, season = null) {
   if (rain) items = items.filter(p => p.material !== 'suede' && !/suede/i.test(p.name ?? ''));
-  if (t == null) return items;
   const k = p => `${p.kind ?? ''} ${p.name ?? ''}`;
+  if (season === 'cold' && !(t >= 24)) items = items.filter(p => !/\bshorts\b|\bjorts\b|tank|sandal|slipper|flip/i.test(k(p)));
+  if (season === 'warm' && !(t != null && t < 12)) items = items.filter(p => !/\bcoat\b|overcoat|puffer|parka|down jacket/i.test(k(p)));
+  if (t == null) return items;
   if (t >= 24) return items.filter(p => !/coat|puffer|parka|sweater|hoodie|knit|beanie|\bboots?\b/i.test(k(p)) && (p.cat !== 'Layers' || /overshirt|flannel|shirt/i.test(k(p))));
   if (t < 12) return items.filter(p => !/\bshorts\b|\bjorts\b|tank|sandal|slipper|flip/i.test(k(p)));
   return items.filter(p => !/puffer|parka/i.test(k(p)));
@@ -552,10 +555,10 @@ export const occasionFit = (ps, occ) => { const o = OCCASIONS[occ]; if (!o) retu
   return -Math.abs(avg - o.dress) * 1.5 + (o.vibe ? vibe(ps, o.vibe) * 0.3 : 0); };
 const likeness = (ps, like) => { if (!like?.length) return 0; const cn = p => colorName(p.color), lc = new Set(like.filter(p => p.cat !== 'Accessories').map(cn)), lk = new Set(like.map(p => p.kind));
   return Math.min(1.2, ps.filter(p => p.cat !== 'Accessories' && lc.has(cn(p))).length * 0.25 + ps.filter(p => lk.has(p.kind)).length * 0.15); };
-export function today(items, { t = null, rain = false, occasion = null, n = 5, rand = Math.random, skip = [], like = null, alone = false } = {}) {
+export function today(items, { t = null, rain = false, season = null, occasion = null, n = 5, rand = Math.random, skip = [], like = null, alone = false } = {}) {
   // skip: what you wore yesterday. Tops and layers rest a day; pants and shoes can repeat.
   if (OCCASIONS[occasion]?.dress >= 1.5) items = items.map(p => p.rate < 0 ? { ...p, rate: 0 } : p); // dressing up: pieces saved for special occasions come back
-  const pool = forWeather(items, t, rain).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
+  const pool = forWeather(items, t, rain, season).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
   const list = collect(pool, { rand, maxUse: 3, alone, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
   // a new top every card; pants, shoes, a layer, the same cap or chain at most twice each.
   return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + (rain ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)

@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.27'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.28'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -281,7 +281,9 @@ const wxLine = w => RAINY(w.code) ? 'Rain day: boots or dark sneakers, a shell o
 const RAINY = c => (c >= 51 && c <= 67) || (c >= 80 && c <= 99);
 // The temperature to dress for: from 4pm on, tonight's low counts too ("30°F later"); "too cold / too warm" feedback shifts it (S.profile.tempBias).
 const dressTemp = t => { if (t == null) return t; const w = weatherNow(), eve = new Date().getHours() >= 16 && w?.lo != null; return (eve ? Math.min(t, w.lo) : t) - (S.profile?.tempBias ?? 0); };
-const todayPicks = (items, t) => today(items, { t: dressTemp(t), alone: !!S.profile?.hoodieAlone, like: S.like?.map(byId).filter(Boolean), rain: RAINY(S.profile?.wx?.code ?? 0), occasion: S.occ, n: 12, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
+// Northern-hemisphere months unless your weather spot is south of the equator. April and October: weather only.
+const seasonNow = () => { const m = (new Date().getMonth() + ((S.profile?.wx?.lat ?? 1) < 0 ? 6 : 0)) % 12; return m >= 10 || m <= 2 ? 'cold' : m >= 4 && m <= 8 ? 'warm' : null; };
+const todayPicks = (items, t) => today(items, { t: dressTemp(t), season: seasonNow(), alone: !!S.profile?.hoodieAlone, like: S.like?.map(byId).filter(Boolean), rain: RAINY(S.profile?.wx?.code ?? 0), occasion: S.occ, n: 12, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
 
 // Gaps are slow-ish to compute, so cache until something about the closet changes.
 const sig = () => S.items.map(i => [i.id, i.cat, i.color, i.fit, i.vibe, i.patterned, i.name, i.kind].join()).join('|');
@@ -933,7 +935,7 @@ async function openRare(it) {
   if (it.dirty) why.push(['In the laundry, so it sits out. Untick "In the laundry" on its page.', `data-open="${it.id}"`, 'Open it']);
   else if (it.stored) why.push(['Stored for the season, so it sits out.', null]);
   else if (!items.includes(it)) why.push([`Not in the ${esc(capName())} capsule you're using.`, 'data-capsel=""', 'Use all clothes']);
-  if (items.includes(it) && !forWeather(items, t, rain).includes(it)) why.push([`Today's weather rules it out (${w ? tempText(w.t) : 'weather'}${rain ? ', rain' : ''}).`, null]);
+  if (items.includes(it) && !forWeather(items, t, rain, seasonNow()).includes(it)) why.push([forWeather(items, t, rain).includes(it) ? `Out of season (${seasonNow() === 'cold' ? 'fall and winter' : 'summer'}). It comes back on a ${seasonNow() === 'cold' ? 'hot' : 'cold'} day.` : `Today's weather rules it out (${w ? tempText(w.t) : 'weather'}${rain ? ', rain' : ''}).`, null]);
   if (it.rate < 0) why.push(['Set to "Suggest it less".', `data-rate="${it.id}|0"`, 'Back to normal']);
   const iss = issueOf(it); if (iss) why.push([`Its tags may be off: ${esc(iss.text)}`, 'data-action="opendetails"', 'Check tags']);
   const made = items.includes(it) ? madeWith(items, it, 8).length : 0; if (items.includes(it) && made < 3) why.push([`Only ${made} look${made === 1 ? '' : 's'} work with it under your style rules.`, `data-quick="made|${it.id}"`, 'See them']);

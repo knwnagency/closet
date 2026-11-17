@@ -1,2 +1,2 @@
-2026.11.17 · v5.27
-"Also works as" styles now only help a piece, never block it (Work Jacket shows up again) · first pick in a new build is never called a clash
+2026.11.17 · v5.28
+Seasons: no shorts or sandals on Today from November to March unless it is hot out, no heavy coats from May to September unless it is cold

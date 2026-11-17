@@ -391,3 +391,14 @@ console.log('edges ok');
   for (const m of ['classic', 'street']) if (so([wj, tee, jeans, sn], m) == null) throw new Error(`extra vibes blocked ${m}`);
   const gym = { ...tee, id: 'g', vibe: ['athletic'] }; if (so([gym, jeans, sn], 'classic') != null) throw new Error('main athletic vibe should still keep a look out of Classic');
   console.log('extra vibes ok'); }
+
+// Seasons: no shorts in fall/winter unless it's hot; no heavy coats in summer unless it's cold (2026-11-17)
+{ const { forWeather: fw } = await import('./match.js');
+  const sh = { id: 'sh', name: 'Mesh shorts', cat: 'Bottoms', kind: 'shorts' }, pf = { id: 'pf', name: 'Black puffer', cat: 'Layers', kind: 'puffer jacket' }, jk = { id: 'jk', name: 'Work Jacket', cat: 'Layers', kind: 'jacket' };
+  const has = (r, x) => r.includes(x), all = [sh, pf, jk];
+  if (has(fw(all, 18, false, 'cold'), sh) || has(fw(all, null, false, 'cold'), sh)) throw new Error('shorts in fall at 18C / no weather');
+  if (!has(fw(all, 27, false, 'cold'), sh)) throw new Error('a hot fall day should allow shorts');
+  if (has(fw(all, 18, false, 'warm'), pf) || !has(fw(all, 8, false, 'warm'), pf)) throw new Error('summer coat rule');
+  if (!has(fw(all, 18, false, 'warm'), jk) || !has(fw(all, 18, false, 'cold'), jk)) throw new Error('a light jacket is fine either season');
+  if (!has(fw(all, 18, false, null), sh)) throw new Error('April/October: weather only');
+  console.log('seasons ok'); }
