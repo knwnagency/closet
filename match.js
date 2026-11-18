@@ -66,7 +66,9 @@ const colored = ps => ps.filter(p => !isNeutral(p.color) && !isDenim(p)); // jea
 const hues = ps => colored(ps).map(p => hexToHsl(p.color).h);
 // Prints that compete: a big graphic or an all-over pattern. A small chest logo doesn't count, and neither does a plain piece.
 // p.pattern: 'solid' | 'logo' | 'graphic' | 'allover'; older pieces only have p.patterned (true = graphic).
-export const patternOf = p => p.pattern ?? (p.patterned ? 'graphic' : 'solid');
+// Your tag wins. Untagged: the name says it ("Camo sweats", "Aztec jacket", "Flannel shirt"); side stripes on joggers aren't an all-over pattern.
+const ALLOVER = /camo|plaid|flannel|tartan|striped|stripes\b|check(ed)?\b|gingham|houndstooth|paisley|floral|leopard|cheetah|zebra|snake|tie.?dye|polka|argyle|fair ?isle|aztec|ikat/i;
+export const patternOf = p => p.pattern ?? (ALLOVER.test(`${p.name ?? ''} ${p.kind ?? ''}`) ? 'allover' : p.patterned ? 'graphic' : 'solid');
 // Prints are a clothes thing: a swoosh on a sneaker or a logo strap on a bag is detail, not a second print fighting the tee.
 export const PRINTABLE = ['Tops', 'Layers', 'Bottoms'];
 const printed = ps => ps.filter(p => PRINTABLE.includes(p.cat) && (patternOf(p) === 'graphic' || patternOf(p) === 'allover'));
@@ -74,10 +76,13 @@ const printed = ps => ps.filter(p => PRINTABLE.includes(p.cat) && (patternOf(p) 
 // polka dot) so the eye knows which to look at first, and the two share a color. Never three. It still scores a bit lower, so it's rare.
 const QUIET_PRINT = /camo|stripe|check|gingham|houndstooth|plaid|flannel|leopard|cheetah|animal|polka|\bdots?\b/i;
 const swatchesOf = p => [p.color, ...(p.accents ?? [])].filter(Boolean);
-export const printPair = ps => { const pr = printed(ps); if (pr.length !== 2) return false;
+// Graphics layered on graphics are fine (a graphic tee under a graphic hoodie): only all-over patterns worn together are limited.
+const patterns = ps => ps.filter(p => PRINTABLE.includes(p.cat) && patternOf(p) === 'allover');
+export const printPair = ps => { const pr = patterns(ps); if (pr.length !== 2) return false;
   const quiet = pr.some(p => QUIET_PRINT.test(`${p.kind ?? ''} ${p.name ?? ''} ${[].concat(p.tags ?? []).join(' ')}`));
   return quiet && swatchesOf(pr[0]).some(a => swatchesOf(pr[1]).some(b => colorDist(a, b) < 28 || colorName(a) === colorName(b))); };
-const prints = ps => { const n = printed(ps).length; return n === 2 && printPair(ps) ? 1 : n; }; // a pair that works counts as one for the style rules
+// How many loud things the style rules see: all your graphics count as one, a pattern pair that works counts as one, two loud patterns count as two.
+const prints = ps => { const pats = patterns(ps).length; return Math.max(ps.some(p => PRINTABLE.includes(p.cat) && patternOf(p) === 'graphic') ? 1 : 0, pats === 2 && printPair(ps) ? 1 : pats); };
 const vibe = (ps, v) => ps.filter(p => [].concat(p.vibe).includes(v)).length; // an item can carry several vibes
 const mainVibe = (ps, v) => ps.filter(p => [].concat(p.vibe ?? [])[0] === v).length; // only the main vibe can rule a look out: "also works as" tags only add
 const pairs = a => a.flatMap((x, i) => a.slice(i + 1).map(y => [x, y]));
@@ -295,7 +300,7 @@ export function style(ps) {
     if (big >= 2) out.push([-0.4, 'Two loud colors the same size, let one lead']);
     else if (fam.length === 1 && fam[0][1] <= 0.15) out.push([0.3, `${cap(fam[0][0])} as the small pop, the 10 in 60/30/10`]);
   }
-  if (printed(ps).length >= 2) out.push(printPair(ps) ? [-0.5, 'Two prints, tied by a shared color: the quiet one acts as a neutral'] : [-0.6, 'Two prints compete, let one stand out']);
+  if (patterns(ps).length >= 2) out.push(printPair(ps) ? [-0.5, 'Two patterns tied by a shared color, the quiet one plays neutral'] : [-0.8, 'Two loud patterns fight for attention']);
   // jewelry and necklines: a chain shows on a tee, tank or open collar; it disappears under a hood or turtleneck
   const chain = ps.find(p => p.cat === 'Accessories' && /chain|necklace|pendant/i.test(`${p.kind} ${p.name}`)), neck = layer && /hoodie|turtleneck|zip/i.test(`${layer.kind} ${layer.name}`) ? layer : top;
   if (chain && neck) /turtleneck|hoodie/i.test(`${neck.kind} ${neck.name}`) ? out.push([-0.2, 'A chain gets lost under a high neck']) : /tee|t-shirt|tank|button|polo|jersey/i.test(`${neck.kind} ${neck.name}`) && out.push([0.2, `Chain over a ${/button|polo/i.test(neck.kind) ? 'open collar' : 'crewneck'}`]);
@@ -593,12 +598,12 @@ export function today(items, { t = null, rain = false, season = null, twoShirts 
   const list = collect(pool, { rand, maxUse: 3, alone, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
   // a new top every card; pants, shoes, a layer, the same cap or chain at most twice each.
   let twoPrints = rand() < 0.35 ? 0 : 1; const res = varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + (rain ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
-  for (let k = res.length - 1; k >= 0; k--) if (printed(res[k].items).length >= 2 && twoPrints++) res.splice(k, 1); // pattern on pattern: about one day in three, one look that day
   // Two shirts: now and then a button-up goes open over the tee (tee + denim shirt + jacket). Never on hot days, each shirt once.
   if (twoShirts && !(t >= 22)) { const used = new Set(); // only if you turned it on: at most one card per deck gets a button-up open over the tee
     for (const o of res) { if (used.size || rand() > 0.3 || o.items.some(openShirt) || o.items.filter(p => p.cat === 'Layers').length > 1 || !o.items.some(p => p.cat === 'Tops')) continue;
       const best = pool.filter(p => openShirt(p) && !used.has(p.id)).map(p => ({ p, r: scoreOutfit([...o.items, p], o.mode) })).filter(x => x.r && x.r.score >= o.score - 1.5).sort((a, b) => b.r.score - a.r.score)[0];
       if (best) { used.add(best.p.id); o.items = [...o.items, best.p]; o.key = o.items.map(p => p.id).sort().join(); } } }
+  for (let k = res.length - 1; k >= 0; k--) if (patterns(res[k].items).length >= 2 && twoPrints++) res.splice(k, 1); // pattern on pattern: about one day in three, one look that day
   return res;
 }
 
@@ -612,7 +617,7 @@ export function whyNot(ps) {
     if (!ok(ps.filter(q => q !== p))) continue;
     const v = [].concat(p.vibe ?? []), swap = (q, x) => ps.map(o => o === p ? { ...o, ...x } : o);
     if (v[0] === 'athletic' && ok(swap(p, { vibe: 'casual' }))) return { note: `${p.name} is tagged sporty, which rules out the dressier looks. Tagged wrong?`, piece: p, fix: 'tag' };
-    if (prints(ps) > 1 && ['graphic', 'allover'].includes(patternOf(p))) return { note: `Two prints compete. Swap the ${p.name.toLowerCase()} for something plain`, piece: p, fix: 'swap' };
+    if (prints(ps) > 1 && patternOf(p) === 'allover') return { note: `Two loud patterns compete. Swap the ${p.name.toLowerCase()} for something plain`, piece: p, fix: 'swap' };
     if (p.cat === 'Shoes' && !/sneaker|boot|trainer|dunk|jordan/i.test(`${p.name} ${p.kind}`)) return { note: `${p.name} work in classic looks, but not with these colors. Try sneakers or a neutral pair`, piece: p, fix: 'swap' };
     if (!isNeutral(p.color) && !isDenim(p)) return { note: `The ${colorName(p.color)} ${p.name.toLowerCase()} doesn't go with the other colors`, piece: p, fix: 'swap' };
     return { note: `${p.name} is the piece that doesn't fit`, piece: p, fix: 'swap' };

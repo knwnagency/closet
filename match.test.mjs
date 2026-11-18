@@ -312,7 +312,8 @@ console.log('orient ok');
   assert.ok(m.style([shirt, blazer, track, runners]).some(([s]) => s < 0), 'two dressy + two sporty fight');
   // materials, prints, palette
   assert.ok(m.style([{ ...shirt, material: 'linen' }, { ...trousers, material: 'wool' }, loafers]).some(([, n]) => /texture/.test(n)));
-  assert.ok(m.style([{ ...shirt, patterned: true }, { ...trousers, patterned: true }, loafers]).some(([s, n]) => s < 0 && /prints/.test(n)));
+  assert.ok(!m.style([{ ...shirt, patterned: true }, { ...trousers, patterned: true }, loafers]).some(([s, n]) => s < 0 && /pattern|print/.test(n)), 'graphics together are fine (changed 2026-11-18 at your request)');
+  assert.ok(m.style([{ ...shirt, pattern: 'allover' }, { ...trousers, pattern: 'allover' }, loafers]).some(([s, n]) => s < 0 && /loud patterns/.test(n)), 'two loud all-over patterns get marked down');
   m.setTaste({ avoid: ['white'] }); assert.ok(m.style([shirt, trousers, loafers]).some(([s, n]) => s < 0 && /suit you/.test(n))); m.setTaste();
   // occasion: work prefers the dressy look
   assert.ok(m.occasionFit([shirt, trousers, loafers], 'work') > m.occasionFit([it('t', 'Tops', '#151515', { kind: 't-shirt' }), track, runners], 'work'));
@@ -454,19 +455,21 @@ console.log('edges ok');
 { const m = await import('./match.js');
   const mk = (id, cat, kind, color, extra = {}) => ({ id, name: `${kind}`, cat, kind, color, fit: 1, vibe: 'casual', ...extra });
   const camo = mk('cp', 'Bottoms', 'cargo pants', '#5c5b33', { name: 'Camo cargo pants', pattern: 'allover', accents: ['#2b2a22', '#8a7a5a'] });
-  const gtee = mk('gt', 'Tops', 't-shirt', '#1b1a19', { name: 'Graphic tee', pattern: 'graphic', accents: ['#8b7b5b'] });
-  const bold2 = mk('b2', 'Bottoms', 'jeans', '#4d6a8c', { name: 'Painted jeans', pattern: 'allover', accents: ['#c0392b'] });
-  const redTee = mk('rt', 'Tops', 't-shirt', '#c0392b', { name: 'Red graphic tee', pattern: 'graphic', accents: ['#f2f2f0'] });
-  const sn = mk('sn', 'Shoes', 'sneakers', '#f4f4f2'), jk = mk('jk', 'Layers', 'jacket', '#1b1a19');
-  assert.ok(m.printPair([gtee, camo, sn]), 'graphic tee + camo sharing a color is a pair that works');
-  assert.ok(!m.printPair([redTee, bold2, sn]), 'two bold prints with no quiet one still clash');
-  const one = m.bestMode([mk('pt', 'Tops', 't-shirt', '#1b1a19'), camo, sn]).score, two = m.bestMode([gtee, camo, sn]).score;
-  assert.ok(two != null && two < one, 'pattern on pattern passes but ranks below a single print');
-  // Today: never more than one two-print look a day
-  const items = [gtee, camo, sn, jk, mk('t2', 'Tops', 't-shirt', '#f2f2f0'), mk('t3', 'Tops', 't-shirt', '#7d7b78'), mk('b3', 'Bottoms', 'jeans', '#1c1c1c'),
-    mk('st', 'Tops', 't-shirt', '#f2f2f0', { name: 'Stripe tee', pattern: 'allover', accents: ['#1b1a19'] }), mk('s2', 'Shoes', 'sneakers', '#1a1a1a')];
+  const stripe = mk('st', 'Tops', 't-shirt', '#f2f2f0', { name: 'Stripe tee', pattern: 'allover', accents: ['#2b2a22'] });
+  const paisley = mk('pz', 'Tops', 'button-up shirt', '#c0392b', { name: 'Paisley shirt', pattern: 'allover', accents: ['#5c5b33'] });
+  const gtee = mk('gt', 'Tops', 't-shirt', '#1b1a19', { name: 'Graphic tee', pattern: 'graphic', accents: ['#8b7b5b'] }), ghood = mk('gh', 'Layers', 'hoodie', '#7d7b78', { name: 'Graphic hoodie', pattern: 'graphic' });
+  const sn = mk('sn', 'Shoes', 'sneakers', '#f4f4f2'), jk = mk('jk', 'Layers', 'jacket', '#1b1a19'), jeans = mk('jn', 'Bottoms', 'jeans', '#1c1c1c');
+  assert.ok(m.printPair([stripe, camo, sn]), 'stripes + camo sharing a color is a pattern pair that works');
+  assert.ok(!m.printPair([paisley, mk('pj', 'Bottoms', 'jeans', '#4d6a8c', { name: 'Painted jeans', pattern: 'allover', accents: ['#c0392b'] }), sn]), 'two loud patterns still clash');
+  assert.ok(m.bestMode([gtee, ghood, jeans, sn]).score != null, 'a graphic tee under a graphic hoodie is fine (layering graphics is not pattern on pattern)');
+  assert.ok(m.bestMode([gtee, camo, sn]).score != null, 'a graphic tee with camo pants is fine (one pattern)');
+  const one = m.bestMode([mk('pt', 'Tops', 't-shirt', '#f2f2f0'), camo, sn]).score, two = m.bestMode([stripe, camo, sn]).score;
+  assert.ok(two != null && two < one, 'pattern on pattern passes but ranks below a single pattern');
+  // Today: never more than one pattern-on-pattern look a day, even after the open-shirt pass
+  const flannel = mk('fl', 'Tops', 'button-up shirt', '#5c5b33', { name: 'Flannel shirt', pattern: 'allover', accents: ['#2b2a22'] });
+  const items = [gtee, camo, sn, jk, stripe, flannel, mk('t2', 'Tops', 't-shirt', '#f2f2f0'), mk('t3', 'Tops', 't-shirt', '#7d7b78'), jeans, mk('s2', 'Shoes', 'sneakers', '#1a1a1a')];
   let seed = 3; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 15; i++) assert.ok(m.today(items, { n: 8, rand }).filter(o => o.items.filter(p => ['graphic', 'allover'].includes(m.patternOf(p)) && p.cat !== 'Shoes').length >= 2).length <= 1, 'one pattern-on-pattern look a day at most');
+  for (let i = 0; i < 25; i++) assert.ok(m.today(items, { n: 8, rand, twoShirts: true, t: 15 }).filter(o => o.items.filter(p => m.patternOf(p) === 'allover' && p.cat !== 'Shoes').length >= 2).length <= 1, 'one pattern-on-pattern look a day at most');
   // camo pants pick tops from their own list; dark jeans like a light top; suede + denim; smart streetwear
   const notes = ps => m.style(ps).map(n => n[1]).join(' | ');
   assert.match(notes([mk('pk', 'Tops', 't-shirt', '#e8a0b4'), camo, sn]), /Camo pants with pink/);
@@ -474,3 +477,10 @@ console.log('edges ok');
   assert.match(notes([mk('sj', 'Layers', 'jacket', '#8a6a4a', { material: 'suede' }), mk('t9', 'Tops', 't-shirt', '#f2f2f0'), mk('mj', 'Bottoms', 'jeans', '#4d6a8c'), sn]), /Suede and denim/);
   assert.match(notes([mk('wt2', 'Tops', 't-shirt', '#f2f2f0'), mk('bz', 'Layers', 'blazer', '#1e2a45'), mk('tr', 'Bottoms', 'trousers', '#7d7b78'), mk('lf', 'Shoes', 'loafers', '#5b3e2a')]), /Smart streetwear/);
   console.log('2026-11-18 reel rules ok'); }
+
+// Untagged pieces: the name decides all-over vs graphic (2026-11-18: none of the 58 real pieces had a pattern tag)
+{ const { patternOf: po } = await import('./match.js');
+  for (const [name, want] of [['Camo Sweats', 'allover'], ['Aztec jacket red', 'allover'], ['Flannel shirt', 'allover'], ['Grey stripe sweatpants', 'graphic'], ['Graphic tee', 'graphic'], ['Striped polo', 'allover']])
+    if (po({ name, patterned: true }) !== want) throw new Error(`${name} should read ${want}, got ${po({ name, patterned: true })}`);
+  if (po({ name: 'Camo Sweats', pattern: 'solid' }) !== 'solid') throw new Error('your own tag wins');
+  console.log('pattern from name ok'); }
