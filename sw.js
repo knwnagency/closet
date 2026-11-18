@@ -1,17 +1,19 @@
 // Offline support. The app's own files: network first (so updates show up), this cache when there's no signal.
 // transformers.js + its wasm (versioned URLs on jsdelivr): cache first. The AI models cache themselves (transformers.js browser cache).
-const CACHE = 'closet-v60', SHELL = ['./', 'index.html', 'styles.css', 'match.js', 'style.js', 'cutout.js', 'progress.js', 'manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'version.txt', 'gaps-worker.js'];
+const CACHE = 'closet-v61', SHELL = ['./', 'index.html', 'styles.css', 'match.js', 'style.js', 'cutout.js', 'progress.js', 'manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'version.txt', 'gaps-worker.js'];
 const keep = (req, res) => { if (res.ok && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; };
 
-self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
-self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+// cache: 'reload' skips the browser's 10-minute HTTP cache, so a new version never stores the old page (v5.34 got stuck on v5.33 that way)
+self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' }))))); self.skipWaiting(); });
+self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('closet-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', e => {
   const req = e.request, u = new URL(req.url);
   if (req.method !== 'GET' || req.headers.has('range')) return;
   // App files: always revalidate with the server (cache: 'no-cache'). Without it the browser's own cache could hand a new
   // index.html an old match.js, the app fails to start, and nothing shows. Offline: the copy cached here.
+  // By URL: fetch(pageLoadRequest, options) throws, which used to drop every page load to the cached copy.
   if (u.origin === location.origin)
-    e.respondWith(fetch(req, { cache: 'no-cache' }).then(r => keep(req, r)).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r ?? caches.match('index.html'))));
+    e.respondWith(fetch(u.href, { cache: 'no-cache', credentials: 'same-origin' }).then(r => keep(req, r)).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r ?? caches.match('index.html'))));
   else if (u.hostname === 'cdn.jsdelivr.net') // versioned libs: cache first, works offline
     e.respondWith(caches.match(req).then(r => r ?? fetch(req).then(res => keep(req, res))));
 });

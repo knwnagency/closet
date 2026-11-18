@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.34'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.35'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -874,7 +874,7 @@ function todayView() {
   const items = pool(), w = weatherNow(), c = S.coll && collById(S.coll);
   if (!MODES[S.mode] && S.mode !== 'today') S.mode = 'today';
   if (!S.profile?.wx && !S.profile?.wxAsked) { S.profile = { k: 'me', ...S.profile, wxAsked: true }; put('profile', S.profile); setTimeout(askWeather, 400); } // once: the phone asks to share location
-  else if (S.items.length >= 5 && Date.now() - (S.profile?.lastBackup ?? 0) > 7 * 864e5 && S.profile?.nudged !== dayKey()) { S.profile = { k: 'me', ...S.profile, nudged: dayKey() }; put('profile', S.profile);
+  else if (S.items.length >= 5 && (S.profile?.backupEvery ?? 7) && Date.now() - (S.profile?.lastBackup ?? 0) > (S.profile?.backupEvery ?? 7) * 864e5 - 36e5 && S.profile?.nudged !== dayKey()) { S.profile = { k: 'me', ...S.profile, nudged: dayKey() }; put('profile', S.profile);
     setTimeout(() => toast(S.profile.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up', { label: 'Back up', fn: exportBackup }), 900); } // once a day, a week after the last backup
   const date = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const nf = (S.mode !== 'today' ? 1 : 0) + (S.occ ? 1 : 0) + (S.src ? 1 : 0);
@@ -890,7 +890,7 @@ function todayView() {
   if (!looks.length && S.src) return top + `<div class="empty"><h2>${S.src === 'saved' ? 'No favorites yet' : 'Nothing worn yet'}</h2><p>${S.src === 'saved' ? 'Tap ♡ on a look you like and it shows up here.' : 'Hit Wear today on a look and it shows up here.'}</p><button class="btn" data-src="">Back to fresh picks</button></div>`;
   if (!looks.length) return top + `<div class="empty"><h2>No ${MODES[S.mode]?.label ?? ''} matches</h2><p>${d.blocked ? `Most combos break a proportion rule: <b>${esc(d.blocked.toLowerCase())}</b>. If a fit tag is wrong, fix it on the piece.` : 'Your closet needs more colors for this rule. Try another filter.'}</p><button class="btn" data-action="filters">Change filter</button></div>`;
   const cur = looks[Math.min(at, looks.length - 1)];
-  const lh = lessHint(), lb = S.profile?.lastBackup, changed = lb ? S.items.filter(i => (i.updatedAt ?? i.createdAt ?? 0) > lb).length : 0, needBk = S.items.length >= 5 && (Date.now() - (lb ?? 0) > 7 * 864e5 || changed >= 15);
+  const lh = lessHint(), lb = S.profile?.lastBackup, changed = lb ? S.items.filter(i => (i.updatedAt ?? i.createdAt ?? 0) > lb).length : 0, every = S.profile?.backupEvery ?? 7, needBk = S.items.length >= 5 && ((every && Date.now() - (lb ?? 0) > every * 864e5 - 36e5) || changed >= 15); // every: days between reminders (Settings › Backup)
   const bk = needBk ? `<button class="nudge glass" data-action="export"><div><span class="mono">${lb ? `Last backup ${ago(lb)}${changed ? ` · ${changed} pieces changed since` : ''}` : 'Never backed up'}</span><b>Your ${S.items.length} pieces live only on this phone</b></div><span class="plus">Back up →</span></button>` : '';
   const tip = S.profile?.tipsSeen ? '' : `<div class="nudge glass tip"><div><span class="mono">How Today works</span><b>Slide for more looks · ♡ saves one · Wear today logs it · Not for me teaches it what's off · ↻ swaps just that look</b></div><button class="tag o" data-action="tipsok">Got it</button></div>`;
   const plain = S.items.filter(plainName).length, rnDay = S.profile?.renameDay, rn = !bk && !tip && plain >= 10 && (rnDay === dayKey() || !rnDay || Date.now() - new Date(rnDay).getTime() > 7 * 864e5);
@@ -1411,6 +1411,8 @@ function meView() {
     <p class="sub">${kept ? 'This browser has agreed to keep your closet.' : 'Your closet lives only in this browser and can be cleared. Safari wipes sites you skip for 7 days, so add the app to your Home Screen and save a backup now and then.'}</p>
     ${p.lastBackup ? `<button class="btn ghost sm" data-action="exportnew">Save changes only (for your other device) · ${S.items.filter(i => (i.updatedAt ?? i.createdAt ?? 0) > p.lastBackup).length} pieces</button>` : ''}
     ${p.lastSync ? `<p class="sub">Last restore or sync ${ago(p.lastSync.at)} from ${esc(p.lastSync.file)}.</p>` : ''}
+    <label class="cell"><span>Remind me to back up</span><select data-bkevery aria-label="Backup reminder">${[[1, 'Every day'], [3, 'Every 3 days'], [7, 'Every week'], [0, 'Only after big changes']].map(([v, l]) => `<option value="${v}" ${(p.backupEvery ?? 7) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <p class="sub">iPhone doesn't let web apps save files on their own, so a backup is one tap on the reminder, then Save › Save to Files › iCloud Drive (it remembers the folder).</p>
     <label class="chk"><input type="checkbox" data-action="fullbackup" ${p.fullBackup ? 'checked' : ''}> Include original photos (bigger file, so Remove background still works after a restore)</label>
     <div class="row"><button class="btn ghost sm" data-action="export">Save backup</button><button class="btn ghost sm" data-action="import">Restore or sync</button></div>
     <p class="sub">Using Fitted on your phone and computer? Save a backup on one, then Restore or sync on the other. The newer edit wins, deletes carry over, nothing else is lost.</p>
@@ -2014,6 +2016,7 @@ document.addEventListener('change', async e => {
   if (e.target.matches('[data-sort]')) { S.sort = e.target.value; render(); return; }
   if (e.target.matches('[data-popany]')) { const h = e.target.value; applyPop(h); S.profile = { k: 'me', ...S.profile, pop: h }; await put('profile', S.profile); render(); return; }
   if (e.target.matches('[data-pref]')) { S.profile = { k: 'me', ...S.profile, [e.target.dataset.pref]: e.target.checked }; await put('profile', S.profile); S.deck = null; S.ideas = null; toast(e.target.dataset.pref === 'twoShirts' ? (e.target.checked ? 'Today will sometimes put a button-up over a tee' : 'No more open button-ups on Today') : e.target.checked ? 'Hoodies and sweaters can be worn alone now' : 'A tee goes under hoodies again'); return; }
+  if (e.target.matches('[data-bkevery]')) { S.profile = { k: 'me', ...S.profile, backupEvery: +e.target.value }; await put('profile', S.profile); toast(+e.target.value ? `Backup reminder every ${+e.target.value === 1 ? 'day' : `${e.target.value} days`}` : 'Reminder only after big changes'); return; }
   if (e.target.matches('[data-season]')) { S.profile = { k: 'me', ...S.profile, season: e.target.value }; await put('profile', S.profile); S.deck = null; toast('Season set'); return; }
   if (e.target.matches('[data-favsort]')) { S.favSort = e.target.value; render(); return; }
   if (e.target.matches('[data-action="fullbackup"]')) { S.profile = { k: 'me', ...S.profile, fullBackup: e.target.checked }; await put('profile', S.profile); return; }
@@ -2079,6 +2082,8 @@ document.addEventListener('click', async e => {
     <p class="sub">Shoot each piece flat from above on a plain floor that contrasts with it: light clothes on dark, dark on light. Pick as many photos as you like.</p>
     <div class="quick"><button class="btn" data-action="addfiles">${ic('camera')} Clothes · photos</button><button class="btn ghost" data-action="addinspo">Inspo pic</button><button class="btn ghost" data-calday="${dayKey()}">Log today's fit</button><button class="btn ghost" data-go="list" data-listtab="mine">Something I want (wishlist)</button></div></div>`);
   else if (ds.action === 'add' || ds.action === 'addfiles') { if (sheet.open) { sheet.onclose = null; sheet.close(); } fileInput.click(); }
+  else if (ds.action === 'reloadnew') { t.textContent = 'Updating…'; try { const r = await navigator.serviceWorker?.getRegistration(); await r?.update(); // fetch the new worker, wait for it to take over, then load the new page
+      if (r?.installing || r?.waiting) await new Promise(res => { navigator.serviceWorker.addEventListener('controllerchange', res, { once: true }); setTimeout(res, 5000); }); } catch (e) { console.warn(e); } location.reload(); }
   else if (ds.action === 'copyerr') { try { await navigator.clipboard.writeText(document.querySelector('.crash').textContent); toast('Copied. Paste it to Claude'); } catch { toast('Copy blocked. Take a screenshot instead'); } }
   else if (ds.action === 'askwx') askWeather();
   else if (ds.action === 'seasonswap' || ds.action === 'seasonlater') { const sw = seasonSwap(); if (!sw) return; if (ds.action === 'seasonswap') { for (const it of sw.back ?? []) { delete it.stored; delete it.storedSeason; await put('items', it); }
@@ -2499,8 +2504,9 @@ navigator.serviceWorker?.register('sw.js').catch(e => console.warn(e)); // opens
 // "New version" banner: version.txt is the live version; if it differs from this page, offer a reload. Checked on open and on every return to the app.
 async function checkUpdate() {
   try { const [v, ...notes] = (await (await fetch('version.txt', { cache: 'no-store' })).text()).trim().split('\n'); // line 1 = version, the rest = what's new
-    if (v?.trim() === VERSION && notes.length && S.profile && !S.profile.news?.some(n => n.v === VERSION)) { S.profile.news = [{ v: VERSION, at: dayKey(), notes: notes.join(' ').trim() }, ...(S.profile.news ?? [])].slice(0, 20); put('profile', S.profile); }
-    if (v && v.trim() !== VERSION && !document.querySelector('.update')) document.body.insertAdjacentHTML('beforeend', `<div class="update" role="status"><span>New version ready${notes.length ? `<small>${esc(notes.join(' ').trim())}</small>` : ''}</span><button onclick="location.reload()">Reload</button></div>`); } catch {}
+    if (v?.match(/v[\d.]+/)?.[0] === VERSION.match(/v[\d.]+/)?.[0] && notes.length && S.profile && !S.profile.news?.some(n => n.v === VERSION)) { S.profile.news = [{ v: VERSION, at: dayKey(), notes: notes.join(' ').trim() }, ...(S.profile.news ?? [])].slice(0, 20); put('profile', S.profile); }
+    const num = x => x?.match(/v[\d.]+/)?.[0]; // compare just the version number: a date typo must never show the banner forever
+    if (v && num(v) !== num(VERSION) && !document.querySelector('.update')) document.body.insertAdjacentHTML('beforeend', `<div class="update" role="status"><span>New version ready${notes.length ? `<small>${esc(notes.join(' ').trim())}</small>` : ''}</span><button data-action="reloadnew">Reload</button></div>`); } catch {}
 }
 checkUpdate(); document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
 </script>
