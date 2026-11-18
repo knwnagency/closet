@@ -577,6 +577,12 @@ const collect = (items, opts, modes = VISIBLE(), per = 10) => {
   return [...best.values()];
 };
 export const madeWith = (items, anchor, n = 5) => varied(collect(items, { anchor }), n);
+// Rules library (Inspo › Rules): a wide pool of looks from your closet, plus looks built around each all-over pattern
+// (pattern pairs score lower, so they'd hardly show up otherwise). Then every rule a look follows, as its reason lines.
+export const lookPool = items => { const out = new Map(); for (const o of collect(items, { rand: seeded() }, VISIBLE(), 60)) out.set(o.key, o);
+  for (const p of items.filter(p => PRINTABLE.includes(p.cat) && patternOf(p) === 'allover')) for (const o of collect(items, { anchor: p, rand: seeded() }, VISIBLE(), 12)) out.set(o.key, o);
+  return [...out.values()]; };
+export const lookRules = o => [o.note, ...proportion(o.items).list.map(n => n[1]), ...style(o.items).map(n => n[1])].filter(Boolean);
 // The highest-scoring outfits you can make from these pieces (Favorites › Best). Same score as Build's match ring, kept varied
 // so one great pair of pants can't fill the whole list. Fixed seed: the list only changes when your pieces do.
 // Combos library (Inspo › Combos): the combo book, and looks that wear one combo exactly: each of its colors on its own piece,

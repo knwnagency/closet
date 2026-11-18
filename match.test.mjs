@@ -521,3 +521,12 @@ console.log('edges ok');
   assert.ok(looks.length, `found looks for ${pick.text}`);
   for (const o of looks) assert.ok(!o.items.some(p => p.id === 'r'), 'the red tee is not in a navy + white combo');
   console.log(`combo looks ok (${pick.text}: ${looks.length})`); }
+
+// Rules library: the look pool includes pattern-pair looks, and lookRules names them (2026-11-18)
+{ const m = await import('./match.js');
+  const mk = (id, cat, kind, color, extra = {}) => ({ id, name: kind, cat, kind, color, fit: 1, vibe: 'casual', ...extra });
+  const items = [mk('st', 'Tops', 't-shirt', '#f2f2f0', { name: 'Striped tee', pattern: 'allover', accents: ['#5c5b33'] }), mk('cp', 'Bottoms', 'cargo pants', '#5c5b33', { name: 'Camo pants', pattern: 'allover', accents: ['#2b2a22'] }),
+    mk('t', 'Tops', 't-shirt', '#1b1a19'), mk('j', 'Bottoms', 'jeans', '#1c1c1c'), mk('s', 'Shoes', 'sneakers', '#f4f4f2', { fit: 2 }), mk('s2', 'Shoes', 'sneakers', '#1a1a1a')];
+  const pool = m.lookPool(items); assert.ok(pool.length >= 3);
+  assert.ok(pool.some(o => m.lookRules(o).some(n => /Two patterns, one color ties them/.test(n))), 'pattern-on-pattern looks are in the pool and named');
+  console.log(`rules pool ok (${pool.length} looks)`); }

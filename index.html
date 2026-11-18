@@ -39,10 +39,10 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges } from './progress.js';
-import { comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
+import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.43'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.44'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -1084,6 +1084,46 @@ const matchPct = score => Math.max(5, Math.min(99, Math.round(100 * (1 - Math.ex
 const SEASON_DOT = { magenta: '#c2185b', lime: '#9bc53d' };
 const dot = n => `<i class="cdot" style="background:${SWATCHES[n] ?? SEASON_DOT[n] ?? '#888'}" title="${n}"></i>`;
 // Combos library: every combo from your style notes as a palette. Which colors you own, which you can wear today, and the looks.
+// Rules library: the style rules, run backwards. Each rule lists the looks from your closet that follow it. A look follows a rule when
+// its reason lines say so (the same lines Build and Today show), or its best color rule is that one.
+const RULES = [
+  ['Color', [['6030', '60 / 30 / 10', 'One color leads, a second at about half, a small pop.', /the 10 in 60\/30\/10/], ['pop', 'Color pop', 'Two neutral basics, one color and its opposite.', null, 'formula'],
+    ['opp', 'Opposites', 'Two colors from opposite sides of the wheel balance each other.', null, 'complementary'], ['tonal', 'Tonal', 'Neighbors on the wheel blend smoothly.', null, 'analogous'],
+    ['trio', 'Bold trio', 'Three colors evenly spaced on the wheel.', null, 'triadic'], ['echo', 'Repeat a color', 'The cap, shoes or bag picks up a color from a graphic.', /picks up the/],
+    ['combo', 'Named combos', 'A combo from your style notes (see Combos).', /^[A-Z][a-z]+( \+ [a-z ]+)+ · /], ['mono', 'Head to toe', 'One color top to bottom, in different shades.', null, null, o => combo(o.items)?.slots.length === 1],
+    ['yours', 'Your colors', 'A best color from your season, up top.', /A color that suits you|Plays off your/]]],
+  ['Pattern & texture', [['pat', 'Pattern on pattern', 'A quiet pattern with a louder one, tied by a shared color.', /Two patterns, one color ties them/],
+    ['tex', 'Texture mix', 'Materials that play off each other: suede and denim, corduroy and wool.', /texture mix|Suede and denim|Corduroy and wool|Nylon and cotton|Leather against/], ['camo', 'Camo as a neutral', 'Camo with a color it loves.', /^Camo /]]],
+  ['Fit & shape', [['wide', 'Wide pants, chunky shoes', 'Volume at the bottom, grounded by a big shoe.', /Wide pants anchored by chunky shoes|Full oversized fit/], ['slim', 'Slim line', 'Slim pants carried down to a sleek shoe.', /Slim line carried down/],
+    ['vol', 'Volume up top', 'Big top, clean and slim below.', /Volume up top/], ['fitwide', 'Fitted top, wide pants', 'A fitted top balances wide legs.', /Fitted top balances wide-leg/],
+    ['crop', 'Cropped top', 'A short top keeps the legs looking long.', /Cropped top/], ['short', 'Short over long', 'A cropped layer over a longer top.', /Short over long/]]],
+  ['Mixing', [['dressy', 'One dressy piece', 'A single dressy piece makes a casual fit interesting.', /One dressy piece/], ['sporty', 'One sporty piece', 'A single sporty piece keeps it relaxed.', /One sporty piece/],
+    ['smart', 'Smart streetwear', 'Tailoring kept casual with a tee, cap or jeans.', /Smart streetwear/], ['polish', 'Same polish', 'Dressy pieces that match each other.', /same polish|over a dressy top/]]],
+  ['Pants & denim', [['pair', 'Pants pairings', 'Tops in the colors your notes pair with those pants.', /a go-to pairing/], ['jeans', 'Jeans and the top', 'Dark jeans with a light top, light jeans with a dark one.', /Dark jeans, light top|Light jeans, dark top|Mid wash jeans/],
+    ['denim', 'Double denim', 'Washes far apart, or an exact match.', /Denim washes far apart|Same denim head to toe/]]],
+  ['Details', [['chain', 'Chain on show', 'A chain over a crewneck or open collar.', /Chain over/], ['belt', 'Belt ties it in', 'The belt repeats a color from the fit.', /Belt repeats/], ['metal', 'Right metal', 'Silver or gold that suits the colors near it.', /the right metal/]]],
+];
+const ruleSig = () => [VERSION, S.coll ?? '', pool().map(i => `${i.id}${i.updatedAt ?? ''}`).join(), colorsOn() && S.profile.colorSeason].join('|');
+const ruleHits = () => { const items = pool(), sig = ruleSig();
+  if (S.ruleLooks?.sig === sig) return S.ruleLooks;
+  const looks = complete(items) ? lookPool(items).map(o => ({ ...o, why: lookRules(o) })) : [], hits = {};
+  for (const [, rules] of RULES) for (const [id, , , re, mode, fn] of rules) hits[id] = looks.filter(o => re ? o.why.some(n => re.test(n)) : mode ? o.mode === mode : fn(o)).sort((a, b) => b.score - a.score);
+  return S.ruleLooks = { sig, hits }; };
+function rulesView() {
+  if (!S.ruleLooks || S.ruleLooks.sig !== ruleSig()) { setTimeout(() => { ruleHits(); if (S.view === 'inspo' && S.inspoTab === 'rules') render(); }, 60); return `<div class="scan"><i></i><span class="mono">Finding looks for every rule</span></div>`; } // takes a moment on a big closet
+  const { hits } = ruleHits();
+  return `<p class="sub">Your style rules, run backwards. Tap one to see the looks in your closet that follow it.</p>
+    ${RULES.map(([g, rules]) => `<h3><span>${g}</span></h3>${rules.map(([id, t, d]) => `<button class="rulerow ${hits[id].length ? '' : 'none'}" data-rule="${id}"><span><b>${t}</b><small>${d}</small></span><span class="mono">${hits[id].length || 'none yet'}</span></button>`).join('')}`).join('')}`;
+}
+function openRule(id) {
+  const r = RULES.flatMap(([, rs]) => rs).find(x => x[0] === id), looks = (ruleHits().hits[id] ?? []).slice(0, 12); if (!r) return;
+  S.made = looks; // Save and Open in Build find these
+  const note = o => (r[3] ? o.why.find(n => r[3].test(n)) : MODES[o.mode]?.label) ?? '', same = new Set(looks.map(note)).size <= 1, label = o => same ? lookName(o.items) : note(o); // the same reason on every card says nothing
+  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${looks.length ? `${looks.length} look${looks.length > 1 ? 's' : ''} from your closet` : 'Style rule'}</div><h2>${r[1]}</h2></div>${closeBtn}</div>
+    <p class="sub">${r[2]}</p>
+    ${looks.length ? `<div class="rulelooks">${looks.map(o => `<div><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in Build">${flat(o.items)}</button><span class="mono">${esc(label(o))}</span></div>`).join('')}</div>`
+      : `<p class="sub">None of your looks hit this one yet. ${id === 'pat' ? 'It needs two all-over patterns (camo, stripes, plaid…) that share a color.' : id === 'denim' ? 'It needs a denim top or jacket plus jeans.' : 'Add a piece that fits it, or check a few tags.'}</p>`}</div>`);
+}
 const hexOf = n => SWATCHES[n] ?? SEASON_DOT[n] ?? '#888';
 const comboCards = () => { const items = pool().filter(p => p.cat !== 'Accessories'), s = mySeason(), okColor = n => s && (s.good.includes(n) || ['black', 'white', 'grey', 'light grey', 'navy', 'denim', 'beige', 'camel', 'brown', 'olive'].includes(n) && !s.avoid.includes(n));
   return comboBook().map(c => { const shown = []; const per = c.slots.map(sl => { const ps = items.filter(p => sl.includes(colorName(p.color))), owned = sl.filter(n => ps.some(p => colorName(p.color) === n));
@@ -1421,8 +1461,9 @@ function suggestions() {
 }
 
 function inspoView() {
-  const top = head(`${S.inspo.length} look${S.inspo.length === 1 ? '' : 's'}`, 'Inspo') + subnav('inspoTab', [['board', 'Moodboard'], ['combos', 'Combos'], ['wheel', 'Color wheel']]);
+  const top = head(`${S.inspo.length} look${S.inspo.length === 1 ? '' : 's'}`, 'Inspo') + subnav('inspoTab', [['board', 'Moodboard'], ['combos', 'Combos'], ['rules', 'Rules'], ['wheel', 'Color wheel']]);
   if (S.inspoTab === 'combos') return top + combosView();
+  if (S.inspoTab === 'rules') return top + rulesView();
   if (S.inspoTab === 'wheel') return top + `
     <div class="chips">${Object.entries(HARMONIES).map(([k, v]) => `<button class="chip ${S.wheel.harmony === k ? 'on' : ''}" data-harmony="${k}">${v.label}</button>`).join('')}</div>
     <div class="wheel" id="wheel"><svg id="lines"></svg><div id="handles"></div></div>
@@ -2435,6 +2476,7 @@ ${list.map(i => `${i.id} · now called "${i.name}" · ${i.kind || i.cat} · ${co
   }
   else if (ds.inspo) openInspo(ds.inspo);
   else if (ds.combo) openCombo(ds.combo);
+  else if (ds.rule) openRule(ds.rule);
   else if (ds.combof) { S.comboF = ds.combof; render(); }
   else if (ds.wishcolor) { const [n, text] = ds.wishcolor.split('|'), w = { id: uid(), name: `${n[0].toUpperCase() + n.slice(1)} piece`, color: hexOf(n), note: `For ${text}`, got: false, at: Date.now() };
     await put('wish', w); S.wish.push(w); t.textContent = 'On your wishlist ✓'; t.disabled = true; }
