@@ -679,3 +679,5 @@
   .lmacts { display: grid; gap: 8px; margin-bottom: 14px; } .lmacts .btn svg { width: 16px; height: 16px; margin-right: 6px; }
   .plist.open button { min-height: 44px; }
   .seg button { min-width: 44px; padding-left: 6px; padding-right: 6px; } .chip { min-width: 44px; justify-content: center; } button.tag { min-width: 44px; justify-content: center; }
+
+  .crash { text-align: left; font-size: 11px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--s1); padding: 12px; border-radius: 12px; user-select: text; -webkit-user-select: text; }

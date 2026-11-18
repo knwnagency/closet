@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.28'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.29'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -1420,10 +1420,13 @@ function upPill() { let el = document.getElementById('uppill');
   if (!S.pending.length) { el?.remove(); return; }
   if (!el) { el = Object.assign(document.createElement('button'), { id: 'uppill', className: 'uppill' }); el.dataset.go = 'closet'; document.body.append(el); }
   el.textContent = `Adding ${Math.max(1, S.upTotal - S.pending.length + 1)} of ${S.upTotal}`; el.hidden = S.view === 'closet'; }
+addEventListener('error', e => toast(`Error: ${String(e.message).slice(0, 120)}`)); addEventListener('unhandledrejection', e => toast(`Error: ${String(e.reason?.message ?? e.reason).slice(0, 120)}`)); // tap did nothing? say why
 function render() {
   const app = document.getElementById('app'), scrollers = () => document.querySelectorAll('.strip, .colls, .chips, .deck, .occ, .shelf, .tbar.ctrl, .looks');
   const keep = render.view === S.view ? [...scrollers()].map(e => e.scrollLeft) : []; // swapping in the builder keeps each strip where it was
-  app.innerHTML = VIEWS[S.view]();
+  let html; try { html = VIEWS[S.view](); } catch (err) { console.error(err); // a broken screen says why instead of silently not opening
+    html = `<div class="empty"><h2>This screen hit an error</h2><p>Screenshot this and send it to Claude. The other tabs still work.</p><pre class="crash">${esc(`${VERSION} · ${S.view}\n${err?.stack ?? err}`.slice(0, 900))}</pre></div>`; }
+  app.innerHTML = html;
   scrollers().forEach((e, i) => { e.scrollLeft = keep[i] ?? 0; });
   render.view = S.view; upPill();
   if (S.view === 'today' && S.deck) { const dk = document.querySelector('.deck'); if (dk?.children[S.deck.at]) dk.scrollLeft = dk.children[S.deck.at].offsetLeft - dk.firstElementChild.offsetLeft; }
