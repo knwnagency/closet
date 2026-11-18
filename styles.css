@@ -693,3 +693,5 @@
   .tiles .wide { grid-column: 1 / -1; }
   .rrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--hair); } .rrow > button:first-child { flex: none; width: 52px; height: 52px; padding: 0; background: var(--tile); border-radius: 10px; overflow: hidden; }
   .rrow img { width: 100%; height: 100%; object-fit: contain; } .rrow > div { flex: 1; min-width: 0; } .rrow b { display: block; font-size: 14px; } .rrow .mono { text-transform: none; letter-spacing: 0; font-size: 12px; } .rrow .tag { flex: none; }
+  .cpal { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; } .cpal > span:last-child { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .cdot { display: inline-block; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12); }

@@ -41,8 +41,8 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
-import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.18 · v5.41'; // shown on Me, so you can tell the phone has the latest
+import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
+const VERSION = '2026.11.18 · v5.42'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -102,7 +102,8 @@ S.cs = {}; S.past = []; S.q = ''; S.sort = 'type'; S.calOff = 0; S.locks = new S
 // How dressy the looks you save and wear are (5+ looks): Today leans that way, on top of any "too dressy / too sporty" you've said.
 const learnedDress = () => { const looks = [...S.saved, ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(p => p && p.cat !== 'Accessories')).filter(ps => ps.length);
   if (looks.length < 5) return 0; const avg = looks.reduce((t, ps) => t + ps.reduce((u, p) => u + dress(p), 0) / ps.length, 0) / looks.length; return Math.max(-0.6, Math.min(0.6, (avg - 1) * 0.5)); };
-const syncTaste = () => setTaste({ liked: S.saved.map(s => s.ids), worn: S.log.map(l => l.ids), nope: S.nope, good: S.profile?.colors?.good ?? [], avoid: S.profile?.colors?.avoid ?? [],
+const mySeason = () => COLOR_SEASONS[S.profile?.colorSeason] ?? null, colorsOn = () => !!mySeason() && !S.profile?.colorsOff; // Me › Settings › Your colors
+const syncTaste = () => setTaste({ liked: S.saved.map(s => s.ids), worn: S.log.map(l => l.ids), nope: S.nope, good: [...(colorsOn() ? mySeason().good : []), ...(S.profile?.colors?.good ?? [])], avoid: [...(colorsOn() ? mySeason().avoid : []), ...(S.profile?.colors?.avoid ?? [])],
   hair: S.profile?.hair ?? null, never: S.profile?.never ?? [], colorNo: S.profile?.colorNo ?? [], dressBias: (S.profile?.dressBias ?? 0) + learnedDress(), likedColors: [...S.saved, ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean).map(p => colorName(p.color))) });
 syncTaste();
 S.mode = MODES[S.profile?.mode] ? S.profile.mode : 'today'; // the style you picked last time; Today (a mix of every style) by default
@@ -145,7 +146,8 @@ const byId = id => S.items.find(i => i.id === id);
 const collById = id => S.colls.find(c => c.id === id) ?? (id?.startsWith('smart:') && SMART[id.slice(6)] ? { id, name: SMART[id.slice(6)][0], ids: [], smart: true } : undefined);
 // Smart collections fill themselves (pick them in the closet dropdown). Values: smart:<key>.
 const SMART = { never: ['Never worn', its => its.filter(i => !i.wears)], favs: ['Most worn', its => its.filter(i => i.wears).sort((a, b) => b.wears - a.wears).slice(0, 20)],
-  summer: ['Hot weather', its => forWeather(its, 28)], winter: ['Cold weather', its => forWeather(its, 4)], dressy: ['Dressed up', its => its.filter(i => dress(i) === 2 || i.cat === 'Accessories')] };
+  summer: ['Hot weather', its => forWeather(its, 28)], winter: ['Cold weather', its => forWeather(its, 4)], dressy: ['Dressed up', its => its.filter(i => dress(i) === 2 || i.cat === 'Accessories')],
+  mine: ['My colors', its => { const s = mySeason(); return s ? its.filter(i => s.good.includes(colorName(i.color)) || isNeutral(i.color) && !s.avoid.includes(colorName(i.color))) : []; }] };
 const smart = () => S.coll?.startsWith('smart:') && SMART[S.coll.slice(6)];
 const owned = () => smart() ? smart()[1](S.items) : S.coll ? S.items.filter(i => collById(S.coll)?.ids.includes(i.id)) : S.items; // what the closet shows
 const pool = () => owned().filter(i => !i.dirty && !i.stored); // where outfits come from: nothing in the laundry or stored for the season
@@ -798,7 +800,7 @@ function openCapsules() {
     ${S.colls.map(c => row(c.id, c.name, c.ids.filter(byId).length, true)).join('')}
     ${S.colls.length ? '' : '<p class="sub">Make one for a trip, the club, work or the gym: pick its pieces once, and every look comes only from them.</p>'}
     ${suggestCaps().length ? `<span class="mono">Suggested · tap to keep</span>${suggestCaps().map(([n, ids]) => `<div class="caprow"><button class="capsel" data-capsugg="${esc(n)}"><i>${ic('plus')}</i><span class="capcover">${ids.slice(0, 3).map(id => `<img src="${src(byId(id))}" alt="">`).join('')}</span><span><b>${esc(n)}</b><small>${ids.length} pieces</small></span></button></div>`).join('')}` : ''}
-    <span class="mono">Automatic</span>${Object.entries(SMART).map(([k, [n, f]]) => row('smart:' + k, n, f(S.items).length, false)).join('')}
+    <span class="mono">Automatic</span>${Object.entries(SMART).filter(([k]) => k !== 'mine' || mySeason()).map(([k, [n, f]]) => row('smart:' + k, n, f(S.items).length, false)).join('')}
     <button class="btn wide" data-action="newcoll">${ic('plus')} Create capsule</button></div>`);
 }
 
@@ -806,7 +808,7 @@ function openCapsules() {
 // The deck is saved per day + filters + weather band, so leaving and coming back shows the same looks. Shuffle makes a new one.
 const greet = () => { const h = new Date().getHours(); return h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
 const band = w => w ? (w.t < 12 ? 'cold' : w.t >= 24 ? 'hot' : 'mild') + (RAINY(w.code) ? '-rain' : '') : 'none';
-const deckSig = () => ['v2', VERSION, !!S.profile?.hoodieAlone, !!S.profile?.twoShirts, S.profile?.season ?? '', dayKey(), S.items.length, new Date().getHours() >= 16, S.profile?.tempBias ?? 0, S.profile?.dressBias ?? 0, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
+const deckSig = () => ['v2', VERSION, colorsOn() && S.profile.colorSeason, !!S.profile?.hoodieAlone, !!S.profile?.twoShirts, S.profile?.season ?? '', dayKey(), S.items.length, new Date().getHours() >= 16, S.profile?.tempBias ?? 0, S.profile?.dressBias ?? 0, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
 function getDeck(items) {
   if (S.deck?.sig === deckSig()) return S.deck;
   const recs = S.src === 'saved' ? S.saved : S.src === 'worn' ? wornLooks() : null; // looks you already know, instead of fresh picks
@@ -1078,6 +1080,20 @@ function stage(o, items) {
       : `<button class="sp add" data-swap="${sl}" style="${st}" ${items.some(canS(sl)) ? '' : 'disabled'}><svg viewBox="0 0 24 24"><path d="${SIL[sl]}"/></svg><span>+ ${SLOT_LABEL[sl].toLowerCase()}</span></button>`; }).join('')}</div>`;
 }
 const matchPct = score => Math.max(5, Math.min(99, Math.round(100 * (1 - Math.exp(-Math.max(0, score) / 5))))); // Build's match ring, Favorites and Best all use this
+// Your colors: a color season (by skin, hair and eyes), its best colors and the ones to wear less, an on/off switch, and a collection made from it.
+const SEASON_DOT = { magenta: '#c2185b', lime: '#9bc53d' };
+const dot = n => `<i class="cdot" style="background:${SWATCHES[n] ?? SEASON_DOT[n] ?? '#888'}" title="${n}"></i>`;
+function colorsSection(p) {
+  const s = mySeason(), n = s ? SMART.mine[1](S.items).length : 0;
+  return `<h3><span>Your colors</span>${s ? `<span>${colorsOn() ? 'on' : 'off'}</span>` : ''}</h3>
+    <label class="cell"><span>Color season</span><select data-colorseason aria-label="Color season"><option value="">Not set</option>${Object.entries(COLOR_SEASONS).map(([k, v]) => `<option value="${k}" ${p.colorSeason === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
+    ${s ? `<p class="sub">${esc(s.skin)}. Up top, near your face, these get a small boost or a small minus. Nothing gets blocked.</p>
+    <div class="cpal"><span class="mono">Best</span><span>${s.good.map(dot).join('')}</span></div>
+    <div class="cpal"><span class="mono">Wear less up top</span><span>${s.avoid.map(dot).join('')}</span></div>
+    <label class="chk"><input type="checkbox" data-colorson ${colorsOn() ? 'checked' : ''}> Use my colors in suggestions</label>
+    <button class="btn ghost sm" data-capsel="smart:mine">${S.coll === 'smart:mine' ? 'Using' : 'Use'} My colors collection · ${n} pieces</button>`
+    : '<p class="sub">Not sure? Warm or cool undertone, light or deep coloring, clear or soft contrast: pick the closest, you can switch any time.</p>'}`;
+}
 function buildView() {
   const o = S.build, ok = complete(o), v = ok ? bestMode(o) : null, items = buildItems();
   const pct = v?.score == null ? 0 : matchPct(v.score);
@@ -1442,8 +1458,9 @@ function meView() {
     <h3><span>Look</span></h3>
     <div class="seg themeseg">${[['light', 'Light'], ['dark', 'Dark'], ['auto', 'Match my phone']].map(([k, l]) => `<button type="button" class="${(document.documentElement.dataset.theme || 'light') === k ? 'on' : ''}" data-themeset="${k}">${l}</button>`).join('')}</div>
     <span class="mono">Pop color</span><div class="popsw">${[['racing green', '#004225'], ...Object.entries(SWATCHES).filter(([n]) => !/white|light grey|beige|grey/.test(n))].map(([n, h]) => `<button type="button" class="${(p.pop ?? '#004225') === h ? 'on' : ''}" style="background:${h}" data-popset="${h}" aria-label="${n}"></button>`).join('')}<label aria-label="Pick any color"><input type="color" data-popany value="${p.pop ?? '#004225'}"></label></div>
+    ${colorsSection(p)}
     <h3><span>How you wear things</span></h3>
-    <label class="cell seasonpick"><span>Season</span><select data-season aria-label="Season">${[['auto', 'By the calendar'], ['cold', 'Cold season now'], ['warm', 'Warm season now'], ['off', 'Weather only']].map(([v, l]) => `<option value="${v}" ${(p.season ?? 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="cell seasonpick"><span>Time of year</span><select data-season aria-label="Season">${[['auto', 'By the calendar'], ['cold', 'Cold season now'], ['warm', 'Warm season now'], ['off', 'Weather only']].map(([v, l]) => `<option value="${v}" ${(p.season ?? 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <p class="sub">Calendar: no shorts Nov to Mar, no heavy coats May to Sep, unless the day says otherwise.</p>
     <label class="chk"><input type="checkbox" data-pref="twoShirts" ${p.twoShirts ? 'checked' : ''}> Sometimes a button-up open over a tee</label>
     <label class="chk"><input type="checkbox" data-pref="hoodieAlone" ${p.hoodieAlone ? 'checked' : ''}> Hoodies and sweaters without a tee under</label>
@@ -2064,6 +2081,8 @@ document.addEventListener('change', async e => {
   if (e.target.matches('[data-popany]')) { const h = e.target.value; applyPop(h); S.profile = { k: 'me', ...S.profile, pop: h }; await put('profile', S.profile); render(); return; }
   if (e.target.matches('[data-pref]')) { S.profile = { k: 'me', ...S.profile, [e.target.dataset.pref]: e.target.checked }; await put('profile', S.profile); S.deck = null; S.ideas = null; toast(e.target.dataset.pref === 'twoShirts' ? (e.target.checked ? 'Today will sometimes put a button-up over a tee' : 'No more open button-ups on Today') : e.target.checked ? 'Hoodies and sweaters can be worn alone now' : 'A tee goes under hoodies again'); return; }
   if (e.target.matches('[data-bkevery]')) { S.profile = { k: 'me', ...S.profile, backupEvery: +e.target.value }; await put('profile', S.profile); toast(+e.target.value ? `Backup reminder every ${+e.target.value === 1 ? 'day' : `${e.target.value} days`}` : 'Reminder only after big changes'); return; }
+  if (e.target.matches('[data-colorseason]')) { S.profile = { k: 'me', ...S.profile, colorSeason: e.target.value || null, colorsOff: false }; await put('profile', S.profile); syncTaste(); S.deck = null; S.ideas = null; S.best = null; render(); toast(e.target.value ? `${COLOR_SEASONS[e.target.value].label}: your colors are on` : 'Color season cleared'); return; }
+  if (e.target.matches('[data-colorson]')) { S.profile = { k: 'me', ...S.profile, colorsOff: !e.target.checked }; await put('profile', S.profile); syncTaste(); S.deck = null; S.ideas = null; S.best = null; render(); toast(e.target.checked ? 'Your colors are on' : 'Your colors are off'); return; }
   if (e.target.matches('[data-season]')) { S.profile = { k: 'me', ...S.profile, season: e.target.value }; await put('profile', S.profile); S.deck = null; toast('Season set'); return; }
   if (e.target.matches('[data-favsort]')) { S.favSort = e.target.value; render(); return; }
   if (e.target.matches('[data-action="fullbackup"]')) { S.profile = { k: 'me', ...S.profile, fullBackup: e.target.checked }; await put('profile', S.profile); return; }
