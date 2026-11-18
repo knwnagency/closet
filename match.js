@@ -19,8 +19,10 @@ export function isNeutral(hex) {
   return s < 0.18 || l < 0.13 || l > 0.9 || (l < 0.25 && s < 0.25) // last one: near-black, named black by colorName
     || (h >= 15 && h <= 50 && s < 0.5 && l < 0.85)      // tan, beige, brown, khaki
     || (h >= 190 && h <= 250 && (l < 0.3 || s < 0.45))  // navy, denim
-    || (h >= 50 && h <= 100 && s < 0.35 && l < 0.45);   // olive
+    || (h >= 50 && h <= 100 && s < 0.35 && l < 0.45)    // olive
+    || NEUTRAL_NAMES.has(colorName(hex));               // anything named beige, brown, camel, olive, navy, denim, grey, black or white is neutral, full stop
 }
+const NEUTRAL_NAMES = new Set(['black', 'grey', 'light grey', 'white', 'navy', 'denim', 'beige', 'camel', 'brown', 'olive']); // a pale beige zip or red-brown loafers were "colors" before
 
 // Hue bands as people name clothes: a blue-ish green jacket is green, not cyan.
 const HUES = [[15, 'red'], [40, 'orange'], [65, 'yellow'], [85, 'lime'], [172, 'green'], [195, 'teal'], [250, 'blue'], [290, 'purple'], [325, 'magenta'], [345, 'pink'], [361, 'red']];
@@ -95,11 +97,12 @@ export function proportion(ps) {
   const get = c => ps.find(p => p.cat === c);
   const top = get('Tops'), layer = get('Layers'), bottom = get('Bottoms'), shoes = get('Shoes');
   const legs = !!bottom && !/short/i.test(bottom.kind || bottom.name); // shorts show the leg, so pant-width rules don't apply
-  const up = top || layer ? Math.max(top ? fit(top) : 0, layer ? fit(layer) : 0) : null, down = bottom ? fit(bottom) : null, feet = shoes ? fit(shoes) : null;
+  const shoeFit = p => knownFit(p) ?? (/sneaker|trainer|court|superstar|skate/i.test(`${p.kind ?? ''} ${p.name ?? ''}`) ? Math.max(1, fit(p)) : fit(p)); // the AI calls lots of sneakers sleek; Vans and court shoes are regular
+  const up = top || layer ? Math.max(top ? fit(top) : 0, layer ? fit(layer) : 0) : null, down = bottom ? fit(bottom) : null, feet = shoes ? shoeFit(shoes) : null;
   const notes = [], add = (s, note) => notes.push([s, note]);
   if (layer && top && level(layer) < level(top)) add(-2, `A ${layer.kind || 'layer'} doesn't go over a ${top.kind || 'heavier top'}`);
   if (layer && top && level(layer) === level(top) && level(top) >= 2) add(-2, level(top) === 2 ? 'Two knits or hoodies stacked is too bulky' : 'Two jackets at once, drop one');
-  if (legs && down === 2 && feet === 0) add(-2, 'Sleek shoes get swallowed by wide pants');
+  if (legs && down === 2 && feet === 0) add(-1, 'Sleek shoes can get lost under wide pants'); // a nudge, not a ban: loafers with wide trousers is a real look
   if (legs && down === 0 && feet === 2) add(-1.5, 'Chunky shoes overpower slim pants');
   if (legs && down === 2 && feet === 2) add(1, 'Wide pants anchored by chunky shoes');
   if (down === 0 && feet === 0) add(0.8, 'Slim line carried down to sleek shoes');

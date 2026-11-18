@@ -1,2 +1,2 @@
-2026.11.18 · v5.35
-Fixed: Reload and reopening now load the newest version · backup reminder can be every day (Settings › Backup) · plus v5.34: lookbook as images, highest rated sort, button-up over a tee is a setting, browns and whites named right
+2026.11.18 · v5.36
+Colors: beige, brown, camel and other neutrals always count as neutral (brown loafers and a pale beige zip were treated as colors) · sneakers and loafers with wide pants are allowed again, just ranked a little lower

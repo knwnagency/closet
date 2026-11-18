@@ -29,7 +29,7 @@ assert.ok(scoreOutfit([white, black, blue], 'street') != null);
 const wide = it('wide', 'Bottoms', '#151515', { fit: 2 }), skinny = it('skinny', 'Bottoms', '#151515', { fit: 0 });
 const chunky = it('chunky', 'Shoes', '#eeeeee', { fit: 2, kind: 'sneakers' }), sleek = it('sleek', 'Shoes', '#111111', { fit: 0, kind: 'loafers' });
 const boxy = it('boxy', 'Tops', '#f4f4f4', { fit: 2 }), slimJacket = it('sj', 'Layers', '#222222', { fit: 0 });
-assert.equal(scoreOutfit([white, wide, sleek], 'classic'), null, 'wide pants + sleek shoes is vetoed');
+assert.ok(scoreOutfit([white, wide, sleek], 'classic') && scoreOutfit([white, wide, sleek], 'classic').score < scoreOutfit([white, wide, chunky], 'classic').score, 'wide pants + sleek shoes is allowed but scores below chunky (rule softened 2026-11-18: loafers with wide trousers)');
 assert.ok(scoreOutfit([white, wide, chunky], 'classic').score > scoreOutfit([white, skinny, chunky], 'classic').score, 'chunky shoes belong with wide pants');
 assert.ok(scoreOutfit([boxy, skinny, sleek, slimJacket], 'classic'), 'a fitted jacket over a baggy tee is allowed (rule removed at your request)');
 assert.match(proportion([boxy, skinny, sleek]).note, /Volume up top|Slim line/);
@@ -39,7 +39,7 @@ assert.equal(hslToHex(0, 1, 0.5), '#ff0000');
 assert.deepEqual(harmony(30, 1, 0.5, 'complementary').map(c => c.h), [30, 210]);
 assert.ok(generate([white, black, orange, blue], 'palette', { palette: [30, 210] }).length, 'palette mode finds orange + blue');
 
-assert.match(generate([white, wide, sleek], 'classic').blocked, /swallowed/, 'empty result explains the deal-breaker');
+assert.ok(generate([white, wide, sleek], 'classic').length && !generate([white, wide, sleek], 'classic').blocked, 'sleek shoes with wide pants is a nudge now, not a deal-breaker (2026-11-18)');
 
 assert.equal(generate([white, wide, sleek], 'formula').blocked, undefined, 'color failure is not blamed on proportions');
 
@@ -66,8 +66,8 @@ assert.ok(withAcc[0].items.some(p => p.cat === 'Accessories'), 'the top-ranked f
 
 // builder: swapping shoes ranks what works first, rule-breakers last
 const swaps = rankSwaps([white, wide, chunky, sleek], [white, wide, chunky], 'Shoes');
-assert.equal(swaps[0].item, chunky); assert.equal(swaps.at(-1).score, null, 'sleek shoes under wide pants break every rule');
-assert.equal(bestMode([white, wide, sleek]).score, null);
+assert.equal(swaps[0].item, chunky); assert.ok(swaps.at(-1).item === sleek && swaps.at(-1).score < swaps[0].score, 'sleek shoes under wide pants rank below chunky (a nudge since 2026-11-18)');
+assert.ok(bestMode([white, wide, sleek]).score < bestMode([white, wide, chunky]).score);
 
 // inspo: palette from pixels, then fits in those colors (all-neutral inspo works too)
 const pal = extractPalette([...Array(60).fill([200, 30, 30]), ...Array(40).fill([20, 20, 20])]);
@@ -242,7 +242,7 @@ console.log('style notes ok');
   // half-built outfits rank: baggy pants alone put chunky shoes above sleek ones
   const baggy = it('baggy', 'Bottoms', '#151515', { fit: 2 }), chunky = it('chunky', 'Shoes', '#f6f5f1', { fit: 2, kind: 'sneakers' }), sleek = it('sleek', 'Shoes', '#151515', { fit: 0, kind: 'loafers' });
   const r = m.rankSwaps([baggy, chunky, sleek], [baggy], 'Shoes');
-  assert.equal(r[0].item.id, 'chunky'); assert.ok(r[0].score != null, 'chunky shoes score with baggy pants'); assert.equal(r.find(x => x.item.id === 'sleek').score, null, 'sleek shoes with baggy pants clash');
+  assert.equal(r[0].item.id, 'chunky'); assert.ok(r[0].score != null, 'chunky shoes score with baggy pants'); assert.ok(r.find(x => x.item.id === 'sleek').score < r[0].score, 'sleek shoes with baggy pants rank below chunky');
   // see what you can make: every look has the piece, varied
   const closet = [tee, hood, it('t2', 'Tops', '#7d7b78', { kind: 't-shirt' }), pants, it('p2', 'Bottoms', '#1e2a45', { kind: 'jeans' }), kicks, it('k2', 'Shoes', '#151515', { kind: 'boots' })];
   const made = m.madeWith(closet, pants);
@@ -429,3 +429,14 @@ console.log('edges ok');
     ['#6f6a66', 'grey'], ['#aeadab', 'light grey'], ['#b1afaf', 'light grey'], ['#73726e', 'grey']]) if (cn(hex) !== want) throw new Error(`${hex} should read ${want}, got ${cn(hex)}`);
   for (const [n, h] of Object.entries(SW)) if (cn(h) !== n) throw new Error(`swatch ${n} reads ${cn(h)}`);
   console.log('real-photo colors ok'); }
+
+// The outfit from the screenshot (2026-11-18): green A's cap, pale beige quarter zip, white tee, wide beige trousers, brown loafers. All neutrals plus one color.
+{ const { scoreOutfit: so, isNeutral: neu, colorName: cn } = await import('./match.js');
+  const cap = { id: 'c', name: "A's cap", cat: 'Accessories', kind: 'baseball cap', color: '#2c5a44' }, zip = { id: 'z', name: 'Zara beige quarter zip', cat: 'Layers', kind: 'quarter zip', color: '#efe2d6', fit: 2, vibe: 'casual' };
+  const tee = { id: 't', name: 'White short sleeve shirt', cat: 'Tops', kind: 't-shirt', color: '#eef1f2', fit: 1, vibe: 'casual' }, pants = { id: 'p', name: 'Beige trousers', cat: 'Bottoms', kind: 'trousers', color: '#cfc7a6', fit: 2, vibe: 'casual' };
+  const loafers = { id: 'l', name: 'Loafers', cat: 'Shoes', kind: 'loafers', color: '#4a2a20', fit: 0, vibe: 'formal' }, vans = { id: 'v', name: 'Black Vans', cat: 'Shoes', kind: 'sneakers', color: '#1c1c1c', fit: 0, vibe: 'casual' };
+  for (const p of [zip, loafers, pants]) if (!neu(p.color)) throw new Error(`${p.name} (${cn(p.color)}) should count as neutral`);
+  const ok = ps => ['classic', 'street', 'combos', 'formula'].some(m => so(ps, m) != null);
+  if (!ok([cap, zip, tee, pants, loafers])) throw new Error('beige zip + white tee + beige trousers + brown loafers + green cap should work');
+  if (!ok([cap, zip, tee, pants, vans])) throw new Error('Vans with wide trousers should work');
+  console.log('screenshot outfit ok'); }
