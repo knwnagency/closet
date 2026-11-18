@@ -1,2 +1,2 @@
-2026.11.17 · v5.29
-A screen that hits an error now says why instead of not opening
+2026.11.17 · v5.30
+Fixed: Closet and Me not opening (a piece had lost its name; it is now named after its type)

@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.29'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.30'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -68,6 +68,7 @@ const all = name => store(name, 'readonly', s => s.getAll()).then(list => list.m
 const put = async (name, v) => { v.updatedAt = Date.now(); if (name === 'items') { if (v.dirty) v.dirtyAt ??= Date.now(); else delete v.dirtyAt; } return putQuiet(name, v); }; // updatedAt: small "changes only" backups
 const putQuiet = async (name, v) => { // housekeeping saves (previews, format) aren't "changes"
   if (name === 'items') { // a piece's photo and original live in their own stores: opening the app reads only tags + small previews
+    if (typeof v.name !== 'string' || !v.name.trim()) v.name = String(v.kind || v.cat || 'piece').replace(/^./, c => c.toUpperCase()); // a piece always has a name (a missing one broke Closet and Me, v5.29)
     if (v.img instanceof Blob && !onDisk.has(v.img)) { await putQuiet('full', { id: v.id, img: v.img }); onDisk.add(v.img); }
     if (v.photo instanceof Blob) { await putQuiet('orig', { id: v.id, photo: v.photo }); delete v.photo; }
     const { img, photo, ...rec } = v; v = rec; }
@@ -89,6 +90,7 @@ const S = {
     return { profile: ps.find(p => p.k === 'me') ?? null, history: ps.find(p => p.k === 'history')?.list ?? [],
       plan: ps.find(p => p.k === 'plan') ?? { k: 'plan', days: {}, weekly: {} }, deck: ps.find(p => p.k === 'deck') ?? null, nope: ps.find(p => p.k === 'nope')?.list ?? [], draft: ps.find(p => p.k === 'draft')?.ids ?? null, gone: ps.find(p => p.k === 'gone')?.at ?? {} }; })(), // plan: { days: {date: look}, weekly: {0-6: look} } // history: looks you swiped past, newest first
 };
+for (const i of S.items) if (typeof i.name !== 'string' || !i.name.trim()) putQuiet('items', i); // repair: name it after its type
 S.build = null; // the builder starts blank; a half-built look waits behind "Resume" (S.draft)
 S.closetView = S.profile?.closetView ?? 'shelf';
 S.coll = S.profile?.capsule && (S.colls.some(c => c.id === S.profile.capsule) || S.profile.capsule.startsWith('smart:')) ? S.profile.capsule : null; // the capsule you were using
