@@ -46,6 +46,10 @@ tap('nav [data-go="me"]'); await wait(800); log(!!d().querySelector('[data-go="i
 if (tap('[data-go="inspo"]')) { await wait(2500); fits('Inspo'); // the board makes thumbnails: they must never land in the closet as pieces
   const items = await new Promise(r => { const q = w.indexedDB.open('closet'); q.onsuccess = () => { const g = q.result.transaction('items').objectStore('items').getAll(); g.onsuccess = () => r(g.result); }; });
   log(items.every(i => i.cat && typeof i.color === 'string' && typeof i.name === 'string'), `every closet piece has a type, color and name (${items.filter(i => !i.cat).length} without)`); }
+tap('nav [data-go="me"]'); await wait(700); if (tap('main [data-listtab="mine"]')) { await wait(600); const f = d().getElementById('wishform'); // a wish from a link alone, then removed again
+  f.elements.link.value = 'example.com/shop/selftest-black-hoodie/99'; f.requestSubmit(); await wait(900);
+  const row = [...d().querySelectorAll('.wish')].find(r => /selftest black hoodie/.test(r.textContent)); log(!!row, 'Wishlist adds from a link alone'); log(!!row && /black/.test(row.textContent), 'Wish type and color guessed from the name'); fits('Wishlist');
+  row?.querySelector('[data-wishdel]')?.click(); await wait(500); }
 log(!errors.length, errors.length ? `errors: ${errors.join(' | ')}` : 'no errors');
 document.getElementById('sum').textContent = fails ? `${fails} problem${fails > 1 ? 's' : ''}` : 'All good';
 document.title = fails ? `✕ ${fails}` : '✓ all good';

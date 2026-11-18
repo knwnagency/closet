@@ -411,3 +411,14 @@ console.log('edges ok');
   const b = bs([den, tee]); if (b.Tops !== tee || b.Layers !== den || b.Outer) throw new Error('tee + open shirt');
   const c = bs([den]); if (c.Tops !== den) throw new Error('a shirt alone is the top');
   console.log('two shirts ok'); }
+
+// Today sometimes puts a button-up open over the tee, never on a hot day (2026-11-17)
+{ const { today: td } = await import('./match.js');
+  const mk = (id, cat, kind, color, extra = {}) => ({ id, name: `${color} ${kind}`, cat, kind, color, fit: 1, vibe: 'casual', ...extra });
+  const items = [mk('t1', 'Tops', 't-shirt', '#f2f2f0'), mk('t2', 'Tops', 't-shirt', '#1c1c1c'), mk('t3', 'Tops', 't-shirt', '#8a8a8a'), mk('d1', 'Tops', 'button-up shirt', '#5a7bb0', { name: 'Denim shirt' }),
+    mk('j1', 'Layers', 'jacket', '#c9b48f'), mk('b1', 'Bottoms', 'jeans', '#1c1c1c'), mk('b2', 'Bottoms', 'cargo pants', '#6b6b5a'), mk('s1', 'Shoes', 'sneakers', '#f4f4f2'), mk('s2', 'Shoes', 'sneakers', '#1a1a1a')];
+  let seed = 7; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  let two = 0; for (let i = 0; i < 20; i++) two += td(items, { t: 15, n: 6, rand }).filter(o => o.items.filter(p => p.cat === 'Tops').length === 2).length;
+  let hot = 0; for (let i = 0; i < 20; i++) hot += td(items, { t: 28, n: 6, rand }).filter(o => o.items.filter(p => p.cat === 'Tops').length === 2).length;
+  if (!two) throw new Error('never suggested two shirts'); if (hot) throw new Error('two shirts on a hot day');
+  console.log(`two-shirt looks ok (${two} in 20 decks)`); }

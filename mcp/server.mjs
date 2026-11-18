@@ -21,7 +21,7 @@ function load() {
   if (cache.path !== path[0] || cache.mtime !== path[1]) {
     const b = JSON.parse(readFileSync(path[0], 'utf8'));
     const imgs = new Map(b.items.map(i => [i.id, i.img])); // kept aside for show_pieces; the rest of the tools only need the text
-    for (const i of b.items) { delete i.img; delete i.photo; }
+    for (const i of b.items) { delete i.img; delete i.photo; } for (const w of b.wish ?? []) delete w.img; for (const i of b.inspo ?? []) delete i.img; // text only
     cache = { path: path[0], mtime: path[1], data: b, imgs };
   }
   return cache.data;
@@ -47,9 +47,11 @@ function scope(b, collection) {
 const STYLES = Object.keys(MODES).filter(k => !MODES[k].hidden);
 const TOOLS = {
   closet: {
-    description: 'List every piece in the closet (or one collection): name, category, kind, color, fit, vibe, times worn. Also lists collections and the backup date.',
+    description: 'List every piece in the closet (or one collection): name, category, kind, color, fit, vibe, times worn. Also lists collections, the wishlist, the colors on the inspo board and the backup date.',
     inputSchema: { type: 'object', properties: { collection: { type: 'string', description: 'Collection name, e.g. Vacation or Club' } } },
-    run({ collection }) { const b = load(); return { backup: cache.path, collections: (b.colls ?? []).map(c => `${c.name} (${c.ids.length})`), pieces: scope(b, collection).map(desc) }; },
+    run({ collection }) { const b = load(); return { backup: cache.path, collections: (b.colls ?? []).map(c => `${c.name} (${c.ids.length})`), pieces: scope(b, collection).map(desc),
+      wishlist: (b.wish ?? []).filter(w => !w.got).map(w => [w.name, w.cat, w.color && colorName(w.color), w.note].filter(Boolean).join(' · ')),
+      inspo_colors: [...new Set((b.inspo ?? []).flatMap(i => (i.palette ?? []).filter(h => !(i.off ?? []).includes(h)).map(colorName)))] }; },
   },
   style_guide: {
     description: "The user's personal style guide (color combos, jeans and pants pairings, layering, fixes). The app's suggestions follow these rules; use them when advising.",

@@ -682,3 +682,9 @@
 
   .crash { text-align: left; font-size: 11px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--s1); padding: 12px; border-radius: 12px; user-select: text; -webkit-user-select: text; }
   .inspotop { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; } .inspotop .sub { margin: 0; }
+  .seasonl { margin: -4px 0 10px; text-transform: none; letter-spacing: 0; font-size: 12px; } .seasonpick select { font: inherit; background: none; border: 0; color: var(--ink); text-align: right; }
+  .wxask { display: block; min-height: 44px; text-align: left; color: var(--muted); }
+  .linkrow { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; } .linkrow input { flex: 1; min-width: 0; }
+  .wishmore .wpic { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; color: var(--muted); cursor: pointer; } .wpic img { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; }
+  .wish img.wimg { object-fit: cover; padding: 0; } .wtap { text-align: left; padding: 0; min-height: 0; display: block; } .wtap b { text-decoration: underline; text-decoration-color: var(--hair); text-underline-offset: 3px; }
+  .board .reading img { opacity: .55; } .board .reading { animation: pulse 1.2s ease-in-out infinite alternate; } @keyframes pulse { to { opacity: .6; } } @media (prefers-reduced-motion: reduce) { .board .reading { animation: none; } }

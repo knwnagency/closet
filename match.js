@@ -3,6 +3,7 @@ import { ALIAS, COMBOS, JEANS, TROUSERS } from './style.js';
 export const CATS = ['Tops', 'Layers', 'Bottoms', 'Shoes', 'Accessories'];
 
 export function hexToHsl(hex) {
+  if (!/^#[0-9a-f]{6}$/i.test(hex ?? '')) return { h: 0, s: 0, l: 0.5 }; // a missing color reads as grey instead of crashing the screen
   const n = parseInt(hex.slice(1), 16);
   const r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
@@ -563,7 +564,13 @@ export function today(items, { t = null, rain = false, season = null, occasion =
   const pool = forWeather(items, t, rain, season).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
   const list = collect(pool, { rand, maxUse: 3, alone, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
   // a new top every card; pants, shoes, a layer, the same cap or chain at most twice each.
-  return varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + (rain ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
+  const res = varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + (rain ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
+  // Two shirts: now and then a button-up goes open over the tee (tee + denim shirt + jacket). Never on hot days, each shirt once.
+  if (!(t >= 24)) { const used = new Set(); // each shirt goes open over a tee at most once per deck (it can still be the main top on another card)
+    for (const o of res) { if (rand() > 0.3 || o.items.some(openShirt) || o.items.filter(p => p.cat === 'Layers').length > 1 || !o.items.some(p => p.cat === 'Tops')) continue;
+      const best = pool.filter(p => openShirt(p) && !used.has(p.id)).map(p => ({ p, r: scoreOutfit([...o.items, p], o.mode) })).filter(x => x.r && x.r.score >= o.score - 1.5).sort((a, b) => b.r.score - a.r.score)[0];
+      if (best) { used.add(best.p.id); o.items = [...o.items, best.p]; o.key = o.items.map(p => p.id).sort().join(); } } }
+  return res;
 }
 
 // Why no style rule takes a look, and which piece to change: the one whose removal lets a rule pass. The builder shows this instead
