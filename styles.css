@@ -690,3 +690,6 @@
   .whybtn { display: inline-flex; align-items: center; min-height: 32px; padding: 0; text-align: left; } .whybtn:active { opacity: .6; }
   .wxl .wxs { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
   .wtap .wnote, .wtap .mono { display: block; text-align: left; }
+  .tiles .wide { grid-column: 1 / -1; }
+  .rrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--hair); } .rrow > button:first-child { flex: none; width: 52px; height: 52px; padding: 0; background: var(--tile); border-radius: 10px; overflow: hidden; }
+  .rrow img { width: 100%; height: 100%; object-fit: contain; } .rrow > div { flex: 1; min-width: 0; } .rrow b { display: block; font-size: 14px; } .rrow .mono { text-transform: none; letter-spacing: 0; font-size: 12px; } .rrow .tag { flex: none; }

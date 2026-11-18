@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.18 · v5.40'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.41'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -981,12 +981,45 @@ function openBrands() {
     ${list.length > 1 ? `<button class="btn wide" data-brandall="1">Use all ${list.length}</button>` : ''}
     ${list.map(it => `<div class="brow"><button data-open="${it.id}"><img src="${src(it)}" alt=""></button><div><b>${esc(brandName(it, it.brandGuess.brand))}</b><span class="mono">was "${esc(it.name)}"</span></div><button class="btn sm" data-brandok="${it.id}">Use</button><button class="btn ghost sm" data-brandno="${it.id}">No</button></div>`).join('')}</div>`);
 }
+// Skipped pieces (Me): 8 fresh sets of today's looks, with Today's own weather, season and settings. Every piece that lands in none,
+// and the one main reason, with a fix. Pieces sitting out on purpose (laundry, stored, season, capsule) are listed apart. Cached for the day.
+function rareReport() {
+  const w = weatherNow(), t = dressTemp(w?.t), rain = RAINY(S.profile?.wx?.code ?? 0), items = pool(), sn = seasonNow();
+  const sig = [VERSION, dayKey(), S.coll ?? '', S.items.map(i => `${i.id}${i.updatedAt ?? ''}`).join(), !!S.profile?.hoodieAlone, sn, t == null ? '' : Math.round(t / 4)].join('|');
+  if (S.rare?.sig === sig) return S.rare;
+  const hits = new Map(); let seed = 5; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let r = 0; r < 8; r++) for (const o of today(items, { t, rain, season: sn, alone: !!S.profile?.hoodieAlone, n: 12, rand })) for (const p of o.items) hits.set(p.id, (hits.get(p.id) ?? 0) + 1);
+  const ok = forWeather(items, t, rain, sn);
+  const rows = S.items.filter(it => !hits.get(it.id)).map(it => {
+    if (it.dirty) return { it, out: 'In the laundry' };
+    if (it.stored) return { it, out: 'Stored for the season' };
+    if (!items.includes(it)) return { it, out: `Not in ${capName()}` };
+    if (!ok.includes(it)) return { it, out: forWeather(items, t, rain).includes(it) ? 'Out of season' : "Today's weather" };
+    if (it.rate < 0) return { it, txt: 'Set to "Suggest it less"', a: `data-rate="${it.id}|0"`, l: 'Back to normal' };
+    const iss = issueOf(it); if (iss) return { it, txt: `Tags may be off: ${iss.text}`, a: `data-open="${it.id}"`, l: 'Check tags' };
+    const made = madeWith(ok, it, 4).length;
+    if (!made) return { it, txt: 'No look passes your rules with it. Usually a tag (fit, vibe or color) is off', a: `data-open="${it.id}"`, l: 'Check tags' };
+    if (made < 2) return { it, txt: 'Only 1 look passes your rules with it', a: `data-quick="made|${it.id}"`, l: 'See it' };
+    return { it, txt: `Works, but your other ${it.cat.toLowerCase()} win more often`, a: `data-rate="${it.id}|1"`, l: 'Suggest it more' };
+  }).sort((a, b) => !!a.out - !!b.out || (a.it.cat === 'Accessories') - (b.it.cat === 'Accessories') || CATS.indexOf(a.it.cat) - CATS.indexOf(b.it.cat));
+  return S.rare = { sig, rows, n: rows.filter(r => !r.out).length };
+}
+async function openRareAll() {
+  toast('Checking every piece…'); await new Promise(r => setTimeout(r, 30));
+  const { rows, n } = rareReport(), act = rows.filter(r => !r.out), out = rows.filter(r => r.out);
+  render(); // the Me tile behind shows the new count
+  const row = r => `<div class="rrow"><button data-open="${r.it.id}"><img src="${src(r.it)}" alt=""></button><div><b>${esc(r.it.name)}</b><span class="mono">${esc(r.txt ?? r.out)}</span></div>${r.a ? `<button class="tag o" ${r.a}>${r.l}</button>` : ''}</div>`;
+  showSheet(`<div class="pad rarelist"><div class="pickhead"><div><div class="eyebrow">8 fresh sets of today's looks</div><h2>${n ? `${n} piece${n > 1 ? 's' : ''} never picked` : 'Every piece gets picked'}</h2></div>${closeBtn}</div>
+    <p class="sub">Each piece's main reason and a one-tap fix. Accessories are last: looks add one only now and then.</p>
+    ${act.map(row).join('')}
+    ${out.length ? `<details class="more"><summary><span>Sitting out on purpose</span><span class="mono">${out.length}</span></summary>${out.map(row).join('')}</details>` : ''}</div>`);
+}
 // "How often does it show up?": four fresh Today sets with today's weather, how many looks it lands in vs the rest of its kind, and why.
 async function openRare(it) {
   toast('Checking…'); await new Promise(r => setTimeout(r, 30));
   const w = weatherNow(), t = dressTemp(w?.t), rain = RAINY(S.profile?.wx?.code ?? 0), items = pool(), why = [];
   let hits = 0, peers = 0, total = 0; const peer = items.filter(i => i.cat === it.cat && i !== it);
-  if (items.includes(it)) for (let r = 0; r < 4; r++) { const deck = today(items, { t, rain, n: 12 }); total += deck.length; hits += deck.filter(o => o.items.includes(it)).length; peers += deck.reduce((s, o) => s + o.items.filter(p => peer.includes(p)).length, 0); }
+  if (items.includes(it)) for (let r = 0; r < 4; r++) { const deck = today(items, { t, rain, season: seasonNow(), alone: !!S.profile?.hoodieAlone, n: 12 }); total += deck.length; hits += deck.filter(o => o.items.includes(it)).length; peers += deck.reduce((s, o) => s + o.items.filter(p => peer.includes(p)).length, 0); }
   const avg = peer.length ? peers / peer.length : 0;
   if (it.dirty) why.push(['In the laundry, so it sits out. Untick "In the laundry" on its page.', `data-open="${it.id}"`, 'Open it']);
   else if (it.stored) why.push(['Stored for the season, so it sits out.', null]);
@@ -1389,7 +1422,8 @@ function meView() {
     ${S.meTab !== 'settings' ? `
     <div class="tiles"><button data-go="closet"><span class="mono">Pieces ›</span><b>${items.length}</b></button><button data-favs><span class="mono">Favorites ›</span><b>${S.saved.length}</b></button>
       <button data-go="outfits" data-tabto="cal"><span class="mono">Days logged ›</span><b>${S.log.length}</b></button><button data-go="progress"><span class="mono">Streak &amp; badges ›</span><b>${st.cur}</b></button>
-      <button data-go="list" data-listtab="mine"><span class="mono">Wishlist ›</span><b>${S.wish.filter(w => !w.got).length}</b></button><button data-go="inspo"><span class="mono">Inspo ›</span><b>${S.inspo.length}</b></button></div>
+      <button data-go="list" data-listtab="mine"><span class="mono">Wishlist ›</span><b>${S.wish.filter(w => !w.got).length}</b></button><button data-go="inspo"><span class="mono">Inspo ›</span><b>${S.inspo.length}</b></button>
+      <button data-action="rareall" class="wide"><span class="mono">Never picked by Today ›</span><b>${S.rare ? S.rare.n : 'check'}</b></button></div>
     ${styleReport()}
     <h3><span>Closet value</span><span>${priced.length} of ${items.length} priced</span></h3>
     ${priced.length ? `<div class="tiles"><div><span class="mono">Total</span><b>${money(value)}</b></div><div><span class="mono">Cost per wear</span><b>${pricedWears ? money(value / pricedWears) : '$0'}</b>${pricedWears ? '' : '<small class="sub">Log a wear to see it</small>'}</div></div>`
@@ -2098,6 +2132,7 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'reloadnew') { t.textContent = 'Updating…'; try { const r = await navigator.serviceWorker?.getRegistration(); await r?.update(); // fetch the new worker, wait for it to take over, then load the new page
       if (r?.installing || r?.waiting) await new Promise(res => { navigator.serviceWorker.addEventListener('controllerchange', res, { once: true }); setTimeout(res, 5000); }); } catch (e) { console.warn(e); } location.reload(); }
   else if (ds.action === 'copyerr') { try { await navigator.clipboard.writeText(document.querySelector('.crash').textContent); toast('Copied. Paste it to Claude'); } catch { toast('Copy blocked. Take a screenshot instead'); } }
+  else if (ds.action === 'rareall') openRareAll();
   else if (ds.action === 'askwx') askWeather();
   else if (ds.action === 'seasonswap' || ds.action === 'seasonlater') { const sw = seasonSwap(); if (!sw) return; if (ds.action === 'seasonswap') { for (const it of sw.back ?? []) { delete it.stored; delete it.storedSeason; await put('items', it); }
       for (const it of sw.out ?? []) { it.stored = true; it.storedSeason = seasonNow(); await put('items', it); } toast(sw.back ? `Brought back ${sw.back.length}` : `Stored ${sw.out.length} for the season`); }
@@ -2325,7 +2360,8 @@ ${list.map(i => `${i.id} · now called "${i.name}" · ${i.kind || i.cat} · ${co
   else if (ds.action === 'findbrands') S.items.some(i => i.brandGuess && !i.brand) ? openBrands() : findBrands();
   else if (ds.action === 'scanbrands') findBrands();
   else if (ds.rate) { const [id, v] = ds.rate.split('|'), it = byId(id); if (+v) it.rate = +v; else delete it.rate; it.rateAsked = true; await put('items', it); S.ideas = null; S.deck = null; S.cs = {};
-    if (t.closest('#sheet')) openSheet(id); else { render(); toast(+v < 0 ? `${it.name} saved for special occasions` : 'Kept as is'); } }
+    if (t.closest('.rarelist')) { t.textContent = +v > 0 ? 'Suggesting more ✓' : 'Back to normal ✓'; t.disabled = true; S.rare = null; }
+    else if (t.closest('#sheet')) openSheet(id); else { render(); toast(+v < 0 ? `${it.name} saved for special occasions` : 'Kept as is'); } }
   else if (ds.recut) {
     const it = byId(ds.recut); t.disabled = true; toast('Removing background…');
     it.photo = await origOf(it); if (!it.photo) Object.assign(it, { photo: await imgOf(it), turns: 0 }); // imported pieces have no original: start from the picture as it is (already turned)
