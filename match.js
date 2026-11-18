@@ -539,6 +539,9 @@ const collect = (items, opts, modes = VISIBLE(), per = 10) => {
   return [...best.values()];
 };
 export const madeWith = (items, anchor, n = 5) => varied(collect(items, { anchor }), n);
+// The highest-scoring outfits you can make from these pieces (Favorites › Best). Same score as Build's match ring, kept varied
+// so one great pair of pants can't fill the whole list. Fixed seed: the list only changes when your pieces do.
+export const topLooks = (items, n = 20) => varied(collect(items, { rand: seeded() }, VISIBLE(), 40), n, { Tops: 2, Layers: 3, Bottoms: 3, Shoes: 4, Accessories: 4 }, items).sort((a, b) => b.score - a.score);
 // Builder's "see outfit possibilities": complete looks that keep every piece you've already picked.
 export const possibilities = (items, picked, n = 6) => varied(collect(items, { fixed: picked }).map(o => ({ ...o, anchor: null })), n, { Tops: 2, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 });
 

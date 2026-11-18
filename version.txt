@@ -1,2 +1,2 @@
-2026.11.18 · v5.36
-Colors: beige, brown, camel and other neutrals always count as neutral (brown loafers and a pale beige zip were treated as colors) · sneakers and loafers with wide pants are allowed again, just ranked a little lower
+2026.11.18 · v5.37
+Favorites › Best: your 20 highest-scoring outfits from the capsule you are in (or your whole closet), with the same match score as Build · every favorite shows its match score

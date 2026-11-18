@@ -39,10 +39,10 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges } from './progress.js';
-import { hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
+import { topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.18 · v5.36'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.37'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -655,9 +655,20 @@ async function printLookbook() {
     <p class="sub">Tap Save, then Save Image or Save to Files. For a PDF, pick Print and pinch out on the preview.</p>
     <button class="btn wide" data-action="sharelookbook">Save</button></div>`);
 }
+// Favorites › Best: your top 20 by match score, from the capsule you're in (or everything). Cached until your pieces change.
+function bestView() {
+  const items = pool(), c = S.coll && collById(S.coll);
+  if (!complete(items)) return `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs` : 'Add'} at least a top, bottoms and shoes.</p></div>`;
+  const sig = [VERSION, S.coll ?? '', items.map(i => i.updatedAt ?? i.id).join(), !!S.profile?.hoodieAlone].join('|');
+  if (S.best?.sig !== sig) S.best = { sig, looks: topLooks(items, 20) }; S.ideas = S.best.looks; // so Save, Wear and Open in Build find them
+  return `<p class="sub">The highest-scoring outfits ${c ? `from <b>${esc(c.name)}</b>` : 'from your whole closet'}, by the same match score as Build. Pick a capsule to rank just its pieces.</p>
+    <div class="feed favs">${S.best.looks.map((o, i) => { const saved = isFav(o.key); return `<article class="outfit fav"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in Build">${flat(o.items)}</button>
+      <h3 class="display ftitle">${esc(lookName(o.items))}</h3><span class="mono wcount">#${i + 1} · ${matchPct(o.score)} match · ${esc(MODES[o.mode]?.label ?? '')}</span>
+      <div class="facts"><button class="btn sm ghost" data-wear="${o.key}">Wear today</button><button class="icon ${saved ? 'on' : ''}" data-save="${o.key}" aria-label="${saved ? 'Saved' : 'Save to favorites'}">${heart}</button></div></article>`; }).join('')}</div>`;
+}
 function favCard(o) { const title = lookName(o.items), worn = wornOn(dayKey(), o.key);
   return `<article class="outfit fav" style="--tint:${tintOf(o.items)}"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open ${esc(title)} in the builder">${flat(o.items)}</button>
-    <h3 class="display ftitle">${esc(title)}</h3>${(n => n ? `<span class="mono wcount">worn ${n}×</span>` : '')(S.log.filter(l => l.key === o.key).length)}<div class="facts"><button class="btn sm ghost ${worn ? 'done' : ''}" data-wear="${o.key}">${worn ? 'Worn today' : 'Wear today'}</button><button class="icon on" data-save="${o.key}" aria-label="Remove from favorites">${heart}</button><button class="icon cmpbtn ${S.cmp?.includes(o.key) ? 'on' : ''}" data-cmp="${o.key}" aria-label="Compare this look" aria-pressed="${!!S.cmp?.includes(o.key)}">⇆</button></div></article>`; }
+    <h3 class="display ftitle">${esc(title)}</h3><span class="mono wcount">${(b => b?.score != null ? `${matchPct(b.score)} match` : 'breaks a rule')(bestMode(o.items))}${(n => n ? ` · worn ${n}×` : '')(S.log.filter(l => l.key === o.key).length)}</span><div class="facts"><button class="btn sm ghost ${worn ? 'done' : ''}" data-wear="${o.key}">${worn ? 'Worn today' : 'Wear today'}</button><button class="icon on" data-save="${o.key}" aria-label="Remove from favorites">${heart}</button><button class="icon cmpbtn ${S.cmp?.includes(o.key) ? 'on' : ''}" data-cmp="${o.key}" aria-label="Compare this look" aria-pressed="${!!S.cmp?.includes(o.key)}">⇆</button></div></article>`; }
 function outfitCard(o) {
   const isSaved = S.saved.some(s => s.key === o.key);
   return `<article class="outfit"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in builder">${flat(o.items)}</button>
@@ -710,8 +721,9 @@ function closetView() {
 function outfitsView() {
   const items = pool(), c = S.coll && collById(S.coll);
   if (S.tab === 'ideas' || S.tab === 'history') { S.tab = 'saved'; S.view = 'today'; return todayView(); } // old "ideas" links (collection outfits, color wheel, inspo) open Today
-  const top = head(S.tab === 'saved' ? `${S.saved.length} saved` : `${S.log.length} day${S.log.length === 1 ? '' : 's'} logged`, S.tab === 'saved' ? 'Favorites' : 'Calendar') + subnav('tab', [['saved', 'Favorites'], ['cal', 'Calendar'], ['week', 'Week']])
+  const top = head(S.tab === 'saved' ? `${S.saved.length} saved` : S.tab === 'best' ? 'by match score' : `${S.log.length} day${S.log.length === 1 ? '' : 's'} logged`, S.tab === 'saved' ? 'Favorites' : S.tab === 'best' ? 'Best outfits' : 'Calendar') + subnav('tab', [['saved', 'Favorites'], ['best', 'Best'], ['cal', 'Calendar'], ['week', 'Week']])
     + (c && S.tab === 'saved' ? capBar() : '');
+  if (S.tab === 'best') return top + bestView();
   if (S.tab === 'week') return top + weekView();
   if (S.tab === 'cal') return top + calView();
   if (S.tab === 'history') {
@@ -1032,9 +1044,10 @@ function stage(o, items) {
     return p ? `<button class="sp ${S.dropped === sl ? 'drop' : ''}" data-swap="${sl}" style="${st}" aria-label="Change ${SLOT_LABEL[sl].toLowerCase()}: ${esc(p.name)}"><img src="${src(p)}" alt="" style="object-position:${ALIGN[sl] ?? '50% 50%'}"></button>`
       : `<button class="sp add" data-swap="${sl}" style="${st}" ${items.some(canS(sl)) ? '' : 'disabled'}><svg viewBox="0 0 24 24"><path d="${SIL[sl]}"/></svg><span>+ ${SLOT_LABEL[sl].toLowerCase()}</span></button>`; }).join('')}</div>`;
 }
+const matchPct = score => Math.max(5, Math.min(99, Math.round(100 * (1 - Math.exp(-Math.max(0, score) / 5))))); // Build's match ring, Favorites and Best all use this
 function buildView() {
   const o = S.build, ok = complete(o), v = ok ? bestMode(o) : null, items = buildItems();
-  const pct = v?.score == null ? 0 : Math.max(5, Math.min(99, Math.round(100 * (1 - Math.exp(-Math.max(0, v.score) / 5)))));
+  const pct = v?.score == null ? 0 : matchPct(v.score);
   // stacked the way it's worn: hat + accessory, layer + top, bottoms, shoes at the bottom
   const row = sl => { const cur = o.find(inS(sl)), lab = SLOT_LABEL[sl]; if (!cur) return '';
     const cs = carouselFor(sl, cur);

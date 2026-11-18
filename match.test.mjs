@@ -440,3 +440,12 @@ console.log('edges ok');
   if (!ok([cap, zip, tee, pants, loafers])) throw new Error('beige zip + white tee + beige trousers + brown loafers + green cap should work');
   if (!ok([cap, zip, tee, pants, vans])) throw new Error('Vans with wide trousers should work');
   console.log('screenshot outfit ok'); }
+
+// Favorites › Best: top looks come back sorted by score, every one complete (2026-11-18)
+{ const { topLooks: tl, complete: cp } = await import('./match.js');
+  const mk = (id, cat, kind, color, fit = 1) => ({ id, name: `${color} ${kind}`, cat, kind, color, fit, vibe: 'casual' });
+  const items = [mk('t1', 'Tops', 't-shirt', '#f2f2f0'), mk('t2', 'Tops', 't-shirt', '#1c1c1c'), mk('j1', 'Layers', 'jacket', '#c9b48f'), mk('b1', 'Bottoms', 'jeans', '#1c1c1c'), mk('b2', 'Bottoms', 'cargo pants', '#5c5b33', 2), mk('s1', 'Shoes', 'sneakers', '#f4f4f2'), mk('s2', 'Shoes', 'sneakers', '#1a1a1a', 2)];
+  const r = tl(items, 10); if (!r.length || !r.every(o => cp(o.items))) throw new Error('top looks incomplete');
+  for (let i = 1; i < r.length; i++) if (r[i].score > r[i - 1].score) throw new Error('top looks not sorted');
+  if (JSON.stringify(tl(items, 10).map(o => o.key)) !== JSON.stringify(r.map(o => o.key))) throw new Error('top looks should be stable');
+  console.log(`top looks ok (${r.length})`); }
