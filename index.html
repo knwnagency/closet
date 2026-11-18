@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.30'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.31'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -90,6 +90,9 @@ const S = {
     return { profile: ps.find(p => p.k === 'me') ?? null, history: ps.find(p => p.k === 'history')?.list ?? [],
       plan: ps.find(p => p.k === 'plan') ?? { k: 'plan', days: {}, weekly: {} }, deck: ps.find(p => p.k === 'deck') ?? null, nope: ps.find(p => p.k === 'nope')?.list ?? [], draft: ps.find(p => p.k === 'draft')?.ids ?? null, gone: ps.find(p => p.k === 'gone')?.at ?? {} }; })(), // plan: { days: {date: look}, weekly: {0-6: look} } // history: looks you swiped past, newest first
 };
+{ const strays = S.items.filter(i => !i.cat && Array.isArray(i.palette)); S.items = S.items.filter(i => !strays.includes(i)); // repair: inspo pics the thumbnail maker saved into the closet (before v5.31)
+  (async () => { for (const i of strays) { if (!S.inspo.some(x => x.id === i.id)) { const img = await loadPic('full', i.id); if (img) { const ins = { id: i.id, img, palette: i.palette, off: i.off ?? [], at: i.at ?? Date.now() }; await putQuiet('inspo', ins); S.inspo.push(ins); } } // only copy left: back to Inspo
+    await store('items', 'readwrite', s => s.delete(i.id)); await store('full', 'readwrite', s => s.delete(i.id)); } })(); }
 for (const i of S.items) if (typeof i.name !== 'string' || !i.name.trim()) putQuiet('items', i); // repair: name it after its type
 S.build = null; // the builder starts blank; a half-built look waits behind "Resume" (S.draft)
 S.closetView = S.profile?.closetView ?? 'shelf';
@@ -124,7 +127,7 @@ const thumbQ = new Set(); let thumbBusy = false;
 function queueThumb(it) { if (thumbQ.has(it)) return; thumbQ.add(it); if (!thumbBusy) setTimeout(makeThumbs, 300); }
 async function makeThumbs() {
   thumbBusy = true;
-  let n = 0; for (const it of [...thumbQ]) { thumbQ.delete(it); try { const had = it.img; it.thumb = await thumbOf(await imgOf(it)); await putQuiet('items', it); if (!had) { delete it.img; n++; } } catch (e) { console.warn(e); } }
+  let n = 0; for (const it of [...thumbQ]) { thumbQ.delete(it); try { const had = it.img; it.thumb = await thumbOf(await imgOf(it)); await putQuiet(S.inspo.includes(it) ? 'inspo' : 'items', it); if (!had) { delete it.img; n++; } } catch (e) { console.warn(e); } }
   thumbBusy = false; if (n) render();
 }
 async function thumbOf(blob) {
@@ -1292,7 +1295,7 @@ function inspoView() {
     <label class="hexin"><i id="hexdot"></i><input id="hex" value="" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="#3F7A52" aria-label="Hex color code"></label>
     <div id="wheelOut"></div>`;
   if (!S.inspo.length) return top + `<div class="empty"><h2>Pin your inspo here</h2><p>Save looks from Pinterest or Instagram to your phone, or screenshot them, and add them here. Each one gets its colors pulled out, then rebuilt from what you own.</p><button class="btn" data-action="addinspo">Add inspo</button></div>`;
-  return top + `<p class="sub">Tap a look to rebuild it from your closet.</p><div class="board">${S.inspo.slice().sort((a, b) => b.at - a.at).map(i => { const on = i.palette.filter(h => !i.off.includes(h)); return `<button data-inspo="${i.id}" aria-label="Inspo look in ${on.map(colorName).join(', ')}. Tap to rebuild"><img src="${src(i)}" alt="">
+  return top + `<div class="row inspotop"><p class="sub">Tap a look to rebuild it from your closet.</p><button class="btn sm go" data-action="addinspo">Add inspo</button></div><div class="board">${S.inspo.slice().sort((a, b) => b.at - a.at).map(i => { const on = i.palette.filter(h => !i.off.includes(h)); return `<button data-inspo="${i.id}" aria-label="Inspo look in ${on.map(colorName).join(', ')}. Tap to rebuild"><img src="${src(i)}" alt="">
     <span class="pals">${on.map(h => `<i style="background:${h}"></i>`).join('')}<span class="mono">${[...new Set(on.map(colorName))].slice(0, 3).join(' · ')}</span></span></button>`; }).join('')}</div>`;
 }
 
@@ -1434,7 +1437,7 @@ function render() {
   if (S.view === 'today' && S.deck) { const dk = document.querySelector('.deck'); if (dk?.children[S.deck.at]) dk.scrollLeft = dk.children[S.deck.at].offsetLeft - dk.firstElementChild.offsetLeft; }
   if (render.qFocus) { const q = document.querySelector('[data-q]'); q?.focus(); q?.setSelectionRange(q.value.length, q.value.length); render.qFocus = false; }
   if (S.view === 'inspo' && S.inspoTab === 'wheel') paintWheel();
-  const add = document.querySelector('nav .add'); add.dataset.action = 'add'; add.setAttribute('aria-label', 'Add clothes, inspo or today\'s fit');
+  const add = document.querySelector('nav .add'); add.dataset.action = S.view === 'inspo' && S.inspoTab !== 'wheel' ? 'addinspo' : 'add'; add.setAttribute('aria-label', 'Add clothes, inspo or today\'s fit');
   document.querySelectorAll('nav [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === (NAV_OF[S.view] ?? S.view)));
 }
 
@@ -1565,6 +1568,7 @@ function openSheet(id) {
     ${S.colls.length ? `<div class="incoll"><span class="mono">In capsules</span><div>${S.colls.map(c => `<button type="button" class="pill ${c.ids.includes(it.id) ? 'on' : ''}" data-collitem="${it.id}" data-collid="${c.id}">${esc(c.name)}</button>`).join('')}</div></div>` : ''}
     ${it.review ? `<button type="button" class="btn go" data-confirm="${it.id}">Looks right${left > 1 ? ' · next' : ''}</button>` : ''}
     </details>
+    <button type="button" class="btn ghost" data-toinspo="${it.id}">It's an inspo pic, not clothing</button>
     <button type="button" class="btn danger" data-del="${it.id}">Delete piece</button>
   </form>`);
   if (again) { sheet.scrollTop = again.y; const d = sheet.querySelector('details.more'); if (d && again.open) d.open = true; } // a refresh after an edit keeps your place
@@ -2323,6 +2327,9 @@ ${list.map(i => `${i.id} · now called "${i.name}" · ${i.kind || i.cat} · ${co
     sheet.close(); render(); scrollTo(0, 0);
   }
   else if (ds.inspodel) { await del('inspo', ds.inspodel); S.inspo = S.inspo.filter(x => x.id !== ds.inspodel); sheet.close(); render(); }
+  else if (ds.toinspo) { const it = byId(ds.toinspo); if (!it) return; const b = await origOf(it) ?? await imgOf(it); if (!b) return toast("Couldn't find the photo");
+    sheet.onclose = null; sheet.close(); await addInspo([new File([b], 'inspo.jpg', { type: b.type || 'image/jpeg' })]); // the original photo, not the cutout
+    await del('items', it.id); S.items = S.items.filter(i => i !== it); if (S.build) S.build = S.build.filter(p => p !== it); S.deck = null; S.ideas = null; S.view = 'inspo'; S.inspoTab = 'board'; render(); toast('Moved to Inspo'); }
   else if (ds.del) {
     if (!t.classList.contains('armed')) { t.classList.add('armed'); t.textContent = 'Tap again to delete'; return; }
     const uses = [...S.saved, ...Object.values(S.plan.days), ...Object.values(S.plan.weekly)].filter(r => r.ids.includes(ds.del)).length;

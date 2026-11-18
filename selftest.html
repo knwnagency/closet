@@ -43,6 +43,9 @@ if (d().querySelector('[data-action="patreview"]')) { tap('[data-action="patrevi
 tap('nav [data-go="build"]'); await wait(900); if (!d().querySelector('.stage .sp:not(.add)')) { tap('.starters [data-buildkey]'); await wait(800); }
 if (tap('[data-action="possible"]')) { await wait(1500); fits('Outfit possibilities'); await close(); }
 tap('nav [data-go="me"]'); await wait(800); log(!!d().querySelector('[data-go="inspo"]'), 'Me links to Inspo'); fits('Me');
+if (tap('[data-go="inspo"]')) { await wait(2500); fits('Inspo'); // the board makes thumbnails: they must never land in the closet as pieces
+  const items = await new Promise(r => { const q = w.indexedDB.open('closet'); q.onsuccess = () => { const g = q.result.transaction('items').objectStore('items').getAll(); g.onsuccess = () => r(g.result); }; });
+  log(items.every(i => i.cat && typeof i.color === 'string' && typeof i.name === 'string'), `every closet piece has a type, color and name (${items.filter(i => !i.cat).length} without)`); }
 log(!errors.length, errors.length ? `errors: ${errors.join(' | ')}` : 'no errors');
 document.getElementById('sum').textContent = fails ? `${fails} problem${fails > 1 ? 's' : ''}` : 'All good';
 document.title = fails ? `✕ ${fails}` : '✓ all good';

@@ -1,2 +1,2 @@
-2026.11.17 · v5.30
-Fixed: Closet and Me not opening (a piece had lost its name; it is now named after its type)
+2026.11.17 · v5.31
+On Inspo, + adds an inspo pic (not clothes) · Add inspo button on the board · a pic that landed in your closet by mistake: open it and tap "It's an inspo pic, not clothing"
