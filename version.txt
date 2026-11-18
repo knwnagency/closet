@@ -1,2 +1,2 @@
-2026.11.18 · v5.39
-Graphics layered on graphics are always fine · only all-over patterns worn together are limited (two loud ones clash, a quiet one like camo or stripes with a shared color shows up now and then) · camo, plaid, flannel, Aztec and similar are recognized from the name
+2026.11.18 · v5.40
+Cleanup of the new rules: smart streetwear only for real tailoring, no double bonuses, gold on a black tee is never marked down, Best follows the weather and explains each score · clash reasons are grey (red only on the one you picked) · simpler Settings and Backup

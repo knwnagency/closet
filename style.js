@@ -70,7 +70,7 @@ export const JEANS = {
 };
 export const TROUSERS = {
   black: ['Black pants', 'blue + beige + brown + white + grey'],
-  white: ['White pants', 'navy + brown + red + white + forest + grey + black'], beige: ['Beige pants', 'burgundy + green + red + forest + navy + grey + black'],
+  white: ['White pants', 'navy + brown + red + white + forest + grey + black'], beige: ['Beige pants', 'burgundy + forest + sage + red + navy + grey + black'],
   grey: ['Grey pants', 'yellow + burgundy + lightblue + sage'], 'light grey': ['Grey pants', 'yellow + burgundy + lightblue + sage'],
   brown: ['Brown pants', 'lightblue + taupe + black + cream + beige + navy + green'],
   navy: ['Navy pants', 'rust + grey + lightblue + white'],

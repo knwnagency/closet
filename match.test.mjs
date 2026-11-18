@@ -473,7 +473,8 @@ console.log('edges ok');
   // camo pants pick tops from their own list; dark jeans like a light top; suede + denim; smart streetwear
   const notes = ps => m.style(ps).map(n => n[1]).join(' | ');
   assert.match(notes([mk('pk', 'Tops', 't-shirt', '#e8a0b4'), camo, sn]), /Camo pants with pink/);
-  assert.match(notes([mk('wt', 'Tops', 't-shirt', '#f2f2f0'), mk('dj', 'Bottoms', 'jeans', '#1e2a45'), sn]), /Dark jeans, light top/);
+  assert.match(notes([mk('lg', 'Tops', 't-shirt', '#b9b7b3'), mk('dj', 'Bottoms', 'jeans', '#1e2a45'), sn]), /Dark jeans, light top/);
+  assert.ok(!/Dark jeans, light top/.test(notes([mk('wt', 'Tops', 't-shirt', '#f2f2f0'), mk('dj', 'Bottoms', 'jeans', '#1e2a45'), sn])), 'the jeans list already covers white: no double bonus');
   assert.match(notes([mk('sj', 'Layers', 'jacket', '#8a6a4a', { material: 'suede' }), mk('t9', 'Tops', 't-shirt', '#f2f2f0'), mk('mj', 'Bottoms', 'jeans', '#4d6a8c'), sn]), /Suede and denim/);
   assert.match(notes([mk('wt2', 'Tops', 't-shirt', '#f2f2f0'), mk('bz', 'Layers', 'blazer', '#1e2a45'), mk('tr', 'Bottoms', 'trousers', '#7d7b78'), mk('lf', 'Shoes', 'loafers', '#5b3e2a')]), /Smart streetwear/);
   console.log('2026-11-18 reel rules ok'); }
@@ -484,3 +485,28 @@ console.log('edges ok');
     if (po({ name, patterned: true }) !== want) throw new Error(`${name} should read ${want}, got ${po({ name, patterned: true })}`);
   if (po({ name: 'Camo Sweats', pattern: 'solid' }) !== 'solid') throw new Error('your own tag wins');
   console.log('pattern from name ok'); }
+
+// Review fixes (2026-11-18): no false smart streetwear, metal never penalizes, loud plaid isn't quiet, black/white alone doesn't tie two prints, Best ≤1 pattern pair
+{ const m = await import('./match.js');
+  const mk = (id, cat, kind, color, extra = {}) => ({ id, name: kind, cat, kind, color, fit: 1, vibe: 'casual', ...extra });
+  const notes = ps => m.style(ps).map(n => n[1]).join(' | '), sn = mk('sn', 'Shoes', 'sneakers', '#f4f4f2');
+  assert.ok(!/Smart streetwear/.test(notes([mk('sw', 'Layers', 'sweater', '#7d7b78'), mk('t', 'Tops', 't-shirt', '#f2f2f0'), mk('j', 'Bottoms', 'jeans', '#1e2a45'), sn])), 'a sweater over a tee is not smart streetwear');
+  const chain = mk('gc', 'Accessories', 'chain necklace', '#c9a54a', { name: 'Gold chain' });
+  assert.ok(!m.style([mk('bt', 'Tops', 't-shirt', '#1b1a19'), mk('j2', 'Bottoms', 'jeans', '#4d6a8c'), sn, chain]).some(([v, n]) => v < 0 && /gold|silver|metal/i.test(n)), 'gold chain on a black tee is never marked down');
+  const redPlaid = mk('rp', 'Tops', 'flannel shirt', '#b8322a', { name: 'Red buffalo plaid flannel', pattern: 'allover', accents: ['#1b1a19'] });
+  const loudPants = mk('lp', 'Bottoms', 'cargo pants', '#c0392b', { name: 'Paisley pants', pattern: 'allover', accents: ['#1b1a19'] });
+  assert.ok(!m.printPair([redPlaid, loudPants, sn]), 'red buffalo plaid is a loud print, not a quiet one');
+  const stripeBW = mk('sb', 'Tops', 't-shirt', '#c0392b', { name: 'Striped tee', pattern: 'allover', accents: ['#f2f2f0'] }), floral = mk('fl', 'Bottoms', 'trousers', '#2f5fb5', { name: 'Floral trousers', pattern: 'allover', accents: ['#f2f2f0'] });
+  assert.ok(!m.printPair([stripeBW, floral, sn]), 'a bit of white in both is not a color tie');
+  const items = [mk('a', 'Tops', 't-shirt', '#f2f2f0', { name: 'Striped tee', pattern: 'allover', accents: ['#5c5b33'] }), mk('b', 'Tops', 't-shirt', '#5c5b33', { name: 'Check shirt', pattern: 'allover', accents: ['#2b2a22'] }),
+    mk('c', 'Bottoms', 'cargo pants', '#5c5b33', { name: 'Camo pants', pattern: 'allover', accents: ['#2b2a22'] }), mk('d', 'Bottoms', 'jeans', '#1c1c1c'), sn, mk('s2', 'Shoes', 'sneakers', '#1a1a1a'), mk('e', 'Tops', 't-shirt', '#1b1a19')];
+  assert.ok(m.topLooks(items, 12).filter(o => o.items.filter(p => m.patternOf(p) === 'allover').length >= 2).length <= 1, 'Best shows one pattern-on-pattern look at most');
+  console.log('review fixes ok'); }
+
+// The app itself must parse: a // comment pasted mid-line cut off the rest of a line three times on 2026-11-18 (once the whole app went blank)
+{ const { readFileSync, writeFileSync, mkdtempSync } = await import('fs'), { execSync } = await import('child_process'), { tmpdir } = await import('os'), { join } = await import('path');
+  const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8'), dir = mkdtempSync(join(tmpdir(), 'fitted-'));
+  const code = [...html.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)].map(m => m[1]).sort((a, b) => b.length - a.length)[0];
+  writeFileSync(join(dir, 'app.mjs'), code);
+  for (const f of [join(dir, 'app.mjs'), decodeURIComponent(new URL('./sw.js', import.meta.url).pathname)]) execSync(`node --check "${f}"`, { stdio: 'pipe' });
+  console.log('app parses ok'); }
