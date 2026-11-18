@@ -579,6 +579,17 @@ const collect = (items, opts, modes = VISIBLE(), per = 10) => {
 export const madeWith = (items, anchor, n = 5) => varied(collect(items, { anchor }), n);
 // The highest-scoring outfits you can make from these pieces (Favorites › Best). Same score as Build's match ring, kept varied
 // so one great pair of pants can't fill the whole list. Fixed seed: the list only changes when your pieces do.
+// Combos library (Inspo › Combos): the combo book, and looks that wear one combo exactly: each of its colors on its own piece,
+// every other piece black, white or grey (or an accessory). One-color combos: top, bottoms and layer all in that color.
+export const comboBook = () => BOOK;
+export function comboLooks(items, text, n = 6) {
+  const c = BOOK.find(b => b.text === text); if (!c) return [];
+  const want = new Set(c.slots.flat()), body = ps => ps.filter(p => CLOTHES.includes(p.cat) && p.cat !== 'Shoes').map(p => colorName(p.color));
+  const pool = items.filter(p => p.cat === 'Accessories' || want.has(colorName(p.color)) || ACHRO.includes(colorName(p.color)));
+  const wears = o => (c.slots.length === 1 ? body(o.items).length >= 2 && body(o.items).every(x => c.slots[0].includes(x)) : fits(c.slots, names(o.items)))
+    && o.items.filter(p => CLOTHES.includes(p.cat) && !ACHRO.includes(colorName(p.color))).every(p => want.has(colorName(p.color)));
+  return varied(collect(pool, { rand: seeded() }, VISIBLE(), 40).filter(wears), n, { Tops: 2, Layers: 2, Bottoms: 2, Shoes: 3, Accessories: 3 }, pool).sort((a, b) => b.score - a.score);
+}
 export const topLooks = (items, n = 20) => { let pp = 0; return varied(collect(items, { rand: seeded() }, VISIBLE(), 40), n + 4, { Tops: 2, Layers: 3, Bottoms: 3, Shoes: 4, Accessories: 4 }, items)
   .sort((a, b) => b.score - a.score).filter(o => patterns(o.items).length < 2 || !pp++).slice(0, n); }; // one pattern-on-pattern look at most
 // Builder's "see outfit possibilities": complete looks that keep every piece you've already picked.

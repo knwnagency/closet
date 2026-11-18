@@ -510,3 +510,14 @@ console.log('edges ok');
   writeFileSync(join(dir, 'app.mjs'), code);
   for (const f of [join(dir, 'app.mjs'), decodeURIComponent(new URL('./sw.js', import.meta.url).pathname)]) execSync(`node --check "${f}"`, { stdio: 'pipe' });
   console.log('app parses ok'); }
+
+// Combos library: looks for one combo wear exactly its colors (2026-11-18)
+{ const m = await import('./match.js');
+  const mk = (id, cat, kind, color) => ({ id, name: kind, cat, kind, color, fit: 1, vibe: 'casual' });
+  const items = [mk('w', 'Tops', 't-shirt', '#f6f5f1'), mk('n', 'Layers', 'jacket', '#1e2a45'), mk('r', 'Tops', 't-shirt', '#b8322a'), mk('j', 'Bottoms', 'jeans', '#1c1c1c'), mk('c', 'Bottoms', 'chinos', '#d8c7a6'), mk('s', 'Shoes', 'sneakers', '#f4f4f2'), mk('s2', 'Shoes', 'sneakers', '#1a1a1a')];
+  const book = m.comboBook(); assert.ok(book.length > 100 && book.every(c => c.text && c.slots.length));
+  const pick = book.find(c => c.slots.length === 2 && c.slots.some(sl => sl.includes('navy')) && c.slots.some(sl => sl.includes('white')));
+  const looks = m.comboLooks(items, pick.text, 6);
+  assert.ok(looks.length, `found looks for ${pick.text}`);
+  for (const o of looks) assert.ok(!o.items.some(p => p.id === 'r'), 'the red tee is not in a navy + white combo');
+  console.log(`combo looks ok (${pick.text}: ${looks.length})`); }

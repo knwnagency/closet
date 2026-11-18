@@ -39,10 +39,10 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges } from './progress.js';
-import { topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
+import { comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.42'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.43'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -1083,6 +1083,32 @@ const matchPct = score => Math.max(5, Math.min(99, Math.round(100 * (1 - Math.ex
 // Your colors: a color season (by skin, hair and eyes), its best colors and the ones to wear less, an on/off switch, and a collection made from it.
 const SEASON_DOT = { magenta: '#c2185b', lime: '#9bc53d' };
 const dot = n => `<i class="cdot" style="background:${SWATCHES[n] ?? SEASON_DOT[n] ?? '#888'}" title="${n}"></i>`;
+// Combos library: every combo from your style notes as a palette. Which colors you own, which you can wear today, and the looks.
+const hexOf = n => SWATCHES[n] ?? SEASON_DOT[n] ?? '#888';
+const comboCards = () => { const items = pool().filter(p => p.cat !== 'Accessories'), s = mySeason(), okColor = n => s && (s.good.includes(n) || ['black', 'white', 'grey', 'light grey', 'navy', 'denim', 'beige', 'camel', 'brown', 'olive'].includes(n) && !s.avoid.includes(n));
+  return comboBook().map(c => { const shown = []; const per = c.slots.map(sl => { const ps = items.filter(p => sl.includes(colorName(p.color))), owned = sl.filter(n => ps.some(p => colorName(p.color) === n));
+      const show = owned.find(n => !shown.includes(n)) ?? sl.find(n => !shown.includes(n)) ?? sl[0]; shown.push(show); return { sl, ps, show }; }); // each swatch a different color when the combo allows it
+    return { c, per, have: per.filter(x => x.ps.length).length, n: per.reduce((t, x) => t + x.ps.length, 0), mine: !!s && c.slots.every(sl => sl.some(okColor)) && c.slots.some(sl => sl.some(n => s.good.includes(n))) }; }); }; // in your colors: at least one best color, nothing you wear less
+const hue = x => x.per.filter(k => !['black', 'white', 'grey', 'light grey', 'beige'].includes(k.show)).length;
+function combosView() {
+  const cards = comboCards(), make = cards.filter(x => x.have === x.c.slots.length), f = S.comboF ?? (make.length ? 'make' : 'all'), s = mySeason();
+  const list = (f === 'make' ? make : f === 'mine' ? cards.filter(x => x.mine) : cards).sort((a, b) => b.have / b.c.slots.length - a.have / a.c.slots.length || hue(b) - hue(a) || b.n - a.n); // colorful combos first: all-neutral ones are the easy default
+  const chip = (k, l, n) => `<button class="chip ${f === k ? 'on' : ''}" data-combof="${k}">${l}<small>${n}</small></button>`;
+  return `<p class="sub">Color combos from your style notes. Tap one to see your pieces in each color and the looks you can make.</p>
+    <div class="chips">${chip('make', 'You can make', make.length)}${s ? chip('mine', `${s.label} colors`, cards.filter(x => x.mine).length) : ''}${chip('all', 'All', cards.length)}</div>
+    <div class="combos">${list.map(({ c, per, have }) => `<button class="combo" data-combo="${esc(c.text)}"><span class="cstrip">${per.map(x => `<i style="background:${hexOf(x.show)}" class="${x.ps.length ? '' : 'miss'}"></i>`).join('')}</span>
+      <b>${esc(c.text)}</b><span class="mono">${esc(c.label)} · ${have === c.slots.length ? 'you can make it' : `${have} of ${c.slots.length} colors`}</span></button>`).join('') || '<p class="sub">Nothing here yet.</p>'}</div>`;
+}
+function openCombo(text) {
+  const x = comboCards().find(k => k.c.text === text); if (!x) return;
+  S.made = x.have === x.c.slots.length ? comboLooks(pool(), text, 6) : []; // Save and Open in Build find these
+  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${esc(x.c.label)}</div><h2>${esc(x.c.text)}</h2></div>${closeBtn}</div>
+    <span class="cstrip big">${x.per.map(k => `<i style="background:${hexOf(k.show)}" class="${k.ps.length ? '' : 'miss'}"></i>`).join('')}</span>
+    ${x.per.map(k => `<div class="crow"><span class="mono"><i class="cdot" style="background:${hexOf(k.show)}"></i>${esc(k.sl.join(' or '))} · ${k.ps.length}</span>
+      ${k.ps.length ? `<div class="thumbs">${k.ps.slice(0, 10).map(p => `<button data-open="${p.id}"><img src="${src(p)}" alt="${esc(p.name)}"></button>`).join('')}</div>` : `<button class="tag o" data-wishcolor="${esc(k.sl[0])}|${esc(text)}">Missing · add to wishlist</button>`}</div>`).join('')}
+    ${S.made.length ? `<h3><span>Looks you can make</span><span>${S.made.length}</span></h3><div class="minis">${S.made.map(o => `<button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in Build">${flat(o.items)}</button>`).join('')}</div>`
+      : x.have === x.c.slots.length ? `<p class="sub">You own every color, but no full look passes your style rules with them yet (often the shoes). Try it in Build.</p>` : ''}</div>`);
+}
 function colorsSection(p) {
   const s = mySeason(), n = s ? SMART.mine[1](S.items).length : 0;
   return `<h3><span>Your colors</span>${s ? `<span>${colorsOn() ? 'on' : 'off'}</span>` : ''}</h3>
@@ -1395,7 +1421,8 @@ function suggestions() {
 }
 
 function inspoView() {
-  const top = head(`${S.inspo.length} look${S.inspo.length === 1 ? '' : 's'}`, 'Inspo') + subnav('inspoTab', [['board', 'Moodboard'], ['wheel', 'Color wheel']]);
+  const top = head(`${S.inspo.length} look${S.inspo.length === 1 ? '' : 's'}`, 'Inspo') + subnav('inspoTab', [['board', 'Moodboard'], ['combos', 'Combos'], ['wheel', 'Color wheel']]);
+  if (S.inspoTab === 'combos') return top + combosView();
   if (S.inspoTab === 'wheel') return top + `
     <div class="chips">${Object.entries(HARMONIES).map(([k, v]) => `<button class="chip ${S.wheel.harmony === k ? 'on' : ''}" data-harmony="${k}">${v.label}</button>`).join('')}</div>
     <div class="wheel" id="wheel"><svg id="lines"></svg><div id="handles"></div></div>
@@ -2407,6 +2434,10 @@ ${list.map(i => `${i.id} · now called "${i.name}" · ${i.kind || i.cat} · ${co
     S.mode = 'palette'; S.ideas = null; S.view = 'outfits'; S.tab = 'ideas'; render(); scrollTo(0, 0);
   }
   else if (ds.inspo) openInspo(ds.inspo);
+  else if (ds.combo) openCombo(ds.combo);
+  else if (ds.combof) { S.comboF = ds.combof; render(); }
+  else if (ds.wishcolor) { const [n, text] = ds.wishcolor.split('|'), w = { id: uid(), name: `${n[0].toUpperCase() + n.slice(1)} piece`, color: hexOf(n), note: `For ${text}`, got: false, at: Date.now() };
+    await put('wish', w); S.wish.push(w); t.textContent = 'On your wishlist ✓'; t.disabled = true; }
   else if (ds.accdel) { const [id, h] = ds.accdel.split('|'), it = byId(id); it.accents = it.accents.filter(x => x !== h); it.accPicked = it.accPicked?.filter(x => x !== h); await put('items', it); S.ideas = null; S.deck = null; sheet.querySelector('#accbox').innerHTML = accHtml(it); }
   else if (ds.readlook) {
     const ins = S.inspo.find(x => x.id === ds.readlook); t.disabled = true; t.textContent = 'Reading the pieces…';
