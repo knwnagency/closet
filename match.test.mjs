@@ -402,3 +402,12 @@ console.log('edges ok');
   if (!has(fw(all, 18, false, 'warm'), jk) || !has(fw(all, 18, false, 'cold'), jk)) throw new Error('a light jacket is fine either season');
   if (!has(fw(all, 18, false, null), sh)) throw new Error('April/October: weather only');
   console.log('seasons ok'); }
+
+// Two shirts: white tee + denim shirt worn open + jacket = Tops, Layers, Outer (2026-11-17)
+{ const { bySlot: bs, openShirt: os } = await import('./match.js');
+  const tee = { id: 't', name: 'White tee', cat: 'Tops', kind: 't-shirt' }, den = { id: 'd', name: 'Denim shirt', cat: 'Tops', kind: 'button-up shirt' }, jk = { id: 'j', name: 'Work Jacket', cat: 'Layers', kind: 'jacket' };
+  if (!os(den) || os(tee)) throw new Error('openShirt');
+  const a = bs([den, jk, tee]); if (a.Tops !== tee || a.Layers !== den || a.Outer !== jk) throw new Error('tee/denim/jacket slots: ' + JSON.stringify(Object.fromEntries(Object.entries(a).map(([k, v]) => [k, v.id]))));
+  const b = bs([den, tee]); if (b.Tops !== tee || b.Layers !== den || b.Outer) throw new Error('tee + open shirt');
+  const c = bs([den]); if (c.Tops !== den) throw new Error('a shirt alone is the top');
+  console.log('two shirts ok'); }

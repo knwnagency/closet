@@ -413,9 +413,12 @@ export function flatLayout(slots) {
 }
 
 // A look's pieces by slot. Two layers (tee + flannel + jacket): the lighter one is Layers, the heavier one Outer.
+// A button-up worn open over a tee is a layer: tee + denim shirt + jacket = Tops, Layers, Outer.
+export const openShirt = p => p.cat === 'Tops' && /button|denim shirt|chambray|oxford|camp shirt|bowling|work shirt|western|overshirt|flannel/i.test(`${p.kind ?? ''} ${p.name ?? ''}`);
 export function bySlot(ps, outerId = null) {
-  const by = {}, ls = ps.filter(p => p.cat === 'Layers');
-  for (const p of ps) { const sl = slotOf(p); if (sl && sl !== 'Layers') by[sl] ??= p; }
+  const tops = ps.filter(p => p.cat === 'Tops').sort((a, b) => openShirt(a) - openShirt(b) || level(a) - level(b)); // the tee goes under
+  const by = {}, ls = [...tops.slice(1), ...ps.filter(p => p.cat === 'Layers')];
+  for (const p of ps) { const sl = slotOf(p); if (sl && sl !== 'Layers' && !(sl === 'Tops' && p !== tops[0])) by[sl] ??= p; }
   const out = ls.length > 1 ? ls.find(p => p.id === outerId) ?? [...ls].sort((a, b) => level(b) - level(a))[0] : null;
   if (ls.length) by.Layers = ls.find(p => p !== out); if (out) by.Outer = out;
   if (!by.Tops && by.Layers && !by.Outer && level(by.Layers) <= 2) { by.Tops = by.Layers; delete by.Layers; } // a hoodie on its own is the top
@@ -426,9 +429,8 @@ export function bySlot(ps, outerId = null) {
 export const isTopish = p => p.cat === 'Tops' || p.cat === 'Layers' && level(p) <= 2;
 export const complete = ps => ps.some(isTopish) && ps.some(p => p.cat === 'Bottoms') && ps.some(p => p.cat === 'Shoes');
 // Builder: try every piece that fits `slot` in the current outfit, best first. score null = breaks every style rule.
-export function rankSwaps(items, outfit, slot, modes = Object.keys(MODES).filter(k => !MODES[k].hidden)) {
-  const rest = outfit.filter(p => !SLOTS[slot](p));
-  return items.filter(SLOTS[slot]).map(item => {
+export function rankSwaps(items, outfit, slot, modes = Object.keys(MODES).filter(k => !MODES[k].hidden), { rest = outfit.filter(p => !SLOTS[slot](p)), fits = SLOTS[slot] } = {}) {
+  return items.filter(fits).map(item => {
     const ps = [...rest, item];
     let best = null;
     for (const m of modes) { /* half-built outfits score too: only the rules whose pieces are there count */ const r = scoreOutfit(ps, m); if (r && (!best || r.score > best.score)) best = { ...r, mode: m }; }

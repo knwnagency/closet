@@ -39,10 +39,10 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges } from './progress.js';
-import { hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade } from './match.js';
+import { hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.31'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.32'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -246,11 +246,12 @@ const ICON = {
 };
 const PRESET_COLLS = ['Everyday', 'Vacation', 'Club', 'Dressy', 'Work', 'Gym', 'Date night'];
 // Builder slots. Outer = a second layer over the first (tee + flannel + jacket), tracked by id in S.outer.
-const inS = sl => sl === 'Outer' ? p => p.id === S.outer : sl === 'Layers' ? p => p.cat === 'Layers' && p.id !== S.outer : SLOTS[sl];
-const canS = sl => SLOTS[sl === 'Outer' ? 'Layers' : sl]; // what can go in a slot
+const extraTop = () => { const by = bySlot(S.build ?? [], S.outer); return [by.Layers, by.Outer].find(p => p?.cat === 'Tops'); }; // a shirt worn open over the tee
+const inS = sl => sl === 'Outer' ? p => p.id === S.outer : sl === 'Layers' ? (x => p => (p.cat === 'Layers' || p === x) && p.id !== S.outer)(extraTop()) : sl === 'Tops' ? (x => p => p.cat === 'Tops' && p !== x)(extraTop()) : SLOTS[sl];
+const canS = sl => sl === 'Layers' || sl === 'Outer' ? p => p.cat === 'Layers' || openShirt(p) && (S.build ?? []).some(q => q.cat === 'Tops' && q !== p && !openShirt(q)) : SLOTS[sl]; // what can go in a slot (a button-up only once a tee is on)
 // Ranked options for a slot. With two layers, the other layer stays out of the list (and out of the scoring, which knows one layer).
 const swapsFor = (slot, outfit) => { const other = slot === 'Outer' ? outfit.find(inS('Layers')) : slot === 'Layers' ? outfit.find(inS('Outer')) : null;
-  return rankSwaps(buildItems().filter(p => p !== other), outfit.filter(p => p !== other), slot === 'Outer' ? 'Layers' : slot); };
+  const cur = outfit.filter(inS(slot)); return rankSwaps(buildItems().filter(p => p !== other), outfit.filter(p => p !== other), slot === 'Outer' ? 'Layers' : slot, undefined, { rest: outfit.filter(p => p !== other && !cur.includes(p)), fits: canS(slot) }); };
 const SLOT_LABEL = { Tops: 'Top', Layers: 'Layer', Outer: 'Outer layer', Bottoms: 'Bottoms', Shoes: 'Shoes', Hat: 'Hat', Accessory: 'Accessory' };
 const MEASURE = [['height', 'Height', `5'10"`], ['weight', 'Weight', '170 lb'], ['chest', 'Chest', '40 in'], ['waist', 'Waist', '32 in'], ['hips', 'Hips', '38 in'],
   ['inseam', 'Inseam', '32 in'], ['shoulder', 'Shoulder', '18 in'], ['top', 'Top size', 'L'], ['bottom', 'Bottom size', '32x32'], ['shoe', 'Shoe size', '10.5'],
@@ -1080,7 +1081,7 @@ function openWhy() {
 // Every builder change goes through here: undo history, re-rank the other slots, keep the draft.
 function setBuild(next, keepSlot = null) {
   S.past = [...S.past, S.build ?? []].slice(-20); S.build = next;
-  { const ls = next.filter(p => p.cat === 'Layers'); S.outer = ls.length > 1 ? bySlot(next, S.outer).Outer.id : null; } // two layers: one is Outer
+  S.outer = bySlot(next, S.outer).Outer?.id ?? null; // two layers (or a shirt worn open + a jacket): one is Outer
   for (const k of Object.keys(S.cs)) if (k !== keepSlot) delete S.cs[k];
   S.draft = S.build.map(p => p.id); put('profile', { k: 'draft', ids: S.draft }); render();
 }
