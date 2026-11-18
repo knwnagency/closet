@@ -1,5 +1,5 @@
 // Color + outfit matching. Pure functions, no DOM — tested by match.test.mjs.
-import { ALIAS, COMBOS, JEANS, TROUSERS } from './style.js';
+import { ALIAS, COMBOS, JEANS, TROUSERS, CAMO, METAL } from './style.js';
 export const CATS = ['Tops', 'Layers', 'Bottoms', 'Shoes', 'Accessories'];
 
 export function hexToHsl(hex) {
@@ -69,7 +69,15 @@ const hues = ps => colored(ps).map(p => hexToHsl(p.color).h);
 export const patternOf = p => p.pattern ?? (p.patterned ? 'graphic' : 'solid');
 // Prints are a clothes thing: a swoosh on a sneaker or a logo strap on a bag is detail, not a second print fighting the tee.
 export const PRINTABLE = ['Tops', 'Layers', 'Bottoms'];
-const prints = ps => ps.filter(p => PRINTABLE.includes(p.cat) && (patternOf(p) === 'graphic' || patternOf(p) === 'allover')).length;
+const printed = ps => ps.filter(p => PRINTABLE.includes(p.cat) && (patternOf(p) === 'graphic' || patternOf(p) === 'allover'));
+// Two prints can work (2026-11-18 pattern reels): one has to read as a quiet, "neutral" print (camo, stripes, check, plaid, animal,
+// polka dot) so the eye knows which to look at first, and the two share a color. Never three. It still scores a bit lower, so it's rare.
+const QUIET_PRINT = /camo|stripe|check|gingham|houndstooth|plaid|flannel|leopard|cheetah|animal|polka|\bdots?\b/i;
+const swatchesOf = p => [p.color, ...(p.accents ?? [])].filter(Boolean);
+export const printPair = ps => { const pr = printed(ps); if (pr.length !== 2) return false;
+  const quiet = pr.some(p => QUIET_PRINT.test(`${p.kind ?? ''} ${p.name ?? ''} ${[].concat(p.tags ?? []).join(' ')}`));
+  return quiet && swatchesOf(pr[0]).some(a => swatchesOf(pr[1]).some(b => colorDist(a, b) < 28 || colorName(a) === colorName(b))); };
+const prints = ps => { const n = printed(ps).length; return n === 2 && printPair(ps) ? 1 : n; }; // a pair that works counts as one for the style rules
 const vibe = (ps, v) => ps.filter(p => [].concat(p.vibe).includes(v)).length; // an item can carry several vibes
 const mainVibe = (ps, v) => ps.filter(p => [].concat(p.vibe ?? [])[0] === v).length; // only the main vibe can rule a look out: "also works as" tags only add
 const pairs = a => a.flatMap((x, i) => a.slice(i + 1).map(y => [x, y]));
@@ -274,7 +282,10 @@ export function style(ps) {
   if (top && dress(top) === 2 && layer && dress(layer) === 2) out.push([0.4, `A sharp ${layer.kind || 'layer'} over a dressy top`]);
   // textures: two different materials add depth; leather on leather is a lot
   const mats = [...new Set(cl.map(material).filter(Boolean))];
-  if (mats.length >= 2 && mats.some(m => TEXTURED.includes(m))) out.push([0.3, `${cap(mats[0])} with ${mats[1]}, texture mix`]);
+  const PAIRS = [[['suede', 'denim'], 'Suede and denim, casual sophistication'], [['corduroy', 'wool'], 'Corduroy and wool, relaxed heritage'], [['nylon', 'cotton'], 'Nylon and cotton, technical ease'],
+    [['leather', 'cotton'], 'Leather against matte cotton, bold restraint'], [['leather', 'knit'], 'Leather against a matte knit, bold restraint'], [['leather', 'wool'], 'Leather against matte wool, bold restraint']]; // @erikxei textures
+  const pair = PAIRS.find(([[a, b]]) => mats.includes(a) && mats.includes(b));
+  if (pair) out.push([0.4, pair[1]]); else if (mats.length >= 2 && mats.some(m => TEXTURED.includes(m))) out.push([0.3, `${cap(mats[0])} with ${mats[1]}, texture mix`]);
   if (cl.filter(p => material(p) === 'leather').length >= 2) out.push([-0.4, 'Leather on leather is a lot']);
   // 60/30/10: one color leads; two loud colors at the same size fight
   if (cl.length >= 3) {
@@ -284,7 +295,7 @@ export function style(ps) {
     if (big >= 2) out.push([-0.4, 'Two loud colors the same size, let one lead']);
     else if (fam.length === 1 && fam[0][1] <= 0.15) out.push([0.3, `${cap(fam[0][0])} as the small pop, the 10 in 60/30/10`]);
   }
-  if (prints(ps) >= 2) out.push([-0.6, 'Two prints compete, let one stand out']);
+  if (printed(ps).length >= 2) out.push(printPair(ps) ? [-0.5, 'Two prints, tied by a shared color: the quiet one acts as a neutral'] : [-0.6, 'Two prints compete, let one stand out']);
   // jewelry and necklines: a chain shows on a tee, tank or open collar; it disappears under a hood or turtleneck
   const chain = ps.find(p => p.cat === 'Accessories' && /chain|necklace|pendant/i.test(`${p.kind} ${p.name}`)), neck = layer && /hoodie|turtleneck|zip/i.test(`${layer.kind} ${layer.name}`) ? layer : top;
   if (chain && neck) /turtleneck|hoodie/i.test(`${neck.kind} ${neck.name}`) ? out.push([-0.2, 'A chain gets lost under a high neck']) : /tee|t-shirt|tank|button|polo|jersey/i.test(`${neck.kind} ${neck.name}`) && out.push([0.2, `Chain over a ${/button|polo/i.test(neck.kind) ? 'open collar' : 'crewneck'}`]);
@@ -304,7 +315,16 @@ export function style(ps) {
   if (face.some(n => TASTE.avoid.includes(n))) out.push([-0.6, "A color you said doesn't suit you, near your face"]);
   else if (face.some(n => TASTE.good.includes(n))) out.push([0.3, 'A color that suits you, up top']);
   if (c) out.push([0.4, `${cap(c.text)} · ${c.label}`]);
-  const row = b && (isDenim(b) ? JEANS : TROUSERS)[colorName(b.color)];
+  // smart streetwear (@biancatomash): a blazer, vest, trousers or loafers kept casual by a tee or cap, nothing sporty
+  if (hi && hi < cl.length && !lo && cl.length >= 3 && ps.some(p => /t-?shirt|\btee\b|baseball cap|\bcap\b/i.test(`${p.kind ?? ''} ${p.name ?? ''}`))) out.push([0.3, 'Smart streetwear: dressy pieces kept casual']);
+  // jeans and the top: dark jeans want a light top, light jeans a dark one, mid wash a neutral (reel DYnTEJWvKxK)
+  const up = layer ?? top;
+  if (b && isDenim(b) && up) { const jl = hexToHsl(b.color).l, tl = hexToHsl(up.color).l;
+    if (jl < 0.3 && tl > 0.65) out.push([0.3, 'Dark jeans, light top up top']); else if (jl > 0.55 && tl < 0.35) out.push([0.3, 'Light jeans under a dark top']); else if (jl >= 0.3 && jl <= 0.55 && isNeutral(up.color)) out.push([0.2, 'Mid wash jeans, neutral top']); }
+  // metal tone: silver near cool and dark colors, gold near warm ones (only when the piece's name says silver or gold)
+  const metal = ps.find(p => p.cat === 'Accessories' && /silver|gold/i.test(`${p.name} ${p.kind}`)), mt = metal && (/silver/i.test(`${metal.name} ${metal.kind}`) ? 'silver' : 'gold');
+  if (metal && up) METAL[mt].includes(colorName(up.color)) ? out.push([0.2, `${cap(mt)} with ${colorName(up.color)}, the right metal`]) : METAL[mt === 'silver' ? 'gold' : 'silver'].includes(colorName(up.color)) && out.push([-0.2, `${colorName(up.color)} usually wants ${mt === 'silver' ? 'gold' : 'silver'}`]);
+  const row = b && (/camo/i.test(`${b.kind ?? ''} ${b.name ?? ''}`) ? CAMO : (isDenim(b) ? JEANS : TROUSERS)[colorName(b.color)]);
   const hit = row && ps.find(p => (p.cat === 'Tops' || p.cat === 'Layers') && row[1].split('+').some(w => alt(w).includes(colorName(p.color))));
   if (hit) out.push([0.4, `${row[0]} with ${colorName(hit.color)}, a go-to pairing`]);
   const d = ps.filter(p => (p.cat === 'Bottoms' || p.cat === 'Layers' || p.cat === 'Tops') && isDenim(p));
@@ -572,7 +592,8 @@ export function today(items, { t = null, rain = false, season = null, twoShirts 
   const pool = forWeather(items, t, rain, season).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
   const list = collect(pool, { rand, maxUse: 3, alone, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
   // a new top every card; pants, shoes, a layer, the same cap or chain at most twice each.
-  const res = varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + (rain ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
+  let twoPrints = rand() < 0.35 ? 0 : 1; const res = varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + (rain ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
+  for (let k = res.length - 1; k >= 0; k--) if (printed(res[k].items).length >= 2 && twoPrints++) res.splice(k, 1); // pattern on pattern: about one day in three, one look that day
   // Two shirts: now and then a button-up goes open over the tee (tee + denim shirt + jacket). Never on hot days, each shirt once.
   if (twoShirts && !(t >= 22)) { const used = new Set(); // only if you turned it on: at most one card per deck gets a button-up open over the tee
     for (const o of res) { if (used.size || rand() > 0.3 || o.items.some(openShirt) || o.items.filter(p => p.cat === 'Layers').length > 1 || !o.items.some(p => p.cat === 'Tops')) continue;

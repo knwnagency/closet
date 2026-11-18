@@ -449,3 +449,28 @@ console.log('edges ok');
   for (let i = 1; i < r.length; i++) if (r[i].score > r[i - 1].score) throw new Error('top looks not sorted');
   if (JSON.stringify(tl(items, 10).map(o => o.key)) !== JSON.stringify(r.map(o => o.key))) throw new Error('top looks should be stable');
   console.log(`top looks ok (${r.length})`); }
+
+// 2026-11-18 reels: pattern on pattern (rare), camo as a neutral, jeans contrast, texture pairs, smart streetwear
+{ const m = await import('./match.js');
+  const mk = (id, cat, kind, color, extra = {}) => ({ id, name: `${kind}`, cat, kind, color, fit: 1, vibe: 'casual', ...extra });
+  const camo = mk('cp', 'Bottoms', 'cargo pants', '#5c5b33', { name: 'Camo cargo pants', pattern: 'allover', accents: ['#2b2a22', '#8a7a5a'] });
+  const gtee = mk('gt', 'Tops', 't-shirt', '#1b1a19', { name: 'Graphic tee', pattern: 'graphic', accents: ['#8b7b5b'] });
+  const bold2 = mk('b2', 'Bottoms', 'jeans', '#4d6a8c', { name: 'Painted jeans', pattern: 'allover', accents: ['#c0392b'] });
+  const redTee = mk('rt', 'Tops', 't-shirt', '#c0392b', { name: 'Red graphic tee', pattern: 'graphic', accents: ['#f2f2f0'] });
+  const sn = mk('sn', 'Shoes', 'sneakers', '#f4f4f2'), jk = mk('jk', 'Layers', 'jacket', '#1b1a19');
+  assert.ok(m.printPair([gtee, camo, sn]), 'graphic tee + camo sharing a color is a pair that works');
+  assert.ok(!m.printPair([redTee, bold2, sn]), 'two bold prints with no quiet one still clash');
+  const one = m.bestMode([mk('pt', 'Tops', 't-shirt', '#1b1a19'), camo, sn]).score, two = m.bestMode([gtee, camo, sn]).score;
+  assert.ok(two != null && two < one, 'pattern on pattern passes but ranks below a single print');
+  // Today: never more than one two-print look a day
+  const items = [gtee, camo, sn, jk, mk('t2', 'Tops', 't-shirt', '#f2f2f0'), mk('t3', 'Tops', 't-shirt', '#7d7b78'), mk('b3', 'Bottoms', 'jeans', '#1c1c1c'),
+    mk('st', 'Tops', 't-shirt', '#f2f2f0', { name: 'Stripe tee', pattern: 'allover', accents: ['#1b1a19'] }), mk('s2', 'Shoes', 'sneakers', '#1a1a1a')];
+  let seed = 3; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 15; i++) assert.ok(m.today(items, { n: 8, rand }).filter(o => o.items.filter(p => ['graphic', 'allover'].includes(m.patternOf(p)) && p.cat !== 'Shoes').length >= 2).length <= 1, 'one pattern-on-pattern look a day at most');
+  // camo pants pick tops from their own list; dark jeans like a light top; suede + denim; smart streetwear
+  const notes = ps => m.style(ps).map(n => n[1]).join(' | ');
+  assert.match(notes([mk('pk', 'Tops', 't-shirt', '#e8a0b4'), camo, sn]), /Camo pants with pink/);
+  assert.match(notes([mk('wt', 'Tops', 't-shirt', '#f2f2f0'), mk('dj', 'Bottoms', 'jeans', '#1e2a45'), sn]), /Dark jeans, light top/);
+  assert.match(notes([mk('sj', 'Layers', 'jacket', '#8a6a4a', { material: 'suede' }), mk('t9', 'Tops', 't-shirt', '#f2f2f0'), mk('mj', 'Bottoms', 'jeans', '#4d6a8c'), sn]), /Suede and denim/);
+  assert.match(notes([mk('wt2', 'Tops', 't-shirt', '#f2f2f0'), mk('bz', 'Layers', 'blazer', '#1e2a45'), mk('tr', 'Bottoms', 'trousers', '#7d7b78'), mk('lf', 'Shoes', 'loafers', '#5b3e2a')]), /Smart streetwear/);
+  console.log('2026-11-18 reel rules ok'); }

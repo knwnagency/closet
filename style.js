@@ -54,6 +54,8 @@ export const COMBOS = [
   'purple + grey: poetic', 'purple + red: chaotic good', 'purple + black: corporate goth', 'purple + green: matcha', 'purple + white: cloud 9', 'purple + brown: jazz club',
   'pink + white: pop star', 'pink + olive: tough love', 'pink + grey: bubblegum grunge', 'pink + red: cherry bomb', 'pink + black: fatal attraction',
   'lime + black: rebel chic', 'lime + white: nomadic heat', 'sage + white + camel: elegant', 'taupe + white + camel: expensive',
+  // 2026-11-18 batch (pattern + color reels, @hangingwithmr.jones, @rjmoorelife)
+  'forest + denim: easy win', 'charcoal + teal + beige: strong, eased off', 'red + brown: coordinated, not matched', 'black + yellow: monochrome with a pop',
 ];
 
 // What to wear on top, by the color of the pants. Jeans keyed by wash (as the app reads it).
@@ -67,11 +69,16 @@ export const JEANS = {
   brown: ['Brown jeans', 'navy + pink + forest + black'],
 };
 export const TROUSERS = {
-  black: ['Black pants', 'blue + beige + brown + white'],
-  white: ['Cream pants', 'forest + navy + grey + black'], beige: ['Cream pants', 'forest + navy + grey + black'],
+  black: ['Black pants', 'blue + beige + brown + white + grey'],
+  white: ['White pants', 'navy + brown + red + white + forest + grey + black'], beige: ['Beige pants', 'burgundy + green + red + forest + navy + grey + black'],
   grey: ['Grey pants', 'yellow + burgundy + lightblue + sage'], 'light grey': ['Grey pants', 'yellow + burgundy + lightblue + sage'],
-  brown: ['Brown pants', 'lightblue + taupe + black + cream'],
+  brown: ['Brown pants', 'lightblue + taupe + black + cream + beige + navy + green'],
   navy: ['Navy pants', 'rust + grey + lightblue + white'],
   camel: ['Camel pants', 'rust + burgundy + lightblue + cream'],
   olive: ['Olive pants', 'brown + black + cream'],
 };
+
+// Camo pants work like a neutral (2026-11-18 reels): what each color on top brings.
+export const CAMO = ['Camo pants', 'pink + burgundy + white + lightblue + black + brown + yellow + red + orange'];
+// Metal tone by the color near it (reel DeaNjY8vRMF): cool and dark colors take silver, warm ones take gold.
+export const METAL = { silver: ['black', 'grey', 'light grey', 'navy', 'blue', 'denim', 'light blue'], gold: ['white', 'brown', 'beige', 'camel', 'burgundy', 'olive', 'rust'] };
