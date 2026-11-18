@@ -418,7 +418,14 @@ console.log('edges ok');
   const items = [mk('t1', 'Tops', 't-shirt', '#f2f2f0'), mk('t2', 'Tops', 't-shirt', '#1c1c1c'), mk('t3', 'Tops', 't-shirt', '#8a8a8a'), mk('d1', 'Tops', 'button-up shirt', '#5a7bb0', { name: 'Denim shirt' }),
     mk('j1', 'Layers', 'jacket', '#c9b48f'), mk('b1', 'Bottoms', 'jeans', '#1c1c1c'), mk('b2', 'Bottoms', 'cargo pants', '#6b6b5a'), mk('s1', 'Shoes', 'sneakers', '#f4f4f2'), mk('s2', 'Shoes', 'sneakers', '#1a1a1a')];
   let seed = 7; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  let two = 0; for (let i = 0; i < 20; i++) two += td(items, { t: 15, n: 6, rand }).filter(o => o.items.filter(p => p.cat === 'Tops').length === 2).length;
-  let hot = 0; for (let i = 0; i < 20; i++) hot += td(items, { t: 28, n: 6, rand }).filter(o => o.items.filter(p => p.cat === 'Tops').length === 2).length;
-  if (!two) throw new Error('never suggested two shirts'); if (hot) throw new Error('two shirts on a hot day');
+  const twoIn = opts => td(items, { n: 6, rand, ...opts }).filter(o => o.items.filter(p => p.cat === 'Tops').length === 2).length;
+  let two = 0, most = 0, off = 0, hot = 0; for (let i = 0; i < 20; i++) { const k = twoIn({ t: 15, twoShirts: true }); two += k; most = Math.max(most, k); off += twoIn({ t: 15 }); hot += twoIn({ t: 28, twoShirts: true }); }
+  if (!two) throw new Error('never suggested two shirts'); if (hot) throw new Error('two shirts on a hot day'); if (off) throw new Error('two shirts while the setting is off'); if (most > 1) throw new Error('more than one two-shirt look in a deck');
   console.log(`two-shirt looks ok (${two} in 20 decks)`); }
+
+// Colors from real photos (2026-11-18): muted browns read grey, white tees on the floor read light grey, a bright orange cap read rust
+{ const { colorName: cn, SWATCHES: SW } = await import('./match.js');
+  for (const [hex, want] of [['#5a4a40', 'brown'], ['#7a6656', 'brown'], ['#8b7663', 'brown'], ['#ccc9c5', 'white'], ['#cdcece', 'white'], ['#d1d4d7', 'white'], ['#d1530e', 'orange'],
+    ['#6f6a66', 'grey'], ['#aeadab', 'light grey'], ['#b1afaf', 'light grey'], ['#73726e', 'grey']]) if (cn(hex) !== want) throw new Error(`${hex} should read ${want}, got ${cn(hex)}`);
+  for (const [n, h] of Object.entries(SW)) if (cn(h) !== n) throw new Error(`swatch ${n} reads ${cn(h)}`);
+  console.log('real-photo colors ok'); }

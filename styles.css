@@ -656,7 +656,6 @@
   .steps { padding-left: 20px; margin: 8px 0 12px; font-size: 13px; line-height: 1.5; } .steps li { margin-bottom: 6px; }
   .cmpbtn { font-size: 18px; } .cmpbtn.on { color: var(--bg); background: var(--ink); border-radius: 999px; } .favacts { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; } .favacts .mono { text-transform: none; }
   .cmpgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } .cmpgrid b { display: block; margin-top: 8px; font-size: 14px; } .cmpgrid ul { list-style: none; padding: 0; margin: 8px 0; font-size: 12px; } .cmpgrid li { display: flex; gap: 6px; align-items: center; padding: 3px 0; } .cmpgrid li i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-  #lookbook { display: none; } @media print { body > *:not(#lookbook) { display: none !important; } #lookbook { display: block; padding: 24px; color: #000; background: #fff; } #lookbook h1 { margin: 0 0 4px; } .lbgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; } .lbgrid figure { margin: 0; break-inside: avoid; } .lbgrid figcaption { font-size: 11px; margin-top: 6px; } .lbgrid figcaption b { display: block; font-size: 13px; } }
 
   /* v5.22 · Fitted. One pop of color per screen: racing green on the main (solid) button. Everything else stays ink and paper. */
   :root { --pop: var(--pop-l, #004225); --on-pop: var(--on-pop-l, #f5f1e8); --line: color-mix(in srgb, var(--ink) 30%, transparent); }
@@ -688,3 +687,4 @@
   .wishmore .wpic { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; color: var(--muted); cursor: pointer; } .wpic img { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; }
   .wish img.wimg { object-fit: cover; padding: 0; } .wtap { text-align: left; padding: 0; min-height: 0; display: block; } .wtap b { text-decoration: underline; text-decoration-color: var(--hair); text-underline-offset: 3px; }
   .board .reading img { opacity: .55; } .board .reading { animation: pulse 1.2s ease-in-out infinite alternate; } @keyframes pulse { to { opacity: .6; } } @media (prefers-reduced-motion: reduce) { .board .reading { animation: none; } }
+  .lbprev { width: 100%; border-radius: 12px; box-shadow: 0 0 0 1px var(--hair); margin-bottom: 12px; }

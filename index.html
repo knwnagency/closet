@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS } from './style.js';
-const VERSION = '2026.11.17 · v5.33'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.17 · v5.34'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -293,7 +293,7 @@ const seasonSwap = () => { const sn = seasonNow(); if (!sn) return null; const k
   const out = S.items.filter(i => !i.stored && !forWeather([i], null, false, sn).length); return out.length >= 3 ? { out, key, text: `Store ${out.length} ${sn === 'cold' ? 'shorts, tanks and sandals for winter' : 'heavy coats for summer'}? They leave outfits until the season turns.` } : null; };
 // Northern-hemisphere months unless your weather spot is south of the equator. April and October: weather only.
 const seasonNow = () => { const o = S.profile?.season; if (o === 'off') return null; if (o === 'cold' || o === 'warm') return o; const m = (new Date().getMonth() + ((S.profile?.wx?.lat ?? 1) < 0 ? 6 : 0)) % 12; return m >= 10 || m <= 2 ? 'cold' : m >= 4 && m <= 8 ? 'warm' : null; };
-const todayPicks = (items, t) => today(items, { t: dressTemp(t), season: seasonNow(), alone: !!S.profile?.hoodieAlone, like: S.like?.map(byId).filter(Boolean), rain: RAINY(S.profile?.wx?.code ?? 0), occasion: S.occ, n: 12, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
+const todayPicks = (items, t) => today(items, { t: dressTemp(t), season: seasonNow(), twoShirts: !!S.profile?.twoShirts, alone: !!S.profile?.hoodieAlone, like: S.like?.map(byId).filter(Boolean), rain: RAINY(S.profile?.wx?.code ?? 0), occasion: S.occ, n: 12, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
 
 // Gaps are slow-ish to compute, so cache until something about the closet changes.
 const sig = () => S.items.map(i => [i.id, i.cat, i.color, i.fit, i.vibe, i.patterned, i.name, i.kind].join()).join('|');
@@ -622,12 +622,38 @@ function openCompare() {
       <ul>${o.items.map(p => `<li><i style="background:${p.color}"></i>${esc(p.name)}</li>`).join('')}</ul><button class="btn sm" data-wear="${o.key}">Wear today</button></div>`; }).join('')}</div></div>`);
   render();
 }
-// Lookbook: your saved looks on a printable page; iPhone's print sheet saves it as a PDF (pinch out on the preview › Share › Save to Files).
-function printLookbook() {
+// Lookbook: your saved looks drawn as image pages (6 looks each). Home Screen apps on iPhone can't print, so the share sheet does it:
+// Save Image, Save to Files, or Print (pinch out on the print preview for a PDF).
+async function lookbookPages(looks) {
+  const cw = 540, ch = 675, gap = 40, pad = 60, capH = 80, W = pad * 2 + cw * 2 + gap, pages = [];
+  for (let i = 0; i < looks.length; i += 6) {
+    const group = looks.slice(i, i + 6), rows = Math.ceil(group.length / 2), head = i ? pad : 180;
+    const c = Object.assign(document.createElement('canvas'), { width: W, height: head + rows * (ch + capH + gap) - gap + pad }), x = c.getContext('2d');
+    const fit = (t, w) => { while (x.measureText(t).width > w && t.length > 2) t = t.slice(0, -2) + '…'; return t; };
+    x.fillStyle = '#faf8f5'; x.fillRect(0, 0, c.width, c.height);
+    if (!i) { x.fillStyle = '#1a1917'; x.font = '600 60px Helvetica, Arial, sans-serif'; x.fillText('lookbook', pad, 105); x.fillStyle = '#6e6a63'; x.font = '24px Helvetica, Arial, sans-serif'; x.fillText(`${looks.length} looks · ${new Date().toLocaleDateString()}`, pad, 145); }
+    for (const [k, o] of group.entries()) {
+      const ox = pad + (k % 2) * (cw + gap), oy = head + Math.floor(k / 2) * (ch + capH + gap), by = bySlot(o.items), L = flatLayout(Object.keys(by));
+      x.fillStyle = '#f0efec'; x.beginPath(); x.roundRect ? x.roundRect(ox, oy, cw, ch, 24) : x.rect(ox, oy, cw, ch); x.fill();
+      for (const [sl, p] of Object.entries(by)) { try {
+        const [bx, bY, bw, bh] = L[sl], box = { x: ox + bx / 100 * cw, y: oy + bY / 100 * ch, w: bw / 100 * cw, h: bh / 100 * ch }, bmp = await createImageBitmap(await imgOf(p));
+        const k2 = Math.min(box.w / bmp.width, box.h / bmp.height), dw = bmp.width * k2, dh = bmp.height * k2, al = ALIGN[sl];
+        x.drawImage(bmp, box.x + (box.w - dw) / 2, al === '50% 100%' ? box.y + box.h - dh : al === '50% 0' ? box.y : box.y + (box.h - dh) / 2, dw, dh); bmp.close?.();
+      } catch (e) { console.warn(e); } }
+      x.fillStyle = '#1a1917'; x.font = '600 26px Helvetica, Arial, sans-serif'; x.fillText(fit(lookName(o.items), cw), ox, oy + ch + 36);
+      x.fillStyle = '#6e6a63'; x.font = '19px Helvetica, Arial, sans-serif'; x.fillText(fit(o.items.map(p => p.name).join(' · '), cw), ox, oy + ch + 66);
+    }
+    pages.push(new File([await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88))], `lookbook${looks.length > 6 ? `-${i / 6 + 1}` : ''}.jpg`, { type: 'image/jpeg' }));
+  }
+  return pages;
+}
+async function printLookbook() {
   const looks = S.saved.map(r => ({ ...r, items: r.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items)); if (!looks.length) return toast('Save a few looks first');
-  document.getElementById('lookbook')?.remove(); const d = document.createElement('div'); d.id = 'lookbook';
-  d.innerHTML = `<h1>Lookbook</h1><p class="mono">${looks.length} looks · ${new Date().toLocaleDateString()}</p><div class="lbgrid">${looks.map(o => `<figure>${flat(o.items)}<figcaption><b>${esc(lookName(o.items))}</b>${o.items.map(p => esc(p.name)).join(' · ')}</figcaption></figure>`).join('')}</div>`;
-  document.body.append(d); addEventListener('afterprint', () => d.remove(), { once: true }); setTimeout(() => window.print(), 400); // the photos need a moment to draw
+  toast('Making your lookbook…'); S.lookFiles = await lookbookPages(looks);
+  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${looks.length} looks · ${S.lookFiles.length} page${S.lookFiles.length > 1 ? 's' : ''}</div><h2>Lookbook</h2></div>${closeBtn}</div>
+    <img class="lbprev" src="${URL.createObjectURL(S.lookFiles[0])}" alt="First page of your lookbook">
+    <p class="sub">Tap Save, then Save Image or Save to Files. For a PDF, pick Print and pinch out on the preview.</p>
+    <button class="btn wide" data-action="sharelookbook">Save</button></div>`);
 }
 function favCard(o) { const title = lookName(o.items), worn = wornOn(dayKey(), o.key);
   return `<article class="outfit fav" style="--tint:${tintOf(o.items)}"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open ${esc(title)} in the builder">${flat(o.items)}</button>
@@ -696,10 +722,11 @@ function outfitsView() {
   if (S.tab === 'saved') {
     const inC = o => !c || o.items.every(p => c.ids.includes(p.id)); // in a collection: only favorites made entirely from it
     const fq = (S.favQ ?? '').toLowerCase(), wornN = k => S.log.filter(l => l.key === k).length, lastW = k => Math.max(0, ...S.log.filter(l => l.key === k).map(l => l.at ?? 0));
-    const FS = { new: (a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0), worn: (a, b) => wornN(b.key) - wornN(a.key), stale: (a, b) => lastW(a.key) - lastW(b.key) };
+    const rated = new Map(), rate = o => rated.get(o.key) ?? rated.set(o.key, (bestMode(o.items)?.score ?? -5) + Math.min(2, wornN(o.key) * 0.4)).get(o.key);
+    const FS = { top: (a, b) => rate(b) - rate(a), new: (a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0), worn: (a, b) => wornN(b.key) - wornN(a.key), stale: (a, b) => lastW(a.key) - lastW(b.key) };
     const list = S.saved.map(s => ({ key: s.key, savedAt: s.savedAt, mode: s.mode, items: s.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items) && inC(o)) // a piece was deleted or re-tagged
       .filter(o => !fq || o.items.some(p => `${p.name} ${p.kind} ${colorName(p.color)} ${p.brand ?? ''}`.toLowerCase().includes(fq)) || (vibeOf(o)[0] ?? '').toLowerCase().includes(fq)).sort(FS[S.favSort ?? 'new']);
-    return top + (S.saved.length ? `<div class="ctools favtools"><input type="search" data-favq placeholder="search" value="${esc(S.favQ ?? '')}" aria-label="Search favorites"><select data-favsort aria-label="Sort favorites">${[['new', 'sort: newest'], ['worn', 'sort: most worn'], ['stale', "sort: haven't worn lately"]].map(([k, l]) => `<option value="${k}" ${(S.favSort ?? 'new') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div><div class="row favacts"><button class="tag o" data-action="lookbook">Lookbook (PDF)</button>${S.cmp?.length === 1 ? '<span class="mono">Pick one more look to compare</span>' : '<span class="mono">Tap ⇆ on two looks to compare</span>'}</div>` : '')
+    return top + (S.saved.length ? `<div class="ctools favtools"><input type="search" data-favq placeholder="search" value="${esc(S.favQ ?? '')}" aria-label="Search favorites"><select data-favsort aria-label="Sort favorites">${[['new', 'sort: newest'], ['top', 'sort: highest rated'], ['worn', 'sort: most worn'], ['stale', "sort: haven't worn lately"]].map(([k, l]) => `<option value="${k}" ${(S.favSort ?? 'new') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div><div class="row favacts"><button class="tag o" data-action="lookbook">Lookbook (PDF)</button>${S.cmp?.length === 1 ? '<span class="mono">Pick one more look to compare</span>' : '<span class="mono">Tap ⇆ on two looks to compare</span>'}</div>` : '')
       + (list.length ? `<p class="sub">Tap a look to change it in the builder.</p><div class="feed favs">${list.map(o => favCard(o)).join('')}</div>`
       : `<div class="empty"><h2>No favorites ${c ? `in ${esc(c.name)} ` : ''}yet</h2><p>Swipe right on a look in Today, or tap Save in the builder. Your keepers land here.</p><button class="btn" data-go="today">Go to Today</button></div>`);
   }
@@ -766,7 +793,7 @@ function openCapsules() {
 // The deck is saved per day + filters + weather band, so leaving and coming back shows the same looks. Shuffle makes a new one.
 const greet = () => { const h = new Date().getHours(); return h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
 const band = w => w ? (w.t < 12 ? 'cold' : w.t >= 24 ? 'hot' : 'mild') + (RAINY(w.code) ? '-rain' : '') : 'none';
-const deckSig = () => ['v2', VERSION, !!S.profile?.hoodieAlone, S.profile?.season ?? '', dayKey(), S.items.length, new Date().getHours() >= 16, S.profile?.tempBias ?? 0, S.profile?.dressBias ?? 0, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
+const deckSig = () => ['v2', VERSION, !!S.profile?.hoodieAlone, !!S.profile?.twoShirts, S.profile?.season ?? '', dayKey(), S.items.length, new Date().getHours() >= 16, S.profile?.tempBias ?? 0, S.profile?.dressBias ?? 0, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
 function getDeck(items) {
   if (S.deck?.sig === deckSig()) return S.deck;
   const recs = S.src === 'saved' ? S.saved : S.src === 'worn' ? wornLooks() : null; // looks you already know, instead of fresh picks
@@ -1371,6 +1398,7 @@ function meView() {
     <h3><span>How you wear things</span></h3>
     <label class="cell seasonpick"><span>Season</span><select data-season aria-label="Season">${[['auto', 'By the calendar'], ['cold', 'Cold season now'], ['warm', 'Warm season now'], ['off', 'Weather only']].map(([v, l]) => `<option value="${v}" ${(p.season ?? 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <p class="sub">By the calendar: no shorts or sandals November to March unless it's hot, no heavy coats May to September unless it's cold.</p>
+    <label class="chk"><input type="checkbox" data-pref="twoShirts" ${p.twoShirts ? 'checked' : ''}> Now and then, suggest a button-up worn open over a tee (off: you can still build it yourself)</label>
     <label class="chk"><input type="checkbox" data-pref="hoodieAlone" ${p.hoodieAlone ? 'checked' : ''}> Suggest hoodies, sweaters and quarter zips on their own (no tee under)</label>
     <h3><span>Brands</span><span>${S.items.filter(i => i.brand).length} of ${S.items.length} named</span></h3>
     <p class="sub">Find logos and team names in your photos ("Lakers jersey", "Amiri t-shirt"). You confirm each one. Or tap any piece's name to rename it yourself.</p>
@@ -1985,7 +2013,7 @@ document.addEventListener('scroll', e => {
 document.addEventListener('change', async e => {
   if (e.target.matches('[data-sort]')) { S.sort = e.target.value; render(); return; }
   if (e.target.matches('[data-popany]')) { const h = e.target.value; applyPop(h); S.profile = { k: 'me', ...S.profile, pop: h }; await put('profile', S.profile); render(); return; }
-  if (e.target.matches('[data-pref]')) { S.profile = { k: 'me', ...S.profile, [e.target.dataset.pref]: e.target.checked }; await put('profile', S.profile); S.deck = null; S.ideas = null; toast(e.target.checked ? 'Hoodies and sweaters can be worn alone now' : 'A tee goes under hoodies again'); return; }
+  if (e.target.matches('[data-pref]')) { S.profile = { k: 'me', ...S.profile, [e.target.dataset.pref]: e.target.checked }; await put('profile', S.profile); S.deck = null; S.ideas = null; toast(e.target.dataset.pref === 'twoShirts' ? (e.target.checked ? 'Today will sometimes put a button-up over a tee' : 'No more open button-ups on Today') : e.target.checked ? 'Hoodies and sweaters can be worn alone now' : 'A tee goes under hoodies again'); return; }
   if (e.target.matches('[data-season]')) { S.profile = { k: 'me', ...S.profile, season: e.target.value }; await put('profile', S.profile); S.deck = null; toast('Season set'); return; }
   if (e.target.matches('[data-favsort]')) { S.favSort = e.target.value; render(); return; }
   if (e.target.matches('[data-action="fullbackup"]')) { S.profile = { k: 'me', ...S.profile, fullBackup: e.target.checked }; await put('profile', S.profile); return; }
@@ -2092,6 +2120,7 @@ ${ps.map(i => `${i.id} · ${i.name} · ${(i.kind || i.cat).toLowerCase()} · ${c
     render(); toast(n ? `Planned ${n} day${n > 1 ? 's' : ''} from Claude` : "No days found. Copy Claude's whole reply, then try again"); }
   else if (ds.cmp) { S.cmp = S.cmp?.includes(ds.cmp) ? S.cmp.filter(k => k !== ds.cmp) : [...(S.cmp ?? []), ds.cmp].slice(-2); if (S.cmp.length === 2) openCompare(); else render(); }
   else if (ds.action === 'lookbook') printLookbook();
+  else if (ds.action === 'sharelookbook') { const files = S.lookFiles ?? []; if (navigator.canShare?.({ files })) navigator.share({ files, title: 'Lookbook' }).catch(e => { if (e.name !== 'AbortError') files.forEach(download); }); else files.forEach(download); }
   else if (ds.action === 'quickreview') openQuick();
   else if (ds.action === 'rename') openRename();
   else if (ds.rnclear) { const i = sheet.querySelector(`[name="rn_${ds.rnclear}"]`); if (i) { i.value = ''; i.focus(); } }
@@ -2432,6 +2461,7 @@ async function backfillAccents() {
 { let n = 0; for (const it of S.items) { let bad = false; // health check: a piece with no type or color breaks whole screens, so fix it and ask you to check it
     if (!CATS.includes(it.cat)) { it.cat = KINDS[it.kind] ?? 'Tops'; bad = true; }
     if (!/^#[0-9a-f]{6}$/i.test(it.color ?? '')) { it.color = '#808080'; bad = true; }
+    if (it.color === '#c9c7c3') { it.color = SWATCHES['light grey']; putQuiet('items', it); } // you picked light grey before v5.34: keep it light grey
     if (bad) { it.review = true; putQuiet('items', it); n++; } }
   if (n) setTimeout(() => toast(`${n} piece${n > 1 ? 's were' : ' was'} missing tags. Check ${n > 1 ? 'them' : 'it'} in Closet › Review`), 1500); }
 render();

@@ -25,7 +25,7 @@ export function isNeutral(hex) {
 // Hue bands as people name clothes: a blue-ish green jacket is green, not cyan.
 const HUES = [[15, 'red'], [40, 'orange'], [65, 'yellow'], [85, 'lime'], [172, 'green'], [195, 'teal'], [250, 'blue'], [290, 'purple'], [325, 'magenta'], [345, 'pink'], [361, 'red']];
 // What you can pick in the item sheet. Each one reads back as its own name (match.test.mjs checks).
-export const SWATCHES = { black: '#1b1a19', grey: '#7d7b78', 'light grey': '#c9c7c3', white: '#f6f5f1', navy: '#1e2a45', denim: '#4d6a8c', 'light blue': '#9cc3e6', blue: '#2f5fb5', teal: '#2a8085', green: '#3f7a52', forest: '#22402c', olive: '#5c5b33', sage: '#8aa877', beige: '#d8c7a6', camel: '#b2874e', brown: '#5b3e2a', rust: '#a8522b', orange: '#e2782c', yellow: '#e9c548', red: '#c0392b', burgundy: '#6b1e2a', pink: '#e9a2b9', purple: '#6c4a90' };
+export const SWATCHES = { black: '#1b1a19', grey: '#7d7b78', 'light grey': '#b9b7b3', white: '#f6f5f1', navy: '#1e2a45', denim: '#4d6a8c', 'light blue': '#9cc3e6', blue: '#2f5fb5', teal: '#2a8085', green: '#3f7a52', forest: '#22402c', olive: '#5c5b33', sage: '#8aa877', beige: '#d8c7a6', camel: '#b2874e', brown: '#5b3e2a', rust: '#a8522b', orange: '#e2782c', yellow: '#e9c548', red: '#c0392b', burgundy: '#6b1e2a', pink: '#e9a2b9', purple: '#6c4a90' };
 export function colorName(hex) {
   const { h, s, l } = hexToHsl(hex);
   if (l < 0.13) return h >= 200 && h <= 250 && s >= 0.4 && l >= 0.09 ? 'navy' : 'black'; // a very dark but clearly blue polo is navy
@@ -37,6 +37,8 @@ export function colorName(hex) {
   if (l > 0.9) return 'white';
   // warm, barely-colored: olive cargos and cream pants photograph almost grey, but they're olive and cream (true greys sit near s 0.02)
   if (s >= 0.07 && s < 0.18 && h >= 30 && h <= 65 && l > 0.2 && l < 0.85) return l >= 0.55 ? 'beige' : h >= 40 ? 'olive' : 'brown';
+  if (s >= 0.09 && s < 0.18 && h >= 10 && h < 30 && l > 0.2 && l < 0.85) return l >= 0.55 ? 'beige' : 'brown'; // a muted brown (mocha hoodie, suede) photographs nearly grey; true greys sit under s 0.05
+  if (s < 0.1 && l > 0.75) return 'white'; // white clothes shot on the floor come out l 0.77-0.83: 9 of 11 whites in the haul read light grey before
   if (s < 0.18) return l > 0.6 ? 'light grey' : 'grey';
   if (h >= 190 && h <= 250 && l < 0.3) return s >= 0.28 ? 'navy' : 'black'; // a black tee shot in cool light reads blue-ish, not navy
   if (h >= 190 && h <= 250 && s < 0.45) return 'denim';
@@ -44,7 +46,7 @@ export function colorName(hex) {
   if (h >= 50 && h <= 100 && s < 0.35 && l < 0.45) return 'olive';
   if ((h < 15 || h >= 345) && s < 0.45 && l < 0.42) return 'brown'; // dull dark red-brown (tan shoes in shadow) isn't burgundy
   if ((h < 15 || h >= 340) && l < 0.35) return 'burgundy';
-  if (h >= 15 && h < 30 && l < 0.5) return 'rust';
+  if (h >= 15 && h < 30 && l < 0.5 && s < 0.75) return 'rust'; // a bright orange cap (s 0.87) is orange, not rust
   if (h >= 90 && h < 170 && l < 0.3) return 'forest';
   if (h >= 70 && h < 170 && s < 0.35 && l >= 0.45) return 'sage';
   if (h >= 195 && h < 250 && l > 0.65) return 'light blue';
@@ -558,7 +560,7 @@ export const occasionFit = (ps, occ) => { const o = OCCASIONS[occ]; if (!o) retu
   return -Math.abs(avg - o.dress) * 1.5 + (o.vibe ? vibe(ps, o.vibe) * 0.3 : 0); };
 const likeness = (ps, like) => { if (!like?.length) return 0; const cn = p => colorName(p.color), lc = new Set(like.filter(p => p.cat !== 'Accessories').map(cn)), lk = new Set(like.map(p => p.kind));
   return Math.min(1.2, ps.filter(p => p.cat !== 'Accessories' && lc.has(cn(p))).length * 0.25 + ps.filter(p => lk.has(p.kind)).length * 0.15); };
-export function today(items, { t = null, rain = false, season = null, occasion = null, n = 5, rand = Math.random, skip = [], like = null, alone = false } = {}) {
+export function today(items, { t = null, rain = false, season = null, twoShirts = false, occasion = null, n = 5, rand = Math.random, skip = [], like = null, alone = false } = {}) {
   // skip: what you wore yesterday. Tops and layers rest a day; pants and shoes can repeat.
   if (OCCASIONS[occasion]?.dress >= 1.5) items = items.map(p => p.rate < 0 ? { ...p, rate: 0 } : p); // dressing up: pieces saved for special occasions come back
   const pool = forWeather(items, t, rain, season).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
@@ -566,8 +568,8 @@ export function today(items, { t = null, rain = false, season = null, occasion =
   // a new top every card; pants, shoes, a layer, the same cap or chain at most twice each.
   const res = varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + (rain ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
   // Two shirts: now and then a button-up goes open over the tee (tee + denim shirt + jacket). Never on hot days, each shirt once.
-  if (!(t >= 24)) { const used = new Set(); // each shirt goes open over a tee at most once per deck (it can still be the main top on another card)
-    for (const o of res) { if (rand() > 0.3 || o.items.some(openShirt) || o.items.filter(p => p.cat === 'Layers').length > 1 || !o.items.some(p => p.cat === 'Tops')) continue;
+  if (twoShirts && !(t >= 22)) { const used = new Set(); // only if you turned it on: at most one card per deck gets a button-up open over the tee
+    for (const o of res) { if (used.size || rand() > 0.3 || o.items.some(openShirt) || o.items.filter(p => p.cat === 'Layers').length > 1 || !o.items.some(p => p.cat === 'Tops')) continue;
       const best = pool.filter(p => openShirt(p) && !used.has(p.id)).map(p => ({ p, r: scoreOutfit([...o.items, p], o.mode) })).filter(x => x.r && x.r.score >= o.score - 1.5).sort((a, b) => b.r.score - a.r.score)[0];
       if (best) { used.add(best.p.id); o.items = [...o.items, best.p]; o.key = o.items.map(p => p.id).sort().join(); } } }
   return res;
@@ -631,7 +633,7 @@ export function gaps(items) {
   const fitsFor = cat => { const own = [...new Set(items.filter(i => i.cat === cat).map(fit))]; return cat === 'Accessories' ? [1] : own.length ? own : [0, 1, 2]; };
   for (const cat of CATS) for (const color of GAP_COLORS) for (const f of fitsFor(cat)) {
     const cname = colorName(color);
-    if (items.some(i => i.cat === cat && fit(i) === f && colorName(i.color) === cname)) continue; // already own it
+    if (items.some(i => i.cat === cat && colorName(i.color) === cname)) continue; // you own one in that color (any cut): a black jacket is a black jacket
     const name = [GAP_FIT[cat][f], cname, GAP_KIND[cat]].filter(Boolean).join(' ');
     const r = tryPiece(items, { id: `ghost:${cat}:${color}:${f}`, cat, color, fit: f, name: name[0].toUpperCase() + name.slice(1) }, { rand });
     if (r.count) out.push(r);
