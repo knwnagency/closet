@@ -1,2 +1,2 @@
-2026.11.18 · v5.53
-Today asks if you wore yesterday's pick: one tap logs it · unlocks pop up the moment you earn them · the backup reminder saves only what changed (a full backup about once a month) · Progress shows your streak right under your level
+2026.11.18 · v5.54
+Belts and wallet chains get their own spot in Build (+ belt), so a fit can be cap + chain + belt · suggestions only add a belt now and then

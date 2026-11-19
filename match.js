@@ -440,9 +440,11 @@ export function accentsOf(palette, base, min = 0.03) {
 
 // Accessories split into two slots so a fit can carry a hat AND a chain or bag.
 export const isHat = p => p.cat === 'Accessories' && /cap|hat|beanie|fitted|bucket/i.test(`${p.name} ${p.kind}`);
+// Belts and wallet chains get their own spot, so a fit can be cap + chain + belt. Build offers it; suggestions add one only now and then.
+export const isBelt = p => p.cat === 'Accessories' && /belt|wallet chain/i.test(`${p.name} ${p.kind}`);
 export const SLOTS = {
   Tops: p => p.cat === 'Tops', Layers: p => p.cat === 'Layers', Bottoms: p => p.cat === 'Bottoms', Shoes: p => p.cat === 'Shoes',
-  Hat: isHat, Accessory: p => p.cat === 'Accessories' && !isHat(p),
+  Hat: isHat, Belt: isBelt, Accessory: p => p.cat === 'Accessories' && !isHat(p) && !isBelt(p),
 };
 export const slotOf = p => Object.keys(SLOTS).find(k => SLOTS[k](p));
 
@@ -450,13 +452,14 @@ export const slotOf = p => Object.keys(SLOTS).find(k => SLOTS[k](p));
 // Stacked the way it's worn: hat on top, layer + top, chain or bag beside the torso, pants, shoes at the bottom.
 // Pieces get as much room as the card allows (big and even beats true-to-scale), but a cap still stays smaller than a tee.
 export function flatLayout(slots) {
-  const has = x => slots.includes(x), hat = has('Hat'), acc = has('Accessory'), layer = has('Layers'), outer = layer && has('Outer');
-  const y0 = hat ? 20 : 3, th = hat ? 38 : 50, side = acc ? 22 : 0, tw = 100 - side - 4, box = {};
+  const has = x => slots.includes(x), hat = has('Hat'), acc = has('Accessory'), belt = has('Belt'), layer = has('Layers'), outer = layer && has('Outer');
+  const y0 = hat ? 20 : 3, th = hat ? 38 : 50, side = acc || belt ? 22 : 0, tw = 100 - side - 4, box = {};
   if (hat) box.Hat = [38, 1, 24, 18];
   if (outer) { box.Outer = [2, y0, tw * 0.36, th]; box.Layers = [2 + tw * 0.34, y0 + 1, tw * 0.34, th - 2]; box.Tops = [2 + tw * 0.68, y0 + 2, tw * 0.32, th - 4]; } // jacket, flannel, tee: outermost on the left
   else if (layer) { box.Layers = [2, y0, tw * 0.52, th]; box.Tops = [2 + tw * 0.52, y0 + 2, tw * 0.48, th - 4]; }
   else box.Tops = [2 + tw * 0.1, y0, tw * 0.8, th];
   if (acc) box.Accessory = [100 - side, y0 + 6, side - 2, 24];
+  if (belt) box.Belt = [100 - side, y0 + (acc ? 32 : 6), side - 2, 18]; // under the chain or bag, beside the waist
   const by = y0 + th + 2; box.Bottoms = [26, by, 48, 100 - by]; box.Shoes = [24, 101, 52, 21]; // shoes big enough to read
   return Object.fromEntries(Object.entries(box).filter(([k]) => slots.includes(k)).map(([k, [x, y, w, h]]) => [k, [x, y / 1.25, w, h / 1.25].map(v => +v.toFixed(2))]));
 }
@@ -531,7 +534,7 @@ export function generate(items, mode, { anchor, fixed = [], palette, inspo, n = 
   for (let t = 0; t < tries; t++) {
     const ps = [pick(by.Tops), pick(by.Bottoms), pick(by.Shoes)];
     const add = (slot, odds) => { const left = by[slot].filter(p => !ps.includes(p)); if (left.length && (forced.has(slot) || rand() < odds)) ps.push(pick(left)); }; // never the same piece twice
-    add('Layers', layerOdds); add('Hat', 0.8); add('Accessory', 0.5); // hats + chains/bags in most fits, not all
+    add('Layers', layerOdds); add('Hat', 0.8); add('Accessory', 0.5); add('Belt', 0.05); // hats + chains/bags in most fits, a belt rarely
     const key = ps.map(p => p.id).sort().join();
     if (seen.has(key)) continue;
     const r = scoreOutfit(ps, mode, opts);

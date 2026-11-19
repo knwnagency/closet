@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.53'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.54'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -267,7 +267,7 @@ const canS = sl => sl === 'Outer' ? SLOTS.Layers : sl === 'Layers' ? p => p.cat 
 // Ranked options for a slot. With two layers, the other layer stays out of the list (and out of the scoring, which knows one layer).
 const swapsFor = (slot, outfit) => { const other = slot === 'Outer' ? outfit.find(inS('Layers')) : slot === 'Layers' ? outfit.find(inS('Outer')) : null;
   const cur = outfit.filter(inS(slot)); return rankSwaps(buildItems().filter(p => p !== other), outfit.filter(p => p !== other), slot === 'Outer' ? 'Layers' : slot, undefined, { rest: outfit.filter(p => p !== other && !cur.includes(p)), fits: canS(slot) }); };
-const SLOT_LABEL = { Tops: 'Top', Layers: 'Layer', Outer: 'Outer layer', Bottoms: 'Bottoms', Shoes: 'Shoes', Hat: 'Hat', Accessory: 'Accessory' };
+const SLOT_LABEL = { Tops: 'Top', Layers: 'Layer', Outer: 'Outer layer', Bottoms: 'Bottoms', Shoes: 'Shoes', Hat: 'Hat', Belt: 'Belt', Accessory: 'Accessory' };
 const MEASURE = [['height', 'Height', `5'10"`], ['weight', 'Weight', '170 lb'], ['chest', 'Chest', '40 in'], ['waist', 'Waist', '32 in'], ['hips', 'Hips', '38 in'],
   ['inseam', 'Inseam', '32 in'], ['shoulder', 'Shoulder', '18 in'], ['top', 'Top size', 'L'], ['bottom', 'Bottom size', '32x32'], ['shoe', 'Shoe size', '10.5'],
   ['hat', 'Hat size', '7 3/8'], ['notes', 'Fit notes', 'Size up in tees']];
@@ -994,7 +994,7 @@ function openFilters() {
 }
 
 // Builder: one card per slot (like Cladwell). Tap a card or Swap to pick from a list, best matches first.
-const ROWS = ['Layers', 'Tops', 'Bottoms', 'Shoes'], EXTRAS = ['Hat', 'Accessory'], OPTIONAL = ['Layers', 'Hat', 'Accessory'];
+const ROWS = ['Layers', 'Tops', 'Bottoms', 'Shoes'], EXTRAS = ['Hat', 'Belt', 'Accessory'], OPTIONAL = ['Layers', 'Hat', 'Belt', 'Accessory'];
 const isFav = k => S.saved.some(s => s.key === k);
 // Today's picks, one big card at a time: swipe for the next. Each card says why it fits the weather.
 const wxWhy = o => { const w = weatherNow(); if (!w) return '';
@@ -1115,7 +1115,7 @@ const recentHtml = () => { const list = wornLooks().filter(h => h.key !== keyOf(
 
 // What you can pick from: the collection, plus whatever the outfit is already wearing (it may come from outside it).
 const buildItems = () => [...new Set([...pool(), ...S.build])];
-const PICK_TITLE = { Tops: 'Pick a top', Layers: 'Pick a layer', Outer: 'Pick an outer layer', Bottoms: 'Pick bottoms', Shoes: 'Pick shoes', Hat: 'Pick a hat', Accessory: 'Pick an accessory' };
+const PICK_TITLE = { Tops: 'Pick a top', Layers: 'Pick a layer', Outer: 'Pick an outer layer', Bottoms: 'Pick bottoms', Shoes: 'Pick shoes', Hat: 'Pick a hat', Belt: 'Pick a belt or wallet chain', Accessory: 'Pick an accessory' };
 // Builder = one flat-lay canvas. Each piece sits where it would lie and swipes in place; tap a piece for its list, lock, remove.
 const REQ = ['Tops', 'Bottoms', 'Shoes'];
 // The whole outfit on one big flat lay, every piece where it'd lie. Tap a piece to swap it. Missing must-haves wait as outlines.
@@ -1227,8 +1227,8 @@ function buildView() {
       <div class="right">${ok ? `<button class="ring ${v?.score == null ? 'bad' : ''}" style="--p:${pct}" data-action="why" aria-label="Match ${pct} of 100. Why it works"><b>${v?.score == null ? '✕' : pct}</b><span>match</span></button>` : ''}</div></header>
     <div class="build"><div class="tbar">${capBtn()}<span class="sp"></span>${o.length ? `<button class="tag o" data-action="clearbuild">Start over</button>` : ''}</div>${capBar()}
       ${stage(o, items)}
-      ${o.length ? `<div class="srows">${['Hat', 'Outer', 'Layers', 'Tops', 'Bottoms', 'Shoes', 'Accessory'].map(row).join('')}</div>` : '<p class="sub stagehint">Tap a shape to pick that piece. Best matches show first.</p>'}
-      <div class="addopt">${['Layers', 'Hat', 'Accessory'].filter(sl => !o.some(inS(sl)) && items.some(canS(sl))).map(sl => `<button class="tag o" data-swap="${sl}">+ ${SLOT_LABEL[sl].toLowerCase()}</button>`).join('')}</div>
+      ${o.length ? `<div class="srows">${['Hat', 'Outer', 'Layers', 'Tops', 'Bottoms', 'Belt', 'Shoes', 'Accessory'].map(row).join('')}</div>` : '<p class="sub stagehint">Tap a shape to pick that piece. Best matches show first.</p>'}
+      <div class="addopt">${['Layers', 'Hat', 'Accessory', 'Belt'].filter(sl => !o.some(inS(sl)) && items.some(canS(sl))).map(sl => `<button class="tag o" data-swap="${sl}">+ ${SLOT_LABEL[sl].toLowerCase()}</button>`).join('')}</div>
       ${ok ? (v.score == null ? (w => `<p class="verdict bad">Doesn't work · ${esc(w.note)}</p>${w.piece ? `<div class="tools whyfix"><button class="tag" ${w.fix === 'tag' ? `data-open="${w.piece.id}"` : `data-swap="${slotOf(w.piece)}"`}>${w.fix === 'tag' ? `Check its tags` : `Swap the ${esc(SLOT_LABEL[slotOf(w.piece)].toLowerCase())}`}</button></div>` : ''}`)(whyNot(o))
         : `<p class="verdict">Works as ${MODES[v.mode].label} · ${esc(v.note)}</p>`) : ''}
       ${tags || tip ? `<div class="tags whytags">${tags}${tip ? `<span class="tag bad">${esc(tip)}</span>` : ''}</div>` : ''}
@@ -1250,7 +1250,7 @@ function carouselFor(slot, cur) {
 // (picking them last used to leave no cap that matched, and the cap vanished). Then each one gets its own turn to change.
 function shuffleBuild() {
   let next = S.build.filter(p => S.locks.has(slotOf(p)) || OPTIONAL.includes(slotOf(p)));
-  for (const s of ['Bottoms', 'Tops', 'Shoes', 'Layers', 'Hat', 'Accessory']) {
+  for (const s of ['Bottoms', 'Tops', 'Shoes', 'Layers', 'Hat', 'Belt', 'Accessory']) {
     if (S.locks.has(s) || !S.build.some(inS(s))) continue; // only refill slots you're wearing
     const cur = S.build.find(inS(s)), rest = next.filter(p => !inS(s)(p));
     const good = swapsFor(s, rest).filter(r => r.score != null).slice(0, 5), fresh = good.filter(r => r.item.id !== cur.id);
