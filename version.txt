@@ -1,2 +1,2 @@
-2026.11.19 · v5.59
-Build: under Roll, the best neutral and best color-pop hat and shoes for your outfit, one tap to wear · add a second accessory (chain + bag) with + another accessory; suggestions add two only now and then
+2026.11.19 · v5.60
+Colors to double-check: a piece whose name says one color but is saved as another (Black vest saved grey), or a bright blue saved as navy, shows in Tags that don't add up with a one-tap fix

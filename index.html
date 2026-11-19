@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.19 · v5.59'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.19 · v5.60'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -177,6 +177,19 @@ const wornText = it => stale(it) ? "haven't worn in a while" : '';
 const KIND_ALIAS = { 't-shirt': /\btees?\b|\bt-?shirt/i, sweater: /sweater|sweatshirt|crewneck|knit/i, 'button-up shirt': /button|oxford|dress shirt/i, sweatpants: /sweat|jogger|track ?pant/i, 'cargo pants': /cargo/i, 'baseball cap': /\bcap\b|fitted|snapback/i, 'chain necklace': /chain|necklace|pendant/i, sneakers: /sneaker|dunk|jordan|yeezy|air force|trainer/i };
 const guessKind = it => Object.keys(KINDS).filter(k => KINDS[k] === it.cat).find(k => (KIND_ALIAS[k] ?? new RegExp(`\\b${k.split(/[\s-]/).pop()}`, 'i')).test(it.name));
 // Tags that contradict each other (AI guesses): a "denim jacket" filed under Tops, Air Force 1s called sleek. "It's right" silences it.
+// A color word in the name the saved color disagrees with ("Black vest" saved grey, "cream tee" saved olive). Each word lists the
+// color names that still count as it. Tested on 229 real pieces: 4 flagged, all real mix-ups. "Old Navy" is a brand, not a color.
+const NAME_COLORS = [[/\b(black|onyx|jet)\b/, 'black', ['black']], [/\b(white|off[- ]?white)\b/, 'white', ['white', 'light grey', 'beige']], [/\b(cream|ivory|ecru|bone|oat(meal)?)\b/, 'beige', ['white', 'beige', 'light grey']],
+  [/\b(gr[ae]y|charcoal|heather)\b/, 'grey', ['grey', 'light grey', 'black']], [/\bnavy\b/, 'navy', ['navy', 'denim', 'blue', 'black']], [/\b(powder|sky|baby|light) blue\b/, 'light blue', ['light blue', 'denim', 'blue']],
+  [/\b(blue|royal|cobalt)\b/, 'blue', ['blue', 'navy', 'denim', 'light blue', 'teal']], [/\b(red|scarlet)\b/, 'red', ['red', 'burgundy']], [/\b(burgundy|maroon|wine|oxblood)\b/, 'burgundy', ['burgundy', 'red', 'brown']],
+  [/\b(green|kelly)\b/, 'green', ['green', 'forest', 'olive', 'sage', 'teal']], [/\b(olive|army)\b/, 'olive', ['olive', 'forest', 'sage', 'green', 'brown']], [/\bsage\b/, 'sage', ['sage', 'olive', 'green', 'grey']],
+  [/\b(forest|hunter)\b/, 'forest', ['forest', 'green', 'olive']], [/\b(brown|chocolate|mocha|coffee)\b/, 'brown', ['brown', 'rust', 'camel', 'black']], [/\b(tan|khaki|beige|sand|wheat|stone)\b/, 'beige', ['beige', 'camel', 'light grey', 'white']],
+  [/\bcamel\b/, 'camel', ['camel', 'beige', 'brown']], [/\borange\b/, 'orange', ['orange', 'rust']], [/\b(rust|terracotta)\b/, 'rust', ['rust', 'orange', 'brown', 'red']], [/\b(yellow|mustard)\b/, 'yellow', ['yellow', 'camel', 'orange']],
+  [/\b(pink|rose)\b/, 'pink', ['pink', 'magenta', 'red']], [/\b(purple|lavender|lilac|violet)\b/, 'purple', ['purple', 'pink', 'magenta']], [/\bteal\b/, 'teal', ['teal', 'green', 'blue']]];
+const nameColor = it => { const n = ` ${it.name ?? ''} `.toLowerCase().replace(/old navy/g, ' '), hits = NAME_COLORS.filter(([re]) => re.test(n)); if (!hits.length || !it.color) return null;
+  const now = colorName(it.color); return hits.some(([, , ok]) => ok.includes(now)) ? null : hits[0][1]; };
+// A strong, lighter dark blue (a royal cap in shade) reads as navy, a neutral: ask once.
+const brightNavy = it => { if (!it.color || colorName(it.color) !== 'navy') return false; const { s, l } = hexToHsl(it.color); return s > 0.6 && l > 0.22; };
 const issueOf = it => {
   const dbl = dupOf(it); if (dbl) return { text: `Same photo as your other "${dbl.name}". Added twice`, fix: `dup:${dbl.id}`, label: 'Merge into one' }; // the nudge opens openDoubles for a side-by-side if (it.review) return null;
   if (PRINTABLE.includes(it.cat) && (patternOf(it) === 'graphic' || patternOf(it) === 'allover') && !it.accents?.length && !it.tagOk) return { text: 'Tagged as a print, but no print colors were found. Plain?', fix: 'pattern:solid', label: 'Mark as solid' };
@@ -184,6 +197,8 @@ const issueOf = it => {
   if (it.broken) return { text: "This photo is missing on this phone. Restore it from a backup (Me › Restore backup), or take a new one.", fix: 'photo:1', label: 'New photo' };
   if (it.turnHint) return { text: 'This may be lying sideways', fix: `turn:${it.turnHint}`, label: 'Turn it upright' };
   if (it.tagOk) return null;
+  { const w = nameColor(it); if (w && SWATCHES[w]) return { text: `The name says ${w}, but the color is saved as ${colorName(it.color)}`, fix: `color:${SWATCHES[w]}`, label: `Set to ${w}` }; }
+  if (brightNavy(it)) return { text: "Saved as navy (a neutral), but it's a strong blue. If it's bright royal blue, it's a color pop", fix: `color:${SWATCHES.blue}`, label: 'Set to blue' };
   if (KINDS[it.kind] && KINDS[it.kind] !== it.cat) { const g = guessKind(it); // the name usually knows: "Grey stripe sweatpants" tagged hoodie → the type is wrong, not the category
     return { text: `Type says ${it.kind}, but it's filed under ${it.cat}`, ...(g ? { fix: `kind:${g}`, label: `Set type to ${g}` } : { fix: `cat:${KINDS[it.kind]}`, label: `Move to ${KINDS[it.kind]}` }) }; }
   const g = guessKind(it); // "Washed black tee" typed as hoodie: only flagged when it changes the layering (tee vs hoodie), not jacket vs overshirt
@@ -2474,7 +2489,7 @@ ${ps.map(i => `${i.id} · ${i.name} · ${(i.kind || i.cat).toLowerCase()} · ${c
     if (k === 'photo') { replacing = id; sheet.close(); return replaceInput.click(); }
     if (k === 'dup') { const keep = byId(v), u = keep ? await mergeInto(it, keep) : null; if (!keep) { await del('items', id); S.items = S.items.filter(i => i !== it); }
       render(); const n = S.items.find(dupOf); if (n) openSheet(n.id); else sheet.close(); return keep ? undoToast(`Merged into your other "${keep.name}"`, [u]) : toast('Deleted the duplicate'); }
-    if (k === 'turn') { for (let i = 0; i < +v; i++) await rotate(it); delete it.turnHint; } else it[k] = k === 'fit' ? +v : v; await put('items', it); S.ideas = null; S.cs = {}; toast('Fixed'); const n = S.items.find(issueOf); if (n) openSheet(n.id); else { sheet.close(); } }
+    if (k === 'turn') { for (let i = 0; i < +v; i++) await rotate(it); delete it.turnHint; } else it[k] = k === 'fit' ? +v : v; await put('items', it); S.ideas = null; S.cs = {}; if (k === 'color') S.deck = null; toast('Fixed'); const n = S.items.find(issueOf); if (n) openSheet(n.id); else { sheet.close(); } }
   else if (ds.tagok) { const it = byId(ds.tagok); it.tagOk = true; it.dupOk = true; delete it.turnHint; await put('items', it); const n = S.items.find(issueOf); if (n) openSheet(n.id); else openSheet(it.id); }
   else if ('favs' in ds) { if (sheet.open) { sheet.onclose = null; sheet.close(); } S.view = 'outfits'; S.tab = 'saved'; render(); scrollTo(0, 0); }
   else if (ds.accadd) { S.accPick = S.accPick === ds.accadd ? null : ds.accadd; sheet.querySelector('#accbox').innerHTML = accHtml(byId(ds.accadd)); }

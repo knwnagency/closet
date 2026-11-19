@@ -579,3 +579,14 @@ console.log('edges ok');
   const b0 = sc(busy), c0 = sc(calm); m.setTaste({ busyBias: 0.6 }); const b1 = sc(busy), c1 = sc(calm); m.setTaste();
   assert.ok(b1 < b0 - 1, `busy look drops when you say too busy (${b0.toFixed(1)} → ${b1.toFixed(1)})`); assert.equal(c1, c0, 'a calm look is untouched');
   console.log('too busy ok'); }
+
+// Names vs colors (v5.60): a color word in the name the saved color disagrees with gets a one-tap fix; a strong blue saved as navy is asked once
+{ const { readFileSync } = await import('node:fs'), m = await import('./match.js'), src = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  const { nameColor, brightNavy } = new Function('colorName', 'hexToHsl', src.slice(src.indexOf('const NAME_COLORS'), src.indexOf('const issueOf')) + '; return { nameColor, brightNavy };')(m.colorName, m.hexToHsl);
+  assert.equal(nameColor({ name: 'Black vest', color: '#7d7b78' }), 'black', 'black vest saved grey');
+  assert.equal(nameColor({ name: 'Essentials cream tee', color: '#5c5b38' }), 'beige', 'cream tee saved olive');
+  assert.equal(nameColor({ name: 'Old Navy burgundy flannel', color: '#6b1e2a' }), null, 'Old Navy is a brand');
+  assert.equal(nameColor({ name: 'Red graphic white tee', color: '#f6f5f1' }), null, 'any color word that matches is enough');
+  assert.equal(nameColor({ name: 'Baseball cap', color: '#16286d' }), null, 'no color word, no flag');
+  assert.ok(brightNavy({ color: '#16286d' }), 'royal cap in shade'); assert.ok(!brightNavy({ color: '#1e2a45' }), 'real navy stays navy'); assert.ok(!brightNavy({ color: '#14274b' }), 'dark navy polo stays navy');
+  console.log('name colors ok'); }
