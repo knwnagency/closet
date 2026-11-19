@@ -1,3 +1,2 @@
-2026.11.18 · v5.56
-Build: a lock on every piece and a big Roll button. Lock what you want to keep, Roll for new looks built around it (Undo goes back)
-Rules and Never picked now work in the background, so the app never freezes while they check
+2026.11.18 · v5.57
+Restoring into a new install now brings your settings too (pop color, theme, colors) · backups no longer leave a little text file next to them · no more "script error" pop-ups from things outside Fitted

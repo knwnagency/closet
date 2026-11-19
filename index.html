@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.56'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.57'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -1725,7 +1725,8 @@ function upPill() { let el = document.getElementById('uppill');
   if (!S.pending.length) { el?.remove(); return; }
   if (!el) { el = Object.assign(document.createElement('button'), { id: 'uppill', className: 'uppill' }); el.dataset.go = 'closet'; document.body.append(el); }
   el.textContent = `Adding ${Math.max(1, S.upTotal - S.pending.length + 1)} of ${S.upTotal}`; el.hidden = S.view === 'closet'; }
-addEventListener('error', e => toast(`Error: ${String(e.message).slice(0, 120)}`)); addEventListener('unhandledrejection', e => toast(`Error: ${String(e.reason?.message ?? e.reason).slice(0, 120)}`)); // tap did nothing? say why
+// "Script error." with no file is Safari hiding another site's or an extension's error: nothing in Fitted broke.
+addEventListener('error', e => { if (!e.filename && /^script error\.?$/i.test(e.message ?? '')) return; toast(`Error: ${String(e.message).slice(0, 120)}`); }); addEventListener('unhandledrejection', e => toast(`Error: ${String(e.reason?.message ?? e.reason).slice(0, 120)}`)); // tap did nothing? say why
 function render() {
   const app = document.getElementById('app'), scrollers = () => document.querySelectorAll('.strip, .colls, .chips, .deck, .occ, .shelf, .tbar.ctrl, .looks');
   const keep = render.view === S.view ? [...scrollers()].map(e => e.scrollLeft) : []; // swapping in the builder keeps each strip where it was
@@ -2061,8 +2062,9 @@ async function exportBackup() {
 }
 const download = f => { const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(f), download: f.name }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); };
 async function backedUp() { const now = Date.now(), full = !S.backupFile?.name.includes('-changes'); S.profile = { k: 'me', ...S.profile, lastBackup: now, ...(full ? { lastFull: now } : {}) }; await put('profile', S.profile); toast('Backup saved'); render(); }
+// No share title: iPhone saves a title as its own little text file next to the backup.
 async function shareBackup() {
-  try { await navigator.share({ files: [S.backupFile], title: 'Fitted backup' }); sheet.close(); await backedUp(); }
+  try { await navigator.share({ files: [S.backupFile] }); sheet.close(); await backedUp(); }
   catch (e) { if (e.name !== 'AbortError') { download(S.backupFile); sheet.close(); await backedUp(); } }
 }
 // Copy the closet + your style rules as text, to paste into Claude on any device (the phone app included).
@@ -2091,7 +2093,7 @@ ${S.wish.some(w => !w.got) ? `ON MY WISHLIST\n${S.wish.filter(w => !w.got).map(w
 // Restore = sync: merges a backup from this or another device, newer edit wins. Untrusted file: only well-formed records get in.
 async function importBackup(file) {
   try {
-    const b = JSON.parse(await file.text()), arr = x => Array.isArray(x) ? x : [], str = x => typeof x === 'string';
+    const b = JSON.parse(await file.text()), arr = x => Array.isArray(x) ? x : [], str = x => typeof x === 'string', fresh = !S.items.length || !S.profile?.lastBackup; // a new install (empty, or never backed up) takes the backup's settings
     if (b.app !== 'closet' || !Array.isArray(b.items)) throw new Error('not a closet backup');
     const hex = x => /^#[0-9a-f]{6}$/i.test(x), pic = x => /^data:image\//.test(x), blob = async u => (await fetch(u)).blob();
     // Sync: for each piece, look, day and wish, the newer edit wins (same age: this device wins). Deletes carry over both ways.
@@ -2124,7 +2126,7 @@ async function importBackup(file) {
       for (const [k, r] of Object.entries(b.plan.days)) if (/^\d{4}-\d\d-\d\d$/.test(k) && str(r?.key) && !days[k]) days[k] = { key: r.key, ids: ids(r.ids) };
       for (const [k, r] of Object.entries(b.plan.weekly ?? {})) if (/^[0-6]$/.test(k) && look(r) && !weekly[k]) weekly[k] = look(r);
       await put('profile', { k: 'plan', days, weekly }); }
-    if (b.profile?.k === 'me' && typeof b.profile === 'object' && (!S.profile || stamp(b.profile) > stamp(S.profile))) { await putQuiet('profile', { ...b.profile, k: 'me', done: true, lastBackup: S.profile?.lastBackup ?? b.profile.lastBackup }); other++; } // settings, taste, custom types
+    if (b.profile?.k === 'me' && typeof b.profile === 'object' && (!S.profile || fresh || stamp(b.profile) > stamp(S.profile))) { await putQuiet('profile', { ...b.profile, k: 'me', done: true, lastBackup: S.profile?.lastBackup ?? b.profile.lastBackup }); other++; } // settings, taste, custom types
     // Deletes made on the other device (only if made after the last edit here)
     for (const [key, t] of Object.entries(b.gone && typeof b.gone === 'object' ? b.gone : {})) { const n = key.indexOf('|'), name = key.slice(0, n), k = key.slice(n + 1); if (!SYNCED.has(name) || !(+t > 0)) continue;
       const here = local[name](k); if (here && +t > stamp(here)) { await del(name, k); name === 'items' ? removed++ : other++; } S.gone[key] = Math.max(S.gone[key] ?? 0, +t); }
