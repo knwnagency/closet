@@ -1,2 +1,2 @@
-2026.11.18 · v5.48
-Streaks you can see and things you unlock: a flame on Today, style points and 8 levels (Fresh to Legend), a weekly points graph, and unlocks you keep: Best Dressed (3-day streak), Gold and Chrome pop colors (7), Noir theme (14), Month in Review (Sharp level)
+2026.11.18 · v5.49
+Combine collections: in the capsule picker, + adds one to what is on (Streetwear + Casual), − takes it out · ☆ keeps a collection at the top · plus streaks, style points, levels and unlocks

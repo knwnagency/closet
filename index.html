@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.48'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.49'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -146,7 +146,10 @@ async function thumbOf(blob) {
   return new Promise(r => o.toBlob(r, 'image/webp', 0.85)); // Safari makes a PNG, fine
 }
 const byId = id => S.items.find(i => i.id === id);
-const collById = id => S.colls.find(c => c.id === id) ?? (id?.startsWith('smart:') && SMART[id.slice(6)] ? { id, name: SMART[id.slice(6)][0], ids: [], smart: true } : undefined);
+const collById = id => S.colls.find(c => c.id === id) ?? (id?.startsWith('smart:') && SMART[id.slice(6)] ? { id, name: SMART[id.slice(6)][0], ids: [], smart: true } : undefined)
+  ?? (id?.startsWith('mix:') ? (parts => ({ id, name: parts.map(p => collById(p)?.name ?? '?').join(' + '), ids: [...new Set(parts.flatMap(collIds))], smart: true, mix: parts }))(id.slice(4).split(',')) : undefined);
+const collIds = id => id.startsWith('smart:') ? (SMART[id.slice(6)]?.[1](S.items) ?? []).map(i => i.id) : collById(id)?.ids ?? []; // the pieces in one collection
+const mixParts = () => S.coll?.startsWith('mix:') ? S.coll.slice(4).split(',') : S.coll ? [S.coll] : []; // what's on now, as a list
 // Smart collections fill themselves (pick them in the closet dropdown). Values: smart:<key>.
 const SMART = { never: ['Never worn', its => its.filter(i => !i.wears)], favs: ['Most worn', its => its.filter(i => i.wears).sort((a, b) => b.wears - a.wears).slice(0, 20)],
   summer: ['Hot weather', its => forWeather(its, 28)], winter: ['Cold weather', its => forWeather(its, 4)], dressy: ['Dressed up', its => its.filter(i => dress(i) === 2 || i.cat === 'Accessories')],
@@ -568,7 +571,7 @@ async function addOne(j) {
     { const w = S.fromWish && S.wish.find(x => x.id === S.fromWish); if (w) { item.name = w.name; if (w.price) item.price = w.price; if (w.link) try { item.from = new URL(w.link).hostname.replace(/^www\./, ''); } catch { /* keep it blank */ } S.fromWish = null; } } // copped from the wishlist: it keeps the name you gave it
     try { item.thumb = await thumbOf(img); } catch (e) { console.warn(e); } // small preview now: full-size cut-outs in the grid eat the memory the AI needs
     await put('items', item); S.items.push(item); S.ideas = null; added++;
-    if (S.coll) { const c = collById(S.coll); c.ids.push(item.id); await put('colls', c); toast(`Added to ${c.name}`); } // adding while inside a collection files it there too
+    if (S.coll) { const c = collById(S.coll); if (c && !c.smart) { c.ids.push(item.id); await put('colls', c); toast(`Added to ${c.name}`); } } // adding while inside one of your collections files it there too (not an automatic one or a combination)
   } catch (e) { console.warn(e); toast(`Couldn't read ${j.name}. Try a JPG`); } // one bad file never stops the batch
   finally { del('queue', j.id).catch(() => {}); URL.revokeObjectURL(j.url); S.pending = S.pending.filter(p => p !== j); S.pending.length ? renderSoon() : render(); }
 }
@@ -763,7 +766,7 @@ function outfitsView() {
       : `<div class="empty"><h2>No favorites ${c ? `in ${esc(c.name)} ` : ''}yet</h2><p>Swipe right on a look in Today, or tap Save in the builder. Your keepers land here.</p><button class="btn" data-go="today">Go to Today</button></div>`);
   }
   if (!complete(items)) return top + `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs at least a top, bottoms and shoes.` : 'Add at least one top, one bottom and one pair of shoes to start getting outfits.'}</p>
-    <button class="btn" data-action="${c ? 'collpick' : 'add'}">${c ? 'Add pieces' : 'Add clothes'}</button></div>`;
+    <button class="btn" data-action="${c && !c.smart ? 'collpick' : 'add'}">${c && !c.smart ? 'Add pieces' : 'Add clothes'}</button></div>`;
   if (!MODES[S.mode] && S.mode !== 'today') S.mode = 'today';
   const isToday = S.mode === 'today', w = weatherNow();
   if (isToday && !S.profile?.wx && !S.profile?.wxAsked) { S.profile = { k: 'me', ...S.profile, wxAsked: true }; put('profile', S.profile); setTimeout(askWeather, 400); } // once: the phone asks to share location
@@ -810,14 +813,17 @@ async function shareCapsule(c) {
 }
 function openCapsules() {
   const cover = id => { const ps = id ? (id.startsWith('smart:') ? SMART[id.slice(6)][1](S.items) : collById(id)?.ids.map(byId).filter(Boolean) ?? []) : S.items; return `<span class="capcover">${ps.slice(0, 3).map(p => `<img src="${src(p)}" alt="">`).join('')}</span>`; };
-  const row = (id, name, n, own) => `<div class="caprow ${(S.coll ?? '') === id ? 'on' : ''}"><button class="capsel" data-capsel="${id}" aria-pressed="${(S.coll ?? '') === id}"><i>${ic('check')}</i>${cover(id)}<span><b>${esc(name)}</b><small>${n} piece${n === 1 ? '' : 's'}</small></span></button>
+  const parts = mixParts(), stars = S.profile?.capStars ?? [], starFirst = l => [...l].sort((a, b) => stars.includes(b.id) - stars.includes(a.id));
+  const tools = (id, name) => id ? `<button class="capstar ${stars.includes(id) ? 'on' : ''}" data-capstar="${id}" aria-label="${stars.includes(id) ? 'Unstar' : 'Star'} ${esc(name)}">${stars.includes(id) ? '★' : '☆'}</button><button class="capmix ${parts.includes(id) ? 'on' : ''}" data-capmix="${id}" aria-label="${parts.includes(id) ? 'Take out of the mix' : 'Combine with what is on'}: ${esc(name)}">${parts.includes(id) ? '−' : '+'}</button>` : '';
+  const row = (id, name, n, own) => `<div class="caprow ${(S.coll ?? '') === id || parts.includes(id) ? 'on' : ''}">${tools(id, name)}<button class="capsel" data-capsel="${id}" aria-pressed="${(S.coll ?? '') === id}"><i>${ic('check')}</i>${cover(id)}<span><b>${esc(name)}</b><small>${n} piece${n === 1 ? '' : 's'}</small></span></button>
     ${own ? `<button class="capmenu" data-capmenu aria-expanded="false" aria-label="More for ${esc(name)}">•••</button><span class="capacts"><button class="tag o" data-capedit="${id}">${ic('plus')} Pieces</button><button class="tag o" data-capren="${id}">Rename</button><button class="tag o" data-capdup="${id}">Duplicate</button><button class="tag o" data-capshare="${id}">${ic('share')} Share</button><button class="tag o del" data-capdel="${id}">Delete</button></span>` : ''}</div>`;
-  showSheet(`<div class="pad caps"><div class="pickhead"><div><div class="eyebrow">Today, the builder and packing only use the one you pick</div><h2>Your capsules</h2></div>${closeBtn}</div>
+  showSheet(`<div class="pad caps"><div class="pickhead"><div><div class="eyebrow">Today, Build and Best use only what you pick</div><h2>Your capsules</h2></div>${closeBtn}</div>
+    ${parts.length > 1 ? `<p class="mixnow">Using <b>${esc(capName())}</b> · ${owned().length} pieces</p>` : ''}<p class="sub">Tap one to use it alone, + to combine it with what's on, ☆ to keep it at the top.</p>
     ${row('', 'All clothes', S.items.length, false)}
-    ${S.colls.map(c => row(c.id, c.name, c.ids.filter(byId).length, true)).join('')}
+    ${starFirst(S.colls).map(c => row(c.id, c.name, c.ids.filter(byId).length, true)).join('')}
     ${S.colls.length ? '' : '<p class="sub">Make one for a trip, the club, work or the gym: pick its pieces once, and every look comes only from them.</p>'}
     ${suggestCaps().length ? `<span class="mono">Suggested · tap to keep</span>${suggestCaps().map(([n, ids]) => `<div class="caprow"><button class="capsel" data-capsugg="${esc(n)}"><i>${ic('plus')}</i><span class="capcover">${ids.slice(0, 3).map(id => `<img src="${src(byId(id))}" alt="">`).join('')}</span><span><b>${esc(n)}</b><small>${ids.length} pieces</small></span></button></div>`).join('')}` : ''}
-    <span class="mono">Automatic</span>${Object.entries(SMART).filter(([k]) => k !== 'mine' || mySeason()).map(([k, [n, f]]) => row('smart:' + k, n, f(S.items).length, false)).join('')}
+    <span class="mono">Automatic</span>${starFirst(Object.entries(SMART).filter(([k]) => k !== 'mine' || mySeason()).map(([k, [n, f]]) => ({ id: 'smart:' + k, n, len: f(S.items).length }))).map(x => row(x.id, x.n, x.len, false)).join('')}
     <button class="btn wide" data-action="newcoll">${ic('plus')} Create capsule</button></div>`);
 }
 
@@ -923,7 +929,7 @@ function todayView() {
     <div class="tbar">${capBtn()}${w ? `<span class="tag" hidden title="${esc(wxLine(w))}">${tempText(w.t)} ${esc(WX[w.code] ?? '')}</span>${w.lo != null && w.lo < w.t - 6 && w.hi == null ? `<span class="tag o"><span class="nc">${tempText(w.lo)}</span> later</span>` : ''}` : `<button class="tag o" data-action="weather">+ Weather</button>`}
       <span class="sp"></span><button class="tag o" data-action="filters" aria-label="Filter">${ic('filter')}${nf ? ` ${nf}` : ''}</button><button class="tag o" data-action="shuffle" aria-label="Shuffle">${ic('shuffle')}</button></div>`;
   if (!complete(items)) return top + `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs at least a top, bottoms and shoes.` : 'Add at least one top, one bottom and one pair of shoes. Then this is where your looks land every morning.'}</p>
-    <button class="btn" data-action="${c ? 'collpick' : 'add'}">${c ? 'Add pieces' : 'Add clothes'}</button></div>`;
+    <button class="btn" data-action="${c && !c.smart ? 'collpick' : 'add'}">${c && !c.smart ? 'Add pieces' : 'Add clothes'}</button></div>`;
   const d = getDeck(items), looks = d.looks.map(l => ({ ...l, items: l.ids.map(byId).filter(Boolean) })).filter(l => complete(l.items)), at = Math.min(d.at, looks.length);
   if (!looks.length && S.src) return top + `<div class="empty"><h2>${S.src === 'saved' ? 'No favorites yet' : 'Nothing worn yet'}</h2><p>${S.src === 'saved' ? 'Tap ♡ on a look you like and it shows up here.' : 'Hit Wear today on a look and it shows up here.'}</p><button class="btn" data-src="">Back to fresh picks</button></div>`;
   if (!looks.length) return top + `<div class="empty"><h2>No ${MODES[S.mode]?.label ?? ''} matches</h2><p>${d.blocked ? `Most combos break a proportion rule: <b>${esc(d.blocked.toLowerCase())}</b>. If a fit tag is wrong, fix it on the piece.` : 'Your closet needs more colors for this rule. Try another filter.'}</p><button class="btn" data-action="filters">Change filter</button></div>`;
@@ -2480,6 +2486,8 @@ ${ps.map(i => `${i.id} · ${i.name} · ${(i.kind || i.cat).toLowerCase()} · ${c
   else if ('coll' in ds) { S.coll = ds.coll || null; S.cat = 'All'; S.ideas = null; render(); if (sheet.querySelector('.filters')) openFilters(); }
   else if (ds.action === 'newcoll') openNewColl();
   else if (ds.action === 'capsules') openCapsules();
+  else if (ds.capmix) { const p = mixParts(), next = p.includes(ds.capmix) ? p.filter(x => x !== ds.capmix) : [...p, ds.capmix]; await useCapsule(next.length > 1 ? 'mix:' + next.join(',') : next[0] ?? ''); openCapsules(); toast(next.length > 1 ? `Using ${capName()}` : next.length ? `Using ${capName()}` : 'Using all clothes'); }
+  else if (ds.capstar) { const st = S.profile?.capStars ?? []; S.profile = { k: 'me', ...S.profile, capStars: st.includes(ds.capstar) ? st.filter(x => x !== ds.capstar) : [...st, ds.capstar] }; await put('profile', S.profile); openCapsules(); }
   else if ('capsel' in ds) { await useCapsule(ds.capsel); if (sheet.open) { sheet.onclose = null; sheet.close(); } render(); toast(S.coll ? `Using ${capName()} · only its pieces` : 'Using all clothes'); }
   else if ('capmenu' in ds) { const row = t.closest('.caprow'); t.setAttribute('aria-expanded', row.classList.toggle('open')); }
   else if (ds.capshare) shareCapsule(collById(ds.capshare));

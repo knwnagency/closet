@@ -727,3 +727,7 @@
   .wrapped .flatbtn { display: block; max-width: 260px; margin: 8px auto 0; }
   /* Noir (unlocked at a 14-day streak): true black, same stone-grey tiles so black clothes still read */
   :root[data-theme=noir] { --bg: #000; --s1: #0e0e0d; --tile: #6f6c66; --ink: #f4f2ee; --muted: #a29f97; --hair: rgb(244 242 238 / .12); --accent: #f4f2ee; --bad: #e57a62; --pop: var(--pop-d, #2f7d55); --on-pop: var(--on-pop-d, #fbfaf6); color-scheme: dark; }
+  .caprow { position: relative; } .capstar, .capmix { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; font-size: 18px; color: var(--muted); z-index: 1; }
+  .capstar { right: 46px; } .capmix { right: 2px; font-size: 22px; } .caprow:has(.capmenu) .capstar { right: 88px; } .caprow:has(.capmenu) .capmix { right: 44px; }
+  .capstar.on { color: var(--pop); } .capmix.on { color: var(--ink); } .caprow .capsel { padding-right: 96px; } .caprow:has(.capmenu) .capsel { padding-right: 136px; }
+  .mixnow { margin: 0 0 6px; font-size: 13px; }
