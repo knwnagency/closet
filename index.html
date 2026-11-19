@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.54'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.55'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -106,8 +106,9 @@ S.cs = {}; S.past = []; S.q = ''; S.sort = 'type'; S.calOff = 0; S.locks = new S
 const learnedDress = () => { const looks = [...S.saved, ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(p => p && p.cat !== 'Accessories')).filter(ps => ps.length);
   if (looks.length < 5) return 0; const avg = looks.reduce((t, ps) => t + ps.reduce((u, p) => u + dress(p), 0) / ps.length, 0) / looks.length; return Math.max(-0.6, Math.min(0.6, (avg - 1) * 0.5)); };
 const mySeason = () => COLOR_SEASONS[S.profile?.colorSeason] ?? null, colorsOn = () => !!mySeason() && !S.profile?.colorsOff; // Me › Settings › Your colors
-const syncTaste = () => setTaste({ liked: S.saved.map(s => s.ids), worn: S.log.map(l => l.ids), nope: S.nope, good: [...(colorsOn() ? mySeason().good : []), ...(S.profile?.colors?.good ?? [])], avoid: [...(colorsOn() ? mySeason().avoid : []), ...(S.profile?.colors?.avoid ?? [])],
+const tasteArgs = () => ({ liked: S.saved.map(s => s.ids), worn: S.log.map(l => l.ids), nope: S.nope, good: [...(colorsOn() ? mySeason().good : []), ...(S.profile?.colors?.good ?? [])], avoid: [...(colorsOn() ? mySeason().avoid : []), ...(S.profile?.colors?.avoid ?? [])],
   hair: S.profile?.hair ?? null, never: S.profile?.never ?? [], colorNo: S.profile?.colorNo ?? [], dressBias: (S.profile?.dressBias ?? 0) + learnedDress(), busyBias: S.profile?.busyBias ?? 0, likedColors: [...S.saved, ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean).map(p => colorName(p.color))) });
+const syncTaste = () => setTaste(tasteArgs());
 syncTaste();
 S.mode = MODES[S.profile?.mode] ? S.profile.mode : 'today'; // the style you picked last time; Today (a mix of every style) by default
 // Ask the browser to keep the closet. Safari clears sites unused for 7 days unless they're on the Home Screen, so Me shows the answer.
@@ -322,6 +323,18 @@ const todayPicks = (items, t) => today(items, { t: dressTemp(t), season: seasonN
 const sig = () => S.items.map(i => [i.id, i.cat, i.color, i.fit, i.vibe, i.patterned, i.name, i.kind].join()).join('|');
 let gapCache = { sig: null, list: null };
 let gapWorker = null;
+// Rules and Never picked run in looks-worker.js (they froze the phone for 7s and 25s). Falls back to this thread.
+let looksWorker = null, jobN = 0; const jobWait = new Map();
+const runJob = (job, data) => new Promise(res => {
+  const msg = { ...data, job, id: ++jobN, taste: tasteArgs(), items: data.items.map(({ img, photo, thumb, selfie, ...r }) => r) };
+  const here = () => import('./looks-worker.js').then(m => res(m.jobs[job](msg)));
+  try {
+    looksWorker ??= new Worker('looks-worker.js', { type: 'module' });
+    looksWorker.onmessage = e => { jobWait.get(e.data.id)?.[0](e.data); jobWait.delete(e.data.id); };
+    looksWorker.onerror = () => { looksWorker = null; const left = [...jobWait.values()]; jobWait.clear(); for (const [r, m] of left) import('./looks-worker.js').then(w => r(w.jobs[m.job](m))); };
+    jobWait.set(msg.id, [res, msg]); looksWorker.postMessage(msg);
+  } catch { setTimeout(here, 30); }
+});
 function getGaps() {
   if (gapCache.sig === sig()) return gapCache.list;
   if (!gapCache.busy) { gapCache.busy = true; const want = sig();
@@ -1027,33 +1040,33 @@ function openBrands() {
 }
 // Skipped pieces (Me): 8 fresh sets of today's looks, with Today's own weather, season and settings. Every piece that lands in none,
 // and the one main reason, with a fix. Pieces sitting out on purpose (laundry, stored, season, capsule) are listed apart. Cached for the day.
-function rareReport() {
+async function rareReport() {
   const w = weatherNow(), t = dressTemp(w?.t), rain = RAINY(S.profile?.wx?.code ?? 0), items = pool(), sn = seasonNow();
   const sig = [VERSION, dayKey(), S.coll ?? '', closetVer, S.items.length, !!S.profile?.hoodieAlone, sn, t == null ? '' : Math.round(t / 4)].join('|');
   if (S.rare?.sig === sig) return S.rare;
-  const t0 = performance.now(), hits = new Map(), picked = {}; let seed = 5; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  for (let r = 0; r < 8; r++) for (const o of today(items, { t, rain, season: sn, alone: !!S.profile?.hoodieAlone, n: 12, rand })) for (const p of o.items) { hits.set(p.id, (hits.get(p.id) ?? 0) + 1); (picked[p.cat] ??= []).push(o.score - 0.75); } // Today adds about 0.75 of randomness
-  const med = c => { const v = (picked[c] ?? []).sort((a, b) => a - b); return v.length ? v[v.length >> 1] : 0; };
-  const ok = forWeather(items, t, rain, sn);
-  const rows = S.items.filter(it => !hits.get(it.id)).map(it => {
+  const t0 = performance.now(), ok = forWeather(items, t, rain, sn);
+  const r = await runJob('rare', { items, opts: { t, rain, season: sn, alone: !!S.profile?.hoodieAlone }, okIds: ok.map(p => p.id), check: ok.filter(p => !(p.rate < 0)).map(p => p.id) });
+  const med = c => r.med[c] ?? 0;
+  const rows = S.items.filter(it => !r.hits[it.id]).map(it => {
     if (it.dirty) return { it, out: 'In the laundry' };
     if (it.stored) return { it, out: 'Stored for the season' };
     if (!items.includes(it)) return { it, out: `Not in ${capName()}` };
     if (!ok.includes(it)) return { it, out: forWeather(items, t, rain).includes(it) ? 'Out of season' : "Today's weather" };
     if (it.rate < 0) return { it, txt: 'Set to "Suggest it less"', a: `data-rate="${it.id}|0"`, l: 'Back to normal' };
     const iss = issueOf(it); if (iss) return { it, txt: `Tags may be off: ${iss.text}`, a: `data-open="${it.id}"`, l: 'Check tags' };
-    const made = madeWith(ok, it, 4), best = made[0]?.score;
-    if (!made.length) return { it, txt: 'No look passes your rules with it. Usually a tag (fit, vibe or color) is off', a: `data-open="${it.id}"`, l: 'Check tags' };
-    if (made.length < 2) return { it, txt: 'Only 1 look passes your rules with it', a: `data-quick="made|${it.id}"`, l: 'See it' };
-    if (best >= med(it.cat) - 0.5) return null; // it can win: it just didn't come up in these 8 days
+    const [count, best] = r.made[it.id] ?? [0, null];
+    if (!count) return { it, txt: 'No look passes your rules with it. Usually a tag (fit, vibe or color) is off', a: `data-open="${it.id}"`, l: 'Check tags' };
+    if (count < 2) return { it, txt: 'Only 1 look passes your rules with it', a: `data-quick="made|${it.id}"`, l: 'See it' };
+    if (best >= med(it.cat) - 0.7) return null; // it can win: it just didn't come up in these 8 days
     return { it, txt: `Works, but your other ${it.cat.toLowerCase()} score higher`, a: `data-rate="${it.id}|1"`, l: 'Suggest it more' };
   }).filter(Boolean).sort((a, b) => !!a.out - !!b.out || (a.it.cat === 'Accessories') - (b.it.cat === 'Accessories') || CATS.indexOf(a.it.cat) - CATS.indexOf(b.it.cat));
   perf['Never picked'] = Math.round(performance.now() - t0);
   return S.rare = { sig, rows, n: rows.filter(r => !r.out).length };
 }
 async function openRareAll() {
-  toast('Checking every piece…'); await new Promise(r => setTimeout(r, 30));
-  const { rows, n } = rareReport(), act = rows.filter(r => !r.out), out = rows.filter(r => r.out);
+  const scan = !S.rare; if (scan) showSheet(`<div class="pad rarelist"><div class="pickhead"><div><div class="eyebrow">8 fresh sets of today's looks</div><h2>Never picked</h2></div>${closeBtn}</div><div class="scan rarescan"><i></i><span class="mono">Checking every piece</span></div></div>`);
+  const { rows, n } = await rareReport(); if (scan && !sheet.querySelector('.rarescan')) return render(); // closed while it checked: the Me tile still updates
+  const act = rows.filter(r => !r.out), out = rows.filter(r => r.out);
   render(); // the Me tile behind shows the new count
   const row = r => `<div class="rrow"><button data-open="${r.it.id}"><img src="${src(r.it)}" alt=""></button><div><b>${esc(r.it.name)}</b><span class="mono">${esc(r.txt ?? r.out)}</span></div>${r.a ? `<button class="tag o" ${r.a}>${r.l}</button>` : ''}</div>`;
   showSheet(`<div class="pad rarelist"><div class="pickhead"><div><div class="eyebrow">8 fresh sets of today's looks</div><h2>${n ? `${n} piece${n > 1 ? 's' : ''} never picked` : 'Every piece gets picked'}</h2></div>${closeBtn}</div>
@@ -1152,13 +1165,16 @@ const RULES = [
 const ruleSig = () => [VERSION, S.coll ?? '', closetVer, S.items.length, S.saved.length, S.log.length, colorsOn() && S.profile.colorSeason].join('|');
 const ruleHits = () => { const items = pool(), sig = ruleSig();
   if (S.ruleLooks?.sig === sig) return S.ruleLooks;
-  const looks = complete(items) ? timed('Rules', () => lookPool(items)).map(o => ({ ...o, why: lookRules(o) })) : [], hits = {};
+  if (complete(items) && S.rulePool?.sig !== sig) { if (S.rulePool?.busy !== sig) { const t0 = performance.now(); S.rulePool = { busy: sig };
+      runJob('pool', { items }).then(r => { perf.Rules = Math.round(performance.now() - t0); S.rulePool = { sig, looks: r.looks.map(o => ({ ...o, items: o.ids.map(byId).filter(Boolean) })) }; if (S.view === 'inspo' && S.inspoTab === 'rules') render(); }); }
+    return null; }
+  const looks = complete(items) ? S.rulePool.looks : [], hits = {};
   const mine = [...S.saved, ...wornLooks()].filter((r, i, a) => a.findIndex(x => x.key === r.key) === i).map(r => { const ps = r.ids.map(byId).filter(Boolean), b = complete(ps) && bestMode(ps); return b?.score != null ? { key: r.key, items: ps, mode: b.mode, score: b.score, note: b.note, mine: true } : null; }).filter(Boolean).map(o => ({ ...o, why: lookRules(o) }));
   const test = (re, mode, fn) => o => re ? o.why.some(n => re.test(n)) : mode ? o.mode === mode : fn(o);
   for (const [, rules] of RULES) for (const [id, , , re, mode, fn] of rules) { const ok = test(re, mode, fn), own = mine.filter(ok), keys = new Set(own.map(o => o.key)); hits[id] = [...own.sort((a, b) => b.score - a.score), ...looks.filter(o => ok(o) && !keys.has(o.key)).sort((a, b) => b.score - a.score)]; } // yours first
   return S.ruleLooks = { sig, hits }; };
 function rulesView() {
-  if (!S.ruleLooks || S.ruleLooks.sig !== ruleSig()) { setTimeout(() => { ruleHits(); if (S.view === 'inspo' && S.inspoTab === 'rules') render(); }, 60); return `<div class="scan"><i></i><span class="mono">Finding looks for every rule</span></div>`; } // takes a moment on a big closet
+  if (!ruleHits()) return `<div class="scan"><i></i><span class="mono">Finding looks for every rule</span></div>`; // takes a moment on a big closet
   const { hits } = ruleHits(), empty = RULES.flatMap(([, rs]) => rs).filter(r => !hits[r[0]].length);
   const rrow = ([id, t, d]) => `<button class="rulerow ${hits[id].length ? '' : 'none'}" data-rule="${id}"><span><b>${t}</b><small>${d}</small></span><span class="mono">${hits[id].length || 'none yet'}</span></button>`;
   return `<p class="sub">Your style rules, run backwards. Tap one to see the looks in your closet that follow it.</p>
@@ -1166,7 +1182,7 @@ function rulesView() {
     ${empty.length ? `<details class="more"><summary><span>${empty.length} rule${empty.length > 1 ? 's' : ''} with no looks yet</span><span class="mono">add pieces to unlock</span></summary>${empty.map(rrow).join('')}</details>` : ''}`;
 }
 function openRule(id) {
-  const r = RULES.flatMap(([, rs]) => rs).find(x => x[0] === id), looks = (ruleHits().hits[id] ?? []).slice(0, 12); if (!r) return;
+  const r = RULES.flatMap(([, rs]) => rs).find(x => x[0] === id), looks = (ruleHits()?.hits[id] ?? []).slice(0, 12); if (!r) return;
   S.made = looks; // Save and Open in Build find these
   const note = o => (r[3] ? o.why.find(n => r[3].test(n)) : MODES[o.mode]?.label) ?? '', same = new Set(looks.map(note)).size <= 1, label = o => same ? lookName(o.items) : note(o); // the same reason on every card says nothing
   showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${looks.length ? `${looks.length} look${looks.length > 1 ? 's' : ''} from your closet` : 'Style rule'}</div><h2>${r[1]}</h2></div>${closeBtn}</div>

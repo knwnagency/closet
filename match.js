@@ -585,7 +585,7 @@ const collect = (items, opts, modes = VISIBLE(), per = 10) => {
   for (const m of modes) for (const o of generate(items, m, { n: per, ...opts })) if ((best.get(o.key)?.score ?? -99) < o.score) best.set(o.key, { ...o, mode: m, anchor: opts.anchor });
   return [...best.values()];
 };
-export const madeWith = (items, anchor, n = 5) => varied(collect(items, { anchor }), n);
+export const madeWith = (items, anchor, n = 5, opts = {}) => varied(collect(items, { anchor, ...opts }), n); // opts.tries: fewer random tries for quick checks
 // Rules library (Inspo › Rules): a wide pool of looks from your closet, plus looks built around each all-over pattern
 // (pattern pairs score lower, so they'd hardly show up otherwise). Then every rule a look follows, as its reason lines.
 export const lookPool = items => { const out = new Map(); for (const o of collect(items, { rand: seeded() }, VISIBLE(), 60)) out.set(o.key, o);

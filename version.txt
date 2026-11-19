@@ -1,2 +1,2 @@
-2026.11.18 · v5.54
-Belts and wallet chains get their own spot in Build (+ belt), so a fit can be cap + chain + belt · suggestions only add a belt now and then
+2026.11.18 · v5.55
+Rules and Never picked now work in the background, so the app never freezes while they check (they took 7 and 25 seconds on your phone) · Never picked is about twice as fast
