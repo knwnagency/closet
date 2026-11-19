@@ -731,3 +731,4 @@
   .capstar { right: 46px; } .capmix { right: 2px; font-size: 22px; } .caprow:has(.capmenu) .capstar { right: 88px; } .caprow:has(.capmenu) .capmix { right: 44px; }
   .capstar.on { color: var(--pop); } .capmix.on { color: var(--ink); } .caprow .capsel { padding-right: 96px; } .caprow:has(.capmenu) .capsel { padding-right: 136px; }
   .mixnow { margin: 0 0 6px; font-size: 13px; }
+  .offask { display: block; margin: 14px 0 6px; text-transform: none; letter-spacing: 0; } .offsheet .btn[disabled] { opacity: .5; }

@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.50'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.51'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -107,7 +107,7 @@ const learnedDress = () => { const looks = [...S.saved, ...S.log].map(r => r.ids
   if (looks.length < 5) return 0; const avg = looks.reduce((t, ps) => t + ps.reduce((u, p) => u + dress(p), 0) / ps.length, 0) / looks.length; return Math.max(-0.6, Math.min(0.6, (avg - 1) * 0.5)); };
 const mySeason = () => COLOR_SEASONS[S.profile?.colorSeason] ?? null, colorsOn = () => !!mySeason() && !S.profile?.colorsOff; // Me › Settings › Your colors
 const syncTaste = () => setTaste({ liked: S.saved.map(s => s.ids), worn: S.log.map(l => l.ids), nope: S.nope, good: [...(colorsOn() ? mySeason().good : []), ...(S.profile?.colors?.good ?? [])], avoid: [...(colorsOn() ? mySeason().avoid : []), ...(S.profile?.colors?.avoid ?? [])],
-  hair: S.profile?.hair ?? null, never: S.profile?.never ?? [], colorNo: S.profile?.colorNo ?? [], dressBias: (S.profile?.dressBias ?? 0) + learnedDress(), likedColors: [...S.saved, ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean).map(p => colorName(p.color))) });
+  hair: S.profile?.hair ?? null, never: S.profile?.never ?? [], colorNo: S.profile?.colorNo ?? [], dressBias: (S.profile?.dressBias ?? 0) + learnedDress(), busyBias: S.profile?.busyBias ?? 0, likedColors: [...S.saved, ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean).map(p => colorName(p.color))) });
 syncTaste();
 S.mode = MODES[S.profile?.mode] ? S.profile.mode : 'today'; // the style you picked last time; Today (a mix of every style) by default
 // Ask the browser to keep the closet. Safari clears sites unused for 7 days unless they're on the Home Screen, so Me shows the answer.
@@ -859,35 +859,40 @@ const moreWays = () => `<article class="dcard slide moreways"><div class="dtop">
     <button data-go="build"><b>Build your own</b><span>pick piece by piece</span></button><button data-action="addinspo"><b>From a pic</b><span>match an inspo photo</span></button></div>
   <span class="mono">ask Claude</span><div class="tags">${["What to wear today", "What's missing from my closet", 'Pack a 3-day trip', 'Dinner outfits'].map(q => `<button class="tag o" data-askclaude="${esc(q)}">${esc(q)}</button>`).join('')}</div></article>`;
 // "Not for me" on a Today look: say what's off, and each answer changes one thing the picker uses.
-const OFF = [['piece', "I don't wear one of these"], ['pair', "Two of these don't go"], ['colors', "The colors don't work"], ['dressy', 'Too dressy'], ['sporty', 'Too sporty'], ['cold', 'Too cold for today'], ['warm', 'Too warm for today'], ['today', 'Just not today']];
-function openOff(key, kind = null, picked = []) {
+// Not for me: tap every reason that fits, pick as many pieces or colors as you need, then Save. Each reason teaches its own thing.
+const OFF = [['piece', "I don't wear these", 'Which ones?'], ['pair', "These don't go together", 'Pick 2 or more'], ['colors', "The colors don't work", 'Pick 2 or more colors'], ['busy', 'Too busy'], ['dressy', 'Too dressy'], ['sporty', 'Too sporty'], ['cold', 'Too cold for today'], ['warm', 'Too warm for today'], ['today', 'Just not today']];
+const OFF_MIN = { piece: 1, pair: 2, colors: 2 };
+function openOff(key) {
   const look = S.deck?.looks.find(l => l.key === key); if (!look) return;
-  const ps = look.ids.map(byId).filter(Boolean), note = sheet.querySelector('[name=offnote]')?.value ?? S.offNote ?? '';
-  const pick = kind === 'colors' ? [...new Set(ps.filter(p => p.cat !== 'Accessories').map(p => colorName(p.color)))].map(n => [n, `<i class="dot" style="background:${ps.find(p => colorName(p.color) === n).color}"></i>${n}`])
+  const ps = look.ids.map(byId).filter(Boolean), note = sheet.querySelector('[name=offnote]')?.value ?? S.offPick?.note ?? '';
+  const st = S.offPick = S.offPick?.key === key ? { ...S.offPick, note } : { key, why: [], piece: [], pair: [], colors: [], note };
+  const choices = kind => kind === 'colors' ? [...new Set(ps.filter(p => p.cat !== 'Accessories').map(p => colorName(p.color)))].map(n => [n, `<i class="dot" style="background:${ps.find(p => colorName(p.color) === n).color}"></i>${n}`])
     : ps.map(p => [p.id, `<img src="${src(p)}" alt="">${esc(p.name)}`]);
-  showSheet(`<div class="pad offsheet"><div class="pickhead"><div><div class="eyebrow">Not for me</div><h2>${kind ? { piece: 'Which one?', pair: 'Which two?', colors: 'Which two colors?' }[kind] : "What's off?"}</h2></div>${closeBtn}</div>
-    <div class="offlook">${flat(ps)}</div>
-    ${kind ? `<div class="offpick ${kind === 'colors' ? 'colors' : ''}">${pick.map(([v, h]) => `<button class="${picked.includes(v) ? 'on' : ''}" data-offpick="${key}|${kind}|${esc(v)}">${h}</button>`).join('')}</div>
-      <button class="btn ghost wide" data-off="${key}">Back</button>`
-    : `<div class="offs">${OFF.map(([k, l]) => `<button class="tag o" data-offwhy="${key}|${k}">${l}</button>`).join('')}</div>
-      <label class="cell offnote"><span>Anything else?</span><textarea name="offnote" rows="2" placeholder="saved for Claude, e.g. I never tuck tees">${esc(note)}</textarea></label>`}</div>`);
-  S.offPick = { key, kind, picked }; S.offNote = note;
+  const ready = st.why.length && st.why.every(k => !OFF_MIN[k] || st[k].length >= OFF_MIN[k]), y = sheet.open ? sheet.scrollTop : 0; // each tap redraws: stay where you were
+  showSheet(`<div class="pad offsheet"><div class="pickhead"><div><div class="eyebrow">Not for me</div><h2>What's off?</h2></div>${closeBtn}</div>
+    <div class="offlook">${flat(ps)}</div><p class="sub">Tap everything that fits.</p>
+    <div class="offs">${OFF.map(([k, l]) => `<button class="tag ${st.why.includes(k) ? '' : 'o'}" data-offwhy="${key}|${k}" aria-pressed="${st.why.includes(k)}">${l}</button>`).join('')}</div>
+    ${OFF.filter(([k]) => OFF_MIN[k] && st.why.includes(k)).map(([k, l, ask]) => `<span class="mono offask">${l} · ${ask}</span><div class="offpick ${k === 'colors' ? 'colors' : ''}">${choices(k).map(([v, h]) => `<button class="${st[k].includes(v) ? 'on' : ''}" data-offpick="${key}|${k}|${esc(v)}" aria-pressed="${st[k].includes(v)}">${h}</button>`).join('')}</div>`).join('')}
+    <label class="cell offnote"><span>Anything else?</span><textarea name="offnote" rows="2" placeholder="saved for Claude, e.g. I never tuck tees">${esc(note)}</textarea></label>
+    <button class="btn wide" data-offsave="${key}" ${ready ? '' : 'disabled'}>${ready ? 'Save' : st.why.length ? 'Pick the pieces or colors above' : 'Tap what\'s off'}</button></div>`);  sheet.scrollTop = y;
 }
-async function applyOff(key, kind, vals = []) {
-  const look = S.deck?.looks.find(l => l.key === key); if (!look) return;
-  const ps = look.ids.map(byId).filter(Boolean), p0 = S.profile ?? { k: 'me' }, note = (S.offNote ?? '').trim(); let msg;
-  if (kind === 'piece') { const it = byId(vals[0]); it.rate = -1; it.rateAsked = true; await put('items', it); msg = `${it.name} saved for special occasions`; }
-  if (kind === 'pair') { p0.never = [...(p0.never ?? []), vals.slice(0, 2)]; msg = `${vals.map(id => byId(id)?.name).join(' and ')} won't be paired again`; }
-  if (kind === 'colors') { p0.colorNo = [...(p0.colorNo ?? []), vals.slice(0, 2)]; msg = `Fewer looks with ${vals.join(' + ')}`; }
-  if (kind === 'dressy' || kind === 'sporty') { p0.dressBias = Math.max(-1, Math.min(1, (p0.dressBias ?? 0) + (kind === 'dressy' ? -0.3 : 0.3))); msg = kind === 'dressy' ? 'Got it: more casual looks' : 'Got it: dressier looks'; }
-  if (kind === 'cold' || kind === 'warm') { p0.tempBias = Math.max(-9, Math.min(9, (p0.tempBias ?? 0) + (kind === 'cold' ? 3 : -3))); msg = kind === 'cold' ? 'Got it: warmer looks from now on' : 'Got it: lighter looks from now on'; }
-  if (kind === 'today') msg = 'Hidden for today';
-  if (note) p0.notes = [...(p0.notes ?? []), { at: dayKey(), why: kind, look: ps.map(p => p.name).join(' + '), text: note.slice(0, 300) }].slice(-50); // your words, for Claude
-  if (kind !== 'today') { S.nope = [...S.nope, look.ids].slice(-200); await put('profile', { k: 'nope', list: S.nope }); } // this exact look never comes back
-  S.profile = p0; await put('profile', S.profile); syncTaste(); S.offNote = ''; S.offPick = null;
+const pairsOf = xs => xs.flatMap((a, i) => xs.slice(i + 1).map(b => [a, b])); // 3 pieces that don't go = 3 pairs that never meet again
+async function applyOff(key) {
+  const look = S.deck?.looks.find(l => l.key === key), st = S.offPick; if (!look || !st) return;
+  const ps = look.ids.map(byId).filter(Boolean), p0 = S.profile ?? { k: 'me' }, note = (sheet.querySelector('[name=offnote]')?.value ?? st.note ?? '').trim(), msg = [], why = st.why;
+  if (why.includes('piece')) { for (const id of st.piece) { const it = byId(id); it.rate = -1; it.rateAsked = true; await put('items', it); } msg.push(`${st.piece.length > 1 ? `${st.piece.length} pieces` : byId(st.piece[0])?.name} saved for special occasions`); }
+  if (why.includes('pair')) { p0.never = [...(p0.never ?? []), ...pairsOf(st.pair)]; msg.push(`${st.pair.map(id => byId(id)?.name).join(', ')} won't be paired again`); }
+  if (why.includes('colors')) { p0.colorNo = [...(p0.colorNo ?? []), ...pairsOf(st.colors)]; msg.push(`fewer looks with ${st.colors.join(' + ')}`); }
+  if (why.includes('busy')) { p0.busyBias = Math.min(1.5, (p0.busyBias ?? 0) + 0.4); msg.push('calmer looks from now on'); }
+  for (const k of ['dressy', 'sporty']) if (why.includes(k)) { p0.dressBias = Math.max(-1, Math.min(1, (p0.dressBias ?? 0) + (k === 'dressy' ? -0.3 : 0.3))); msg.push(k === 'dressy' ? 'more casual looks' : 'dressier looks'); }
+  for (const k of ['cold', 'warm']) if (why.includes(k)) { p0.tempBias = Math.max(-9, Math.min(9, (p0.tempBias ?? 0) + (k === 'cold' ? 3 : -3))); msg.push(k === 'cold' ? 'warmer looks from now on' : 'lighter looks from now on'); }
+  if (why.includes('today')) msg.push('hidden for today');
+  if (note) p0.notes = [...(p0.notes ?? []), { at: dayKey(), why: why.join(', '), look: ps.map(p => p.name).join(' + '), text: note.slice(0, 300) }].slice(-50); // your words, for Claude
+  if (why.some(k => k !== 'today')) { S.nope = [...S.nope, look.ids].slice(-200); await put('profile', { k: 'nope', list: S.nope }); } // this exact look never comes back
+  S.profile = p0; await put('profile', S.profile); syncTaste(); S.offPick = null;
   S.deck.looks = S.deck.looks.filter(l => l.key !== key); S.deck.at = Math.min(S.deck.at, Math.max(0, S.deck.looks.length - 1)); put('profile', S.deck);
-  if (['dressy', 'sporty', 'cold', 'warm'].includes(kind)) S.deck = null; // a new feel for the whole set
-  sheet.close(); render(); toast(msg);
+  if (why.some(k => ['busy', 'dressy', 'sporty', 'cold', 'warm'].includes(k))) S.deck = null; // a new feel for the whole set
+  sheet.close(); render(); const t = msg.join(' · '); toast(t[0].toUpperCase() + t.slice(1));
 }
 // The line under a Today title says something the title and chip don't: fit, layering, a print echo. Never the color combo again.
 function whyLine(o, title, cmb) {
@@ -1078,6 +1083,7 @@ const toldList = () => { const p = S.profile ?? {}, less = S.items.filter(i => i
     ...(p.never ?? []).map((pr, i) => [`Never together: ${pr.map(id => esc(byId(id)?.name ?? 'a deleted piece')).join(' + ')}`, `data-untold="never|${i}"`]),
     ...(p.colorNo ?? []).map((pr, i) => [`Colors that don't work: ${pr.map(esc).join(' + ')}`, `data-untold="colorNo|${i}"`]),
     ...(p.dressBias ? [[`Looks lean ${p.dressBias < 0 ? 'more casual' : 'dressier'}`, 'data-untold="dressBias|0"']] : []),
+    ...(p.busyBias ? [[`Calmer looks (${p.busyBias >= 1.2 ? 'much calmer' : p.busyBias >= 0.8 ? 'calmer' : 'a little calmer'})`, 'data-untold="busyBias|0"']] : []),
     ...(p.tempBias ? [[`Dressing ${Math.abs(p.tempBias)}° ${p.tempBias > 0 ? 'warmer' : 'lighter'} than the forecast`, 'data-untold="tempBias|0"']] : []),
     ...(p.notes ?? []).map((n, i) => [`Note for Claude: "${esc(n.text)}"`, `data-untold="notes|${i}"`])];
   if (!rows.length) return '';
@@ -2386,9 +2392,9 @@ ${ps.map(i => `${i.id} · ${i.name} · ${(i.kind || i.cat).toLowerCase()} · ${c
     if (!fresh) return toast('No other look fits right now');
     d.looks[at] = { key: fresh.key, ids: fresh.items.map(p => p.id), mode: fresh.mode ?? S.mode, note: fresh.note }; put('profile', d); render(); toast('Swapped that look'); }
   else if (ds.off) openOff(ds.off);
-  else if (ds.offwhy) { const [key, kind] = ds.offwhy.split('|'); S.offNote = sheet.querySelector('[name=offnote]')?.value ?? ''; if (['piece', 'pair', 'colors'].includes(kind)) openOff(key, kind); else await applyOff(key, kind); }
-  else if (ds.offpick) { const [key, kind, v] = ds.offpick.split('|'), { picked = [] } = S.offPick ?? {}, next = picked.includes(v) ? picked.filter(x => x !== v) : [...picked, v];
-    if (next.length >= (kind === 'piece' ? 1 : 2)) await applyOff(key, kind, next); else openOff(key, kind, next); }
+  else if (ds.offwhy) { const [key, k] = ds.offwhy.split('|'); openOff(key); const st = S.offPick; st.why = st.why.includes(k) ? st.why.filter(x => x !== k) : [...st.why, k]; openOff(key); }
+  else if (ds.offpick) { const [key, k, v] = ds.offpick.split('|'); openOff(key); const st = S.offPick; st[k] = st[k].includes(v) ? st[k].filter(x => x !== v) : [...st[k], v]; openOff(key); }
+  else if (ds.offsave) await applyOff(ds.offsave);
   else if (ds.deck === 'back') { S.deck.at = 0; put('profile', S.deck); render(); }
   else if (ds.deck) deckAct(ds.deck === 'next' ? 'next' : ds.deck);
   else if (ds.action === 'unanchor') { S.anchor = null; S.ideas = null; render(); }

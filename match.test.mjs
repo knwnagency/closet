@@ -569,3 +569,13 @@ console.log('edges ok');
   assert.equal(m.colorName('#c08a3e'), 'camel', 'wheat Timbs read camel');
   assert.ok(!m.style(FAVS['Olive work jacket, denim shirt, graphic tee, carpenter jeans, burgundy loafers']).some(([v, n]) => v < 0 && /denim/i.test(n)), 'a denim shirt under a jacket is not a near miss');
   console.log(`your 10 favorite fits pass`); }
+
+// Not for me › Too busy: busy looks drop, calm ones don't (2026-11-18)
+{ const m = await import('./match.js');
+  const mk = (id, cat, kind, color, x = {}) => ({ id, name: kind, cat, kind, color, fit: 1, vibe: 'casual', ...x });
+  const calm = [mk('t', 'Tops', 't-shirt', '#f2f2f0'), mk('j', 'Bottoms', 'jeans', '#1c1c1c'), mk('s', 'Shoes', 'sneakers', '#f4f4f2')];
+  const busy = [mk('g', 'Tops', 't-shirt', '#c0392b', { pattern: 'graphic', accents: ['#e9c548'] }), mk('l', 'Layers', 'jacket', '#2f5fb5'), mk('c', 'Bottoms', 'cargo pants', '#5c5b48', { name: 'Camo pants', pattern: 'allover' }), mk('s2', 'Shoes', 'sneakers', '#e2782c'), mk('h', 'Accessories', 'baseball cap', '#3f7a52'), mk('ch', 'Accessories', 'chain necklace', '#c0c0c0')];
+  const sc = ps => Math.max(...['classic', 'street', 'combos', 'formula', 'complementary', 'analogous', 'triadic'].map(k => m.scoreOutfit(ps, k)?.score ?? -99));
+  const b0 = sc(busy), c0 = sc(calm); m.setTaste({ busyBias: 0.6 }); const b1 = sc(busy), c1 = sc(calm); m.setTaste();
+  assert.ok(b1 < b0 - 1, `busy look drops when you say too busy (${b0.toFixed(1)} → ${b1.toFixed(1)})`); assert.equal(c1, c0, 'a calm look is untouched');
+  console.log('too busy ok'); }

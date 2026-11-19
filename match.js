@@ -369,14 +369,14 @@ export function fixTip(ps) {
 // ---------- your taste: learned from favorites, wears and "not for me" ----------
 // Pairs of pieces you keep putting together score higher; pairs from looks you rejected score lower; a rejected look never comes back.
 // ponytail: module-level state set by the app (setTaste) so every scorer sees it without threading opts through. Fine for one user.
-let TASTE = { pair: new Map(), nope: new Set(), good: [], avoid: [], hair: null, cpair: new Map(), never: new Set(), colorNo: new Set(), dressBias: 0 };
+let TASTE = { pair: new Map(), nope: new Set(), good: [], avoid: [], hair: null, cpair: new Map(), never: new Set(), colorNo: new Set(), dressBias: 0, busyBias: 0 };
 // liked/worn/nope: lists of piece-id arrays. good/avoid: color names. hair: black|brown|blonde|red|grey. likedColors: color-name lists of looks you saved or wore.
-export function setTaste({ liked = [], worn = [], nope = [], good = [], avoid = [], hair = null, likedColors = [], never = [], colorNo = [], dressBias = 0 } = {}) {
+export function setTaste({ liked = [], worn = [], nope = [], good = [], avoid = [], hair = null, likedColors = [], never = [], colorNo = [], dressBias = 0, busyBias = 0 } = {}) {
   const pair = new Map(), bump = (ids, w) => { for (const [a, b] of pairs([...ids].sort())) pair.set(a + '|' + b, (pair.get(a + '|' + b) ?? 0) + w); };
   liked.forEach(ids => bump(ids, 1)); worn.forEach(ids => bump(ids, 0.5)); nope.forEach(ids => bump(ids, -1));
   const cpair = new Map(); // color pairs you keep choosing (black + olive), not just piece pairs
   for (const ns of likedColors) for (const [a, b] of pairs([...new Set(ns)].sort())) cpair.set(a + '|' + b, (cpair.get(a + '|' + b) ?? 0) + 1);
-  TASTE = { pair, nope: new Set(nope.map(ids => [...ids].sort().join())), good, avoid, hair, cpair, never: new Set(never.map(p => [...p].sort().join('|'))), colorNo: new Set(colorNo.map(p => [...p].sort().join('|'))), dressBias };
+  TASTE = { pair, nope: new Set(nope.map(ids => [...ids].sort().join())), good, avoid, hair, cpair, never: new Set(never.map(p => [...p].sort().join('|'))), colorNo: new Set(colorNo.map(p => [...p].sort().join('|'))), dressBias, busyBias };
 }
 const taste = ps => {
   const ids = ps.map(p => p.id).sort(); if (TASTE.nope.has(ids.join())) return null;
@@ -386,7 +386,9 @@ const taste = ps => {
   const cl = ps.filter(p => CLOTHES.includes(p.cat)), dressPen = TASTE.dressBias && cl.length ? -Math.abs(cl.reduce((t, p) => t + dress(p), 0) / cl.length - (1 + TASTE.dressBias)) * 0.8 : 0; // too dressy / too sporty
   const t = pairs(ids).reduce((s, [a, b]) => s + (TASTE.pair.get(a + '|' + b) ?? 0), 0);
   const cs = pairs([...new Set(ps.filter(p => p.cat !== 'Accessories').map(p => colorName(p.color)))].sort()).reduce((s, [a, b]) => s + (TASTE.cpair.get(a + '|' + b) ?? 0), 0);
-  return Math.max(-1.5, Math.min(1.5, t * 0.25 + Math.min(0.6, cs * 0.1))) + colorPen + dressPen;
+  // "too busy" (Not for me): every extra loud thing costs a little: a second color, prints, a second layer, a second accessory
+  const busy = TASTE.busyBias ? Math.max(0, colored(cl).length - 1) + prints(ps) + Math.max(0, ps.filter(p => p.cat === 'Layers').length - 1) + Math.max(0, ps.filter(p => p.cat === 'Accessories').length - 1) : 0;
+  return Math.max(-1.5, Math.min(1.5, t * 0.25 + Math.min(0.6, cs * 0.1))) + colorPen + dressPen - TASTE.busyBias * busy * 0.5;
 };
 
 // Known sneakers have a known shape: the AI's fit guess shouldn't call Air Force 1s sleek. null = not a model we know.
