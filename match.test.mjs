@@ -203,7 +203,7 @@ console.log('shop ok');
   const real = new Set(Object.keys(m.SWATCHES).concat('lime', 'magenta'));
   for (const c of S.COMBOS) for (const w of c.split(':')[0].split('+')) for (const n of (S.ALIAS[w.trim()] ?? w.trim()).split('|')) assert.ok(real.has(n), `combo word "${w}" in "${c}"`);
   for (const t of [S.JEANS, S.TROUSERS]) for (const [k, [, ws]] of Object.entries(t)) { assert.ok(real.has(k), k); for (const w of ws.split('+')) assert.ok(S.ALIAS[w.trim()], `pairing word ${w}`); }
-  const forest = it('f', 'Tops', m.SWATCHES.forest), cream = it('c', 'Bottoms', m.SWATCHES.beige, { kind: 'trousers' }), wshoe = it('s', 'Shoes', m.SWATCHES.white, { kind: 'sneakers' });
+  const forest = it('f', 'Tops', m.SWATCHES.forest), cream = it('c', 'Bottoms', m.SWATCHES.cream, { kind: 'trousers' }), wshoe = it('s', 'Shoes', m.SWATCHES.white, { kind: 'sneakers' });
   assert.match(m.combo([forest, cream, wshoe]).label, /grounded/);
   const r = m.scoreOutfit([forest, cream, wshoe], 'combos');
   assert.ok(r && /Forest \+ cream/.test(r.note), 'combos mode + vibe note');
@@ -584,7 +584,7 @@ console.log('edges ok');
 { const { readFileSync } = await import('node:fs'), m = await import('./match.js'), src = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
   const { nameColor, brightNavy } = new Function('colorName', 'hexToHsl', src.slice(src.indexOf('const NAME_COLORS'), src.indexOf('const issueOf')) + '; return { nameColor, brightNavy };')(m.colorName, m.hexToHsl);
   assert.equal(nameColor({ name: 'Black vest', color: '#7d7b78' }), 'black', 'black vest saved grey');
-  assert.equal(nameColor({ name: 'Essentials cream tee', color: '#5c5b38' }), 'beige', 'cream tee saved olive');
+  assert.equal(nameColor({ name: 'Essentials cream tee', color: '#5c5b38' }), 'cream', 'cream tee saved olive');
   assert.equal(nameColor({ name: 'Old Navy burgundy flannel', color: '#6b1e2a' }), null, 'Old Navy is a brand');
   assert.equal(nameColor({ name: 'Red graphic white tee', color: '#f6f5f1' }), null, 'any color word that matches is enough');
   assert.equal(nameColor({ name: 'Baseball cap', color: '#16286d' }), null, 'no color word, no flag');

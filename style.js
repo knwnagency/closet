@@ -4,7 +4,7 @@
 
 // Note words → the app's color names (what colorName() returns).
 export const ALIAS = {
-  cream: 'white|beige', ivory: 'white|beige', bone: 'white|beige', ecru: 'white|beige',
+  cream: 'cream|white|beige', ivory: 'cream|white|beige', bone: 'cream|white|beige', ecru: 'cream|white|beige',
   beige: 'beige', taupe: 'beige|grey', stone: 'beige|grey', tan: 'beige|camel',
   grey: 'grey|light grey', charcoal: 'grey|black', white: 'white', black: 'black',
   brown: 'brown', espresso: 'brown', camel: 'camel', cognac: 'camel|rust|brown',
@@ -64,13 +64,13 @@ export const JEANS = {
   denim: ['Mid wash jeans', 'brown + olive + black + grey'],
   navy: ['Dark wash jeans', 'white + burgundy + camel + green'],
   black: ['Black jeans', 'brown + slate + taupe + black'],
-  white: ['Ecru jeans', 'burgundy + brown + lightblue'], beige: ['Ecru jeans', 'burgundy + brown + lightblue'],
+  white: ['Ecru jeans', 'burgundy + brown + lightblue'], cream: ['Ecru jeans', 'burgundy + brown + lightblue'], beige: ['Ecru jeans', 'burgundy + brown + lightblue'],
   grey: ['Grey jeans', 'cream + yellow + lavender + charcoal'], 'light grey': ['Grey jeans', 'cream + yellow + lavender + charcoal'],
   brown: ['Brown jeans', 'navy + pink + forest + black'],
 };
 export const TROUSERS = {
   black: ['Black pants', 'blue + beige + brown + white + grey'],
-  white: ['White pants', 'navy + brown + red + white + forest + grey + black'], beige: ['Beige pants', 'burgundy + forest + sage + red + navy + grey + black'],
+  white: ['White pants', 'navy + brown + red + white + forest + grey + black'], beige: ['Beige pants', 'burgundy + forest + sage + red + navy + grey + black'], cream: ['Cream pants', 'burgundy + forest + sage + red + navy + grey + black'],
   grey: ['Grey pants', 'yellow + burgundy + lightblue + sage'], 'light grey': ['Grey pants', 'yellow + burgundy + lightblue + sage'],
   brown: ['Brown pants', 'lightblue + taupe + black + cream + beige + navy + green'],
   navy: ['Navy pants', 'rust + grey + lightblue + white'],
@@ -81,22 +81,22 @@ export const TROUSERS = {
 // Camo pants work like a neutral (2026-11-18 reels): what each color on top brings.
 export const CAMO = ['Camo pants', 'pink + burgundy + white + lightblue + black + brown + yellow + red + orange'];
 // Metal tone by the color near it (reel DeaNjY8vRMF): cool and dark colors take silver, warm ones take gold.
-export const METAL = { silver: ['black', 'grey', 'light grey', 'navy', 'blue', 'denim', 'light blue'], gold: ['white', 'brown', 'beige', 'camel', 'burgundy', 'olive', 'rust'] };
+export const METAL = { silver: ['black', 'grey', 'light grey', 'navy', 'blue', 'denim', 'light blue'], gold: ['white', 'cream', 'brown', 'beige', 'camel', 'burgundy', 'olive', 'rust'] };
 
 // Color seasons (Me › Settings › Your colors): which colors flatter near your face, by skin, hair and eye coloring.
 // good: worn up top they get a small boost. avoid: worn up top they get a small minus. Neither ever blocks a look.
 // Names are the app's color names. White and black stay neutral for most seasons: the app can't tell cream from stark white in a photo.
 export const COLOR_SEASONS = {
-  'deep autumn':   { label: 'Deep Autumn',   skin: 'warm, deep: dark hair and eyes, golden or olive skin', good: ['brown', 'camel', 'rust', 'orange', 'olive', 'forest', 'teal', 'burgundy', 'beige', 'red', 'yellow'], avoid: ['light blue', 'pink', 'purple', 'magenta', 'lime', 'light grey', 'blue'] },
-  'warm autumn':   { label: 'Warm Autumn',   skin: 'warm, golden: auburn or golden-brown hair, warm eyes', good: ['camel', 'rust', 'orange', 'olive', 'brown', 'beige', 'yellow', 'forest', 'teal', 'red'], avoid: ['light blue', 'pink', 'purple', 'magenta', 'light grey', 'blue', 'black'] },
-  'soft autumn':   { label: 'Soft Autumn',   skin: 'warm, muted: medium hair and eyes, soft contrast', good: ['sage', 'olive', 'camel', 'beige', 'brown', 'teal', 'rust', 'denim'], avoid: ['black', 'magenta', 'lime', 'pink', 'blue', 'purple'] },
+  'deep autumn':   { label: 'Deep Autumn',   skin: 'warm, deep: dark hair and eyes, golden or olive skin', good: ['brown', 'camel', 'rust', 'orange', 'olive', 'forest', 'teal', 'burgundy', 'beige', 'cream', 'red', 'yellow'], avoid: ['light blue', 'pink', 'purple', 'magenta', 'lime', 'light grey', 'blue'] },
+  'warm autumn':   { label: 'Warm Autumn',   skin: 'warm, golden: auburn or golden-brown hair, warm eyes', good: ['camel', 'rust', 'orange', 'olive', 'brown', 'beige', 'cream', 'yellow', 'forest', 'teal', 'red'], avoid: ['light blue', 'pink', 'purple', 'magenta', 'light grey', 'blue', 'black'] },
+  'soft autumn':   { label: 'Soft Autumn',   skin: 'warm, muted: medium hair and eyes, soft contrast', good: ['sage', 'olive', 'camel', 'beige', 'cream', 'brown', 'teal', 'rust', 'denim'], avoid: ['black', 'magenta', 'lime', 'pink', 'blue', 'purple'] },
   'deep winter':   { label: 'Deep Winter',   skin: 'cool, deep: very dark hair and eyes, high contrast', good: ['black', 'white', 'navy', 'burgundy', 'red', 'forest', 'teal', 'purple', 'magenta', 'blue'], avoid: ['camel', 'beige', 'orange', 'rust', 'olive', 'sage', 'yellow'] },
   'cool winter':   { label: 'Cool Winter',   skin: 'cool: dark hair, cool or blue-pink undertone', good: ['black', 'white', 'navy', 'blue', 'purple', 'magenta', 'red', 'teal', 'light grey'], avoid: ['camel', 'beige', 'orange', 'rust', 'olive', 'brown', 'yellow'] },
   'bright winter': { label: 'Bright Winter', skin: 'cool-neutral, clear: dark hair, bright eyes, high contrast', good: ['black', 'white', 'blue', 'red', 'magenta', 'teal', 'green', 'purple'], avoid: ['camel', 'beige', 'olive', 'brown', 'sage', 'rust'] },
   'light summer':  { label: 'Light Summer',  skin: 'cool, light: light hair, light eyes, low contrast', good: ['light blue', 'pink', 'light grey', 'denim', 'sage', 'purple', 'white'], avoid: ['black', 'orange', 'rust', 'brown', 'olive', 'camel'] },
   'cool summer':   { label: 'Cool Summer',   skin: 'cool: ashy hair, pink undertone', good: ['navy', 'denim', 'light blue', 'grey', 'pink', 'purple', 'burgundy', 'teal'], avoid: ['orange', 'rust', 'camel', 'olive', 'yellow', 'brown'] },
   'soft summer':   { label: 'Soft Summer',   skin: 'cool, muted: ash brown hair, soft contrast', good: ['grey', 'denim', 'sage', 'pink', 'purple', 'navy', 'light grey', 'teal'], avoid: ['black', 'white', 'orange', 'rust', 'yellow', 'lime'] },
-  'light spring':  { label: 'Light Spring',  skin: 'warm, light: golden-blond hair, light eyes', good: ['beige', 'camel', 'light blue', 'pink', 'yellow', 'sage', 'lime', 'white'], avoid: ['black', 'burgundy', 'navy', 'forest', 'brown', 'grey'] },
-  'warm spring':   { label: 'Warm Spring',   skin: 'warm, clear: golden or strawberry hair, warm eyes', good: ['camel', 'beige', 'orange', 'yellow', 'lime', 'teal', 'green', 'red', 'rust'], avoid: ['black', 'grey', 'light grey', 'purple', 'navy', 'magenta'] },
+  'light spring':  { label: 'Light Spring',  skin: 'warm, light: golden-blond hair, light eyes', good: ['beige', 'cream', 'camel', 'light blue', 'pink', 'yellow', 'sage', 'lime', 'white'], avoid: ['black', 'burgundy', 'navy', 'forest', 'brown', 'grey'] },
+  'warm spring':   { label: 'Warm Spring',   skin: 'warm, clear: golden or strawberry hair, warm eyes', good: ['camel', 'beige', 'cream', 'orange', 'yellow', 'lime', 'teal', 'green', 'red', 'rust'], avoid: ['black', 'grey', 'light grey', 'purple', 'navy', 'magenta'] },
   'bright spring': { label: 'Bright Spring', skin: 'warm-neutral, clear: bright eyes, medium-high contrast', good: ['red', 'orange', 'yellow', 'teal', 'blue', 'green', 'pink', 'white'], avoid: ['sage', 'beige', 'grey', 'brown', 'olive', 'burgundy'] },
 };

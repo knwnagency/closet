@@ -23,12 +23,12 @@ function neutralRaw(hex) {
     || (h >= 50 && h <= 100 && s < 0.35 && l < 0.45)    // olive
     || NEUTRAL_NAMES.has(colorName(hex));               // anything named beige, brown, camel, olive, navy, denim, grey, black or white is neutral, full stop
 }
-const NEUTRAL_NAMES = new Set(['black', 'grey', 'light grey', 'white', 'navy', 'denim', 'beige', 'camel', 'brown', 'olive']); // a pale beige zip or red-brown loafers were "colors" before
+const NEUTRAL_NAMES = new Set(['black', 'grey', 'light grey', 'white', 'cream', 'navy', 'denim', 'beige', 'camel', 'brown', 'olive']); // a pale beige zip or red-brown loafers were "colors" before
 
 // Hue bands as people name clothes: a blue-ish green jacket is green, not cyan.
 const HUES = [[15, 'red'], [40, 'orange'], [65, 'yellow'], [85, 'lime'], [172, 'green'], [195, 'teal'], [250, 'blue'], [290, 'purple'], [325, 'magenta'], [345, 'pink'], [361, 'red']];
 // What you can pick in the item sheet. Each one reads back as its own name (match.test.mjs checks).
-export const SWATCHES = { black: '#1b1a19', grey: '#7d7b78', 'light grey': '#b9b7b3', white: '#f6f5f1', navy: '#1e2a45', denim: '#4d6a8c', 'light blue': '#9cc3e6', blue: '#2f5fb5', teal: '#2a8085', green: '#3f7a52', forest: '#22402c', olive: '#5c5b33', sage: '#8aa877', beige: '#d8c7a6', camel: '#b2874e', brown: '#5b3e2a', rust: '#a8522b', orange: '#e2782c', yellow: '#e9c548', red: '#c0392b', burgundy: '#6b1e2a', pink: '#e9a2b9', purple: '#6c4a90' };
+export const SWATCHES = { black: '#1b1a19', grey: '#7d7b78', 'light grey': '#b9b7b3', white: '#f6f5f1', cream: '#ede4cf', navy: '#1e2a45', denim: '#4d6a8c', 'light blue': '#9cc3e6', blue: '#2f5fb5', teal: '#2a8085', green: '#3f7a52', forest: '#22402c', olive: '#5c5b33', sage: '#8aa877', beige: '#d8c7a6', camel: '#b2874e', brown: '#5b3e2a', rust: '#a8522b', orange: '#e2782c', yellow: '#e9c548', red: '#c0392b', burgundy: '#6b1e2a', pink: '#e9a2b9', purple: '#6c4a90' };
 export function colorName(hex) {
   const { h, s, l } = hexToHsl(hex);
   if (l < 0.13) return h >= 200 && h <= 250 && s >= 0.4 && l >= 0.09 ? 'navy' : 'black'; // a very dark but clearly blue polo is navy
@@ -37,6 +37,7 @@ export function colorName(hex) {
     if (s >= 0.12 && h >= 100 && h < 170) return 'forest';
     return 'black';
   }
+  if (h >= 35 && h <= 65 && s >= 0.25 && l >= 0.8 && l <= 0.95) return 'cream'; // off-white with a warm tint: lighter than beige, warmer than white
   if (l > 0.9) return 'white';
   // warm, barely-colored: olive cargos and cream pants photograph almost grey, but they're olive and cream (true greys sit near s 0.02)
   if (s >= 0.07 && s < 0.18 && h >= 30 && h <= 65 && l > 0.2 && l < 0.85) return l >= 0.55 ? 'beige' : h >= 40 ? 'olive' : 'brown';
@@ -81,7 +82,7 @@ const swatchesOf = p => [p.color, ...(p.accents ?? [])].filter(Boolean);
 const patterns = ps => ps.filter(p => PRINTABLE.includes(p.cat) && patternOf(p) === 'allover');
 const quietPrint = p => { const t = `${p.kind ?? ''} ${p.name ?? ''} ${[].concat(p.tags ?? []).join(' ')}`; // a red buffalo plaid is loud, a grey one is quiet
   return QUIET_PRINT.test(t) && !(/plaid|flannel|check|gingham|tartan/i.test(t) && !isNeutral(p.color) && hexToHsl(p.color).s > 0.45); };
-const BW = ['black', 'white'];
+const BW = ['black', 'white', 'cream'];
 export const printPair = ps => { const pr = patterns(ps); if (pr.length !== 2 || !pr.some(quietPrint)) return false;
   const bwPair = pr.every(p => BW.includes(colorName(p.color))); // nearly every print has some black or white in it: that only ties two black-and-white pieces
   return swatchesOf(pr[0]).some(a => swatchesOf(pr[1]).some(b => (colorDist(a, b) < 28 || colorName(a) === colorName(b)) && (bwPair || !BW.includes(colorName(a))))); };
@@ -251,7 +252,7 @@ export function colorDist(a, b) {
 // ---------- your style notes (style.js) ----------
 const alt = w => (ALIAS[w.trim()] ?? w.trim()).split('|');
 const BOOK = COMBOS.map(c => { const [cs, label] = c.split(':'); return { text: cs.trim(), label: label.trim(), slots: cs.split('+').map(alt) }; });
-const CLOTHES = ['Tops', 'Layers', 'Bottoms', 'Shoes'], ACHRO = ['black', 'white', 'grey', 'light grey'];
+const CLOTHES = ['Tops', 'Layers', 'Bottoms', 'Shoes'], ACHRO = ['black', 'white', 'cream', 'grey', 'light grey'];
 const names = ps => ps.filter(p => CLOTHES.includes(p.cat)).map(p => colorName(p.color));
 // Each slot needs its own piece (navy + navy combo can't be met by one navy tee).
 const fits = (slots, ns, used = []) => !slots.length || ns.some((n, i) => !used.includes(i) && slots[0].includes(n) && fits(slots.slice(1), ns, [...used, i]));
@@ -318,7 +319,7 @@ export function style(ps) {
   // shorts: boots are a hard look, clean sneakers or loafers work
   if (b && /short/i.test(`${b.kind} ${b.name}`) && shoes) /boot/i.test(`${shoes.kind} ${shoes.name}`) ? out.push([-0.6, 'Boots with shorts is a hard look']) : /sneaker|loafer|sandal|slide/i.test(`${shoes.kind} ${shoes.name}`) && out.push([0.2, `Shorts with ${shoes.kind || 'clean shoes'}`]);
   // your hair (Me): match it or contrast it near the face
-  const HAIR = { blonde: ['purple', 'black', 'navy'], red: ['forest', 'green', 'olive', 'blue', 'navy'], brown: ['blue', 'light blue', 'navy', 'denim', 'teal'], black: ['white', 'light grey', 'beige', 'light blue', 'pink', 'yellow'], grey: ['navy', 'burgundy', 'black'] };
+  const HAIR = { blonde: ['purple', 'black', 'navy'], red: ['forest', 'green', 'olive', 'blue', 'navy'], brown: ['blue', 'light blue', 'navy', 'denim', 'teal'], black: ['white', 'cream', 'light grey', 'beige', 'light blue', 'pink', 'yellow'], grey: ['navy', 'burgundy', 'black'] };
   const faceCol = ps.filter(p => p.cat === 'Tops' || p.cat === 'Layers' || isHat(p)).map(p => colorName(p.color));
   if (TASTE.hair && faceCol.some(n => HAIR[TASTE.hair]?.includes(n))) out.push([0.25, `Plays off your ${TASTE.hair} hair`]);
   // your palette (Me): colors that suit you near the face, colors you avoid

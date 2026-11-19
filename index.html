@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.19 · v5.60'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.19 · v5.61'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -179,11 +179,11 @@ const guessKind = it => Object.keys(KINDS).filter(k => KINDS[k] === it.cat).find
 // Tags that contradict each other (AI guesses): a "denim jacket" filed under Tops, Air Force 1s called sleek. "It's right" silences it.
 // A color word in the name the saved color disagrees with ("Black vest" saved grey, "cream tee" saved olive). Each word lists the
 // color names that still count as it. Tested on 229 real pieces: 4 flagged, all real mix-ups. "Old Navy" is a brand, not a color.
-const NAME_COLORS = [[/\b(black|onyx|jet)\b/, 'black', ['black']], [/\b(white|off[- ]?white)\b/, 'white', ['white', 'light grey', 'beige']], [/\b(cream|ivory|ecru|bone|oat(meal)?)\b/, 'beige', ['white', 'beige', 'light grey']],
+const NAME_COLORS = [[/\b(black|onyx|jet)\b/, 'black', ['black']], [/\boff[- ]?white\b/, 'cream', ['cream', 'white', 'light grey', 'beige']], [/\bwhite\b/, 'white', ['white', 'cream', 'light grey', 'beige']], [/\b(cream|ivory|ecru|bone|oat(meal)?)\b/, 'cream', ['cream', 'white', 'beige', 'light grey']],
   [/\b(gr[ae]y|charcoal|heather)\b/, 'grey', ['grey', 'light grey', 'black']], [/\bnavy\b/, 'navy', ['navy', 'denim', 'blue', 'black']], [/\b(powder|sky|baby|light) blue\b/, 'light blue', ['light blue', 'denim', 'blue']],
   [/\b(blue|royal|cobalt)\b/, 'blue', ['blue', 'navy', 'denim', 'light blue', 'teal']], [/\b(red|scarlet)\b/, 'red', ['red', 'burgundy']], [/\b(burgundy|maroon|wine|oxblood)\b/, 'burgundy', ['burgundy', 'red', 'brown']],
   [/\b(green|kelly)\b/, 'green', ['green', 'forest', 'olive', 'sage', 'teal']], [/\b(olive|army)\b/, 'olive', ['olive', 'forest', 'sage', 'green', 'brown']], [/\bsage\b/, 'sage', ['sage', 'olive', 'green', 'grey']],
-  [/\b(forest|hunter)\b/, 'forest', ['forest', 'green', 'olive']], [/\b(brown|chocolate|mocha|coffee)\b/, 'brown', ['brown', 'rust', 'camel', 'black']], [/\b(tan|khaki|beige|sand|wheat|stone)\b/, 'beige', ['beige', 'camel', 'light grey', 'white']],
+  [/\b(forest|hunter)\b/, 'forest', ['forest', 'green', 'olive']], [/\b(brown|chocolate|mocha|coffee)\b/, 'brown', ['brown', 'rust', 'camel', 'black']], [/\b(tan|khaki|beige|sand|wheat|stone)\b/, 'beige', ['beige', 'cream', 'camel', 'light grey', 'white']],
   [/\bcamel\b/, 'camel', ['camel', 'beige', 'brown']], [/\borange\b/, 'orange', ['orange', 'rust']], [/\b(rust|terracotta)\b/, 'rust', ['rust', 'orange', 'brown', 'red']], [/\b(yellow|mustard)\b/, 'yellow', ['yellow', 'camel', 'orange']],
   [/\b(pink|rose)\b/, 'pink', ['pink', 'magenta', 'red']], [/\b(purple|lavender|lilac|violet)\b/, 'purple', ['purple', 'pink', 'magenta']], [/\bteal\b/, 'teal', ['teal', 'green', 'blue']]];
 const nameColor = it => { const n = ` ${it.name ?? ''} `.toLowerCase().replace(/old navy/g, ' '), hits = NAME_COLORS.filter(([re]) => re.test(n)); if (!hits.length || !it.color) return null;
@@ -1212,11 +1212,11 @@ function openRule(id) {
       : `<p class="sub">None of your looks hit this one yet. ${id === 'pat' ? 'It needs two all-over patterns (camo, stripes, plaid…) that share a color.' : id === 'denim' ? 'It needs a denim top or jacket plus jeans.' : 'Add a piece that fits it, or check a few tags.'}</p>`}</div>`);
 }
 const hexOf = n => SWATCHES[n] ?? SEASON_DOT[n] ?? '#888';
-const comboCards = () => { const items = pool().filter(p => p.cat !== 'Accessories'), s = mySeason(), okColor = n => s && (s.good.includes(n) || ['black', 'white', 'grey', 'light grey', 'navy', 'denim', 'beige', 'camel', 'brown', 'olive'].includes(n) && !s.avoid.includes(n));
+const comboCards = () => { const items = pool().filter(p => p.cat !== 'Accessories'), s = mySeason(), okColor = n => s && (s.good.includes(n) || ['black', 'white', 'cream', 'grey', 'light grey', 'navy', 'denim', 'beige', 'camel', 'brown', 'olive'].includes(n) && !s.avoid.includes(n));
   return comboBook().map(c => { const shown = []; const per = c.slots.map(sl => { const ps = items.filter(p => sl.includes(colorName(p.color))), owned = sl.filter(n => ps.some(p => colorName(p.color) === n));
       const show = owned.find(n => !shown.includes(n)) ?? sl.find(n => !shown.includes(n)) ?? sl[0]; shown.push(show); return { sl, ps, show }; }); // each swatch a different color when the combo allows it
     return { c, per, have: per.filter(x => x.ps.length).length, n: per.reduce((t, x) => t + x.ps.length, 0), mine: !!s && c.slots.every(sl => sl.some(okColor)) && c.slots.some(sl => sl.some(n => s.good.includes(n))) }; }); }; // in your colors: at least one best color, nothing you wear less
-const hue = x => x.per.filter(k => !['black', 'white', 'grey', 'light grey', 'beige'].includes(k.show)).length;
+const hue = x => x.per.filter(k => !['black', 'white', 'cream', 'grey', 'light grey', 'beige'].includes(k.show)).length;
 function combosView() {
   const cards = comboCards(), make = cards.filter(x => x.have === x.c.slots.length), f = S.comboF ?? (make.length ? 'make' : 'all'), s = mySeason();
   const list = (f === 'make' ? make : f === 'mine' ? cards.filter(x => x.mine) : cards).sort((a, b) => b.have / b.c.slots.length - a.have / a.c.slots.length || hue(b) - hue(a) || b.n - a.n); // colorful combos first: all-neutral ones are the easy default
@@ -1648,7 +1648,7 @@ function meView() {
     ` : `
     <details class="sgroup" data-sg="look" ${S.sopen?.look || false ? 'open' : ''}><summary><span>Look</span><span class="mono">${document.documentElement.dataset.theme === 'dark' ? 'dark' : document.documentElement.dataset.theme === 'auto' ? 'matches your phone' : 'light'}</span></summary>
     <div class="seg themeseg">${[['light', 'Light'], ['dark', 'Dark'], ...(unlocked('noir') ? [['noir', 'Noir']] : []), ['auto', 'Match my phone']].map(([k, l]) => `<button type="button" class="${(document.documentElement.dataset.theme || 'light') === k ? 'on' : ''}" data-themeset="${k}">${l}</button>`).join('')}</div>
-    <span class="mono">Pop color</span><div class="popsw">${[['racing green', '#004225'], ...(unlocked('gold') ? [['gold', '#a8842f'], ['chrome', '#7d868f']] : []), ...Object.entries(SWATCHES).filter(([n]) => !/white|light grey|beige|grey/.test(n))].map(([n, h]) => `<button type="button" class="${(p.pop ?? '#004225') === h ? 'on' : ''}" style="background:${h}" data-popset="${h}" aria-label="${n}"></button>`).join('')}<label aria-label="Pick any color"><input type="color" data-popany value="${p.pop ?? '#004225'}"></label></div>
+    <span class="mono">Pop color</span><div class="popsw">${[['racing green', '#004225'], ...(unlocked('gold') ? [['gold', '#a8842f'], ['chrome', '#7d868f']] : []), ...Object.entries(SWATCHES).filter(([n]) => !/white|cream|light grey|beige|grey/.test(n))].map(([n, h]) => `<button type="button" class="${(p.pop ?? '#004225') === h ? 'on' : ''}" style="background:${h}" data-popset="${h}" aria-label="${n}"></button>`).join('')}<label aria-label="Pick any color"><input type="color" data-popany value="${p.pop ?? '#004225'}"></label></div>
     </details>
     <details class="sgroup" data-sg="colors" ${S.sopen?.colors || false ? 'open' : ''}><summary><span>Your colors</span><span class="mono">${mySeason() ? `${mySeason().label} · ${colorsOn() ? 'on' : 'off'}` : 'not set'}</span></summary>
     ${colorsSection(p)}
