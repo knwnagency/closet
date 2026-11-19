@@ -1,2 +1,2 @@
-2026.11.18 · v5.46
-Today, now and then: one piece you have not worn in a while (or ever), picked at random for the day, with See looks · plus Inspo › Rules and the stuck bottom menu fix
+2026.11.18 · v5.47
+Never picked only lists pieces that cannot win a look · Rules and Combos show your own saved looks first · each piece shows the combos and rules it is part of · Undo on merge, season storage and move to Inspo · Settings in sections · worn-from-Today rate on Me · start from a combo or rule in Build

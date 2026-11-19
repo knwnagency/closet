@@ -52,6 +52,19 @@ tap('nav [data-go="me"]'); await wait(700); if (tap('main [data-listtab="mine"]'
   f.elements.link.value = 'example.com/shop/selftest-black-hoodie/99'; f.requestSubmit(); await wait(900);
   const row = [...d().querySelectorAll('.wish')].find(r => /selftest black hoodie/.test(r.textContent)); log(!!row, 'Wishlist adds from a link alone'); log(!!row && /black/.test(row.textContent), 'Wish type and color guessed from the name'); fits('Wishlist');
   row?.querySelector('[data-wishdel]')?.click(); await wait(500); }
+// Restore / sync on a throwaway closet (?db=selftest): a backup from "another device" lands, and your real closet is never touched
+{ const f2 = Object.assign(document.createElement('iframe'), { src: './?db=selftest' }); f2.style.cssText = 'width:390px;height:300px'; document.body.append(f2);
+  await new Promise(r => f2.onload = r); await wait(1800); const w2 = f2.contentWindow, d2 = w2.document;
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const backup = { app: 'closet', v: 3, items: [{ id: 'st-1', name: 'Selftest tee', cat: 'Tops', kind: 't-shirt', color: '#f2f2f0', fit: 1, img: png, updatedAt: Date.now() }], wish: [{ id: 'st-w', name: 'Selftest wish', got: false, at: 1, updatedAt: Date.now() }] };
+  const dt = new w2.DataTransfer(); dt.items.add(new w2.File([JSON.stringify(backup)], 'closet-backup-selftest.json', { type: 'application/json' }));
+  const oc = w2.HTMLInputElement.prototype.click; w2.HTMLInputElement.prototype.click = function () { if (this.accept.includes('json')) { Object.defineProperty(this, 'files', { value: dt.files }); this.onchange(); } else oc.call(this); };
+  d2.querySelector('nav [data-go="closet"]')?.click(); await wait(700); const btn = d2.querySelector('[data-action="import"]');
+  if (btn) { btn.click(); await wait(5000);
+    const count = store => new Promise(r => { const q = indexedDB.open('closet-selftest'); q.onsuccess = () => { const db = q.result, g = db.transaction(store).objectStore(store).count(); g.onsuccess = () => { r(g.result); db.close(); }; }; q.onerror = () => r(-1); });
+    const n = await count('items'), nw = await count('wish'); log(n === 1 && nw === 1, `Restore brings in a backup (${n} piece, ${nw} wish, in a throwaway closet)`); }
+  else log(false, 'Restore button missing on an empty closet');
+  f2.remove(); await wait(300); indexedDB.deleteDatabase('closet-selftest'); }
 log(!errors.length, errors.length ? `errors: ${errors.join(' | ')}` : 'no errors');
 document.getElementById('sum').textContent = fails ? `${fails} problem${fails > 1 ? 's' : ''}` : 'All good';
 document.title = fails ? `✕ ${fails}` : '✓ all good';

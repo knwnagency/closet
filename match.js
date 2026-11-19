@@ -68,7 +68,7 @@ const hues = ps => colored(ps).map(p => hexToHsl(p.color).h);
 // Prints that compete: a big graphic or an all-over pattern. A small chest logo doesn't count, and neither does a plain piece.
 // p.pattern: 'solid' | 'logo' | 'graphic' | 'allover'; older pieces only have p.patterned (true = graphic).
 // Your tag wins. Untagged: the name says it ("Camo sweats", "Aztec jacket", "Flannel shirt"); side stripes on joggers aren't an all-over pattern.
-const ALLOVER = /camo|plaid|flannel|tartan|striped|stripes\b|check(ed)?\b|gingham|houndstooth|paisley|floral|leopard|cheetah|zebra|snake|tie.?dye|polka|argyle|fair ?isle|aztec|ikat/i;
+const ALLOVER = /camo|plaid|flannel|tartan|striped|stripes\b|checked|checkered|checkerboard|\bcheck (shirt|flannel|overshirt|jacket|pants|trousers|blazer|shacket)|gingham|houndstooth|paisley|floral|leopard|cheetah|zebra|snake|tie.?dye|polka|argyle|fair ?isle|aztec|ikat/i; // "Nike Check tee" is a logo, not a pattern
 export const patternOf = p => p.pattern ?? (ALLOVER.test(`${p.name ?? ''} ${p.kind ?? ''}`) ? 'allover' : p.patterned ? 'graphic' : 'solid');
 // Prints are a clothes thing: a swoosh on a sneaker or a logo strap on a bag is detail, not a second print fighting the tee.
 export const PRINTABLE = ['Tops', 'Layers', 'Bottoms'];

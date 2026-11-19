@@ -9,14 +9,14 @@ import { fileURLToPath } from 'node:url';
 import { MODES, FITS, colorName, isNeutral, generate, rankSwaps, bestMode, fixTip, madeWith, today, SLOTS } from '../match.js';
 
 const here = dirname(fileURLToPath(import.meta.url)), home = homedir();
-const DIRS = [process.env.CLOSET_BACKUP_DIR, join(home, 'Library/Mobile Documents/com~apple~CloudDocs'), join(home, 'Library/Mobile Documents/com~apple~CloudDocs/Downloads'),
+const DIRS = [process.env.CLOSET_BACKUP_DIR, join(home, 'Library/Mobile Documents/com~apple~CloudDocs/Fitted Backups'), join(home, 'Library/Mobile Documents/com~apple~CloudDocs'), join(home, 'Library/Mobile Documents/com~apple~CloudDocs/Downloads'),
   join(home, 'Downloads'), join(here, '../hauls')].filter(Boolean);
 
 // Newest backup wins. Cached until the file changes.
 let cache = { path: null, mtime: 0, data: null };
 function load() {
   const files = DIRS.filter(existsSync).flatMap(d => readdirSync(d).filter(f => /^closet-backup.*\.json$/.test(f)).map(f => join(d, f)));
-  if (!files.length) throw new Error(`No closet backup found. In the app: Me › Export, save the file to iCloud Drive or Downloads. Looked in: ${DIRS.join(', ')}`);
+  if (!files.length) throw new Error(`No closet backup found. In the app: Me › Settings › Backup and sync › Save backup, then Save to Files › iCloud Drive › Fitted Backups. Looked in: ${DIRS.join(', ')}`);
   const path = files.map(f => [f, statSync(f).mtimeMs]).sort((a, b) => b[1] - a[1])[0];
   if (cache.path !== path[0] || cache.mtime !== path[1]) {
     const b = JSON.parse(readFileSync(path[0], 'utf8'));

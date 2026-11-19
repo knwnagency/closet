@@ -1,5 +1,5 @@
 // Before shipping a rule change: compare the rules in this folder with the last commit (or any git ref) on your real pieces.
-// node rules-check.mjs [ref] [backup.json]   (defaults: HEAD, the newest closet-backup*.json in hauls/)
+// node rules-check.mjs [ref] [backup.json]   (defaults: HEAD, the newest closet-backup*.json in iCloud Drive › Fitted Backups, iCloud Drive, Downloads or hauls/)
 // Prints: looks you saved or wore that now fail, pattern-on-pattern per day, how much the Best tab moved, which reasons show up more or less.
 import { execSync } from 'child_process';
 import { mkdtempSync, writeFileSync, readFileSync, readdirSync, statSync } from 'fs';
@@ -12,9 +12,11 @@ const old = mkdtempSync(join(tmpdir(), 'rules-'));
 for (const f of ['match.js', 'style.js']) writeFileSync(join(old, f), execSync(`git show ${ref}:${f}`, { cwd: here }));
 const A = await import(join(old, 'match.js')), B = await import(join(here, 'match.js'));
 
-const backups = readdirSync(join(here, 'hauls')).filter(f => /^closet-backup.*\.json$/.test(f)).map(f => join(here, 'hauls', f));
+// Newest backup from iCloud Drive › Fitted Backups (saved from your phone), iCloud Drive, Downloads or hauls/.
+const icloud = join(process.env.HOME, 'Library/Mobile Documents/com~apple~CloudDocs');
+const backups = [join(icloud, 'Fitted Backups'), icloud, join(process.env.HOME, 'Downloads'), join(here, 'hauls')].flatMap(d => { try { return readdirSync(d).filter(f => /^closet-backup.*\.json$/.test(f)).map(f => join(d, f)); } catch { return []; } });
 const file = process.argv[3] ?? backups.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
-if (!file) { console.log('No backup in hauls/. Save one from the app (Me › Settings › Backup) and put it there.'); process.exit(1); }
+if (!file) { console.log('No backup found. On your phone: Me › Settings › Backup and sync › Save backup › Save to Files › iCloud Drive › Fitted Backups.'); process.exit(1); }
 const b = JSON.parse(readFileSync(file, 'utf8')), items = b.items.map(({ img, photo, ...i }) => i), byId = new Map(items.map(i => [i.id, i]));
 console.log(`${file.split('/').pop()} · ${items.length} pieces · rules now vs ${ref}\n`);
 

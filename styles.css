@@ -687,7 +687,7 @@
   .wish img.wimg { object-fit: cover; padding: 0; } .wtap { text-align: left; padding: 0; min-height: 0; display: block; } .wtap b { text-decoration: underline; text-decoration-color: var(--hair); text-underline-offset: 3px; }
   .board .reading img { opacity: .55; } .board .reading { animation: pulse 1.2s ease-in-out infinite alternate; } @keyframes pulse { to { opacity: .6; } } @media (prefers-reduced-motion: reduce) { .board .reading { animation: none; } }
   .lbprev { width: 100%; border-radius: 12px; box-shadow: 0 0 0 1px var(--hair); margin-bottom: 12px; }
-  .whybtn { display: inline-flex; align-items: center; min-height: 32px; padding: 0; text-align: left; } .whybtn:active { opacity: .6; }
+  .whybtn { display: inline-flex; align-items: center; min-height: 44px; padding: 0; text-align: left; } .whybtn:active { opacity: .6; }
   .wxl .wxs { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
   .wtap .wnote, .wtap .mono { display: block; text-align: left; }
   .tiles .wide { grid-column: 1 / -1; }
@@ -702,6 +702,12 @@
   .crow { padding: 10px 0; border-top: 1px solid var(--hair); } .crow .mono { display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 12px; margin-bottom: 8px; }
   .crow .cdot { width: 16px; height: 16px; } .crow .thumbs { display: flex; gap: 8px; overflow-x: auto; } .crow .thumbs button { flex: none; width: 56px; height: 56px; padding: 0; background: var(--tile); border-radius: 10px; overflow: hidden; } .crow .thumbs img { width: 100%; height: 100%; object-fit: contain; }
   .rulerow { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 56px; padding: 10px 0; text-align: left; border-top: 1px solid var(--hair); }
-  .rulerow b { display: block; font-size: 14px; } .rulerow small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; } .rulerow .mono { flex: none; text-transform: none; letter-spacing: 0; } .rulerow.none { opacity: .55; }
+  .rulerow b { display: block; font-size: 14px; } .rulerow small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; } .rulerow .mono { flex: none; text-transform: none; letter-spacing: 0; } .rulerow.none b, .rulerow.none small, .rulerow.none .mono { color: var(--muted); }
   .rulelooks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } .rulelooks .mono { display: block; margin-top: 4px; text-transform: none; letter-spacing: 0; font-size: 11px; }
   .nudge.rd > button:first-child { flex: none; width: 56px; height: 56px; padding: 4px; background: var(--tile); border-radius: 12px; } .nudge.rd img { width: 100%; height: 100%; object-fit: contain; } .nudge.rd > div { flex: 1; min-width: 0; } .nudge.rd .tag { flex: none; }
+  .rrow .tag, .partof .tag, .fromlib .tag { min-height: 44px; }
+  .cnames { margin: -2px 0 8px; font-size: 11px; color: var(--muted); text-align: right; }
+  .partof { margin-top: 16px; display: grid; gap: 6px; } .fromlib { margin: 0 0 14px; }
+  .sgroup { border-top: 1px solid var(--hair); } .sgroup > summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 56px; cursor: pointer; list-style: none; font-weight: 600; font-size: 15px; }
+  .sgroup > summary::-webkit-details-marker { display: none; } .sgroup > summary .mono { font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 12px; } .sgroup > summary::after { content: '+'; margin-left: 8px; color: var(--muted); } .sgroup[open] > summary::after { content: '−'; }
+  .sgroup[open] { padding-bottom: 16px; } .hitrate { margin-top: 12px; }

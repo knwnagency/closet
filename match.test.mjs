@@ -530,3 +530,8 @@ console.log('edges ok');
   const pool = m.lookPool(items); assert.ok(pool.length >= 3);
   assert.ok(pool.some(o => m.lookRules(o).some(n => /Two patterns, one color ties them/.test(n))), 'pattern-on-pattern looks are in the pool and named');
   console.log(`rules pool ok (${pool.length} looks)`); }
+
+// A Nike "Check" is a logo, a check shirt is a pattern (2026-11-18)
+{ const { patternOf: po } = await import('./match.js');
+  for (const [name, want] of [['Nike Check tee', 'graphic'], ['Checkerboard Vans', 'allover'], ['Check shirt', 'allover'], ['Checked trousers', 'allover']]) if (po({ name, patterned: true }) !== want) throw new Error(`${name} should read ${want}`);
+  console.log('check names ok'); }
