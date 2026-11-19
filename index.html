@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.55'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.56'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -1233,8 +1233,9 @@ function buildView() {
   // stacked the way it's worn: hat + accessory, layer + top, bottoms, shoes at the bottom
   const row = sl => { const cur = o.find(inS(sl)), lab = SLOT_LABEL[sl]; if (!cur) return '';
     const cs = carouselFor(sl, cur);
-    return `<div class="srow"><button class="srname" data-swap="${sl}"><span class="lab">${lab}${S.locks.has(sl) ? ' · locked' : ''}</span><b>${esc(cur.name)}</b></button>
-      <div class="ops"><button data-cyc="${sl}|-1" aria-label="Previous ${lab.toLowerCase()} option" ${cs.at ? '' : 'disabled'}>${svg('M15 5l-7 7 7 7')}</button><span class="mono">${cs.at + 1}/${cs.ids.length}</span><button data-cyc="${sl}|1" aria-label="Next best ${lab.toLowerCase()}" ${cs.at < cs.ids.length - 1 ? '' : 'disabled'}>${svg('M9 5l7 7-7 7')}</button><button data-unwear="${sl}" aria-label="Remove ${lab.toLowerCase()}">${ic('x')}</button></div></div>`; };
+    const lk = S.locks.has(sl);
+    return `<div class="srow ${lk ? 'locked' : ''}"><button class="srname" data-swap="${sl}"><span class="lab">${lab}${lk ? ' · locked' : ''}</span><b>${esc(cur.name)}</b></button>
+      <div class="ops"><button data-cyc="${sl}|-1" aria-label="Previous ${lab.toLowerCase()} option" ${cs.at ? '' : 'disabled'}>${svg('M15 5l-7 7 7 7')}</button><span class="mono">${cs.at + 1}/${cs.ids.length}</span><button data-cyc="${sl}|1" aria-label="Next best ${lab.toLowerCase()}" ${cs.at < cs.ids.length - 1 ? '' : 'disabled'}>${svg('M9 5l7 7-7 7')}</button><button class="lockbtn" data-lock="${sl}" aria-pressed="${lk}" aria-label="${lk ? 'Unlock' : 'Lock'} the ${lab.toLowerCase()}: Roll keeps it">${ic(lk ? 'lock' : 'unlock')}</button><button data-unwear="${sl}" aria-label="Remove ${lab.toLowerCase()}">${ic('x')}</button></div></div>`; };
   S.dropped = null;
   const why = ok ? explain(o) : null, tip = ok && v?.score != null ? fixTip(o) : null;
   const tags = why ? why.rows.filter(([l, val]) => Math.abs(val) >= 0.3 && !/^Color rule|^Finished with/.test(l)).slice(0, 3).map(([l, val]) => `<span class="tag ${val < 0 ? 'bad' : 'o'}">${esc(l.replace(/ · .*|, .*/, '').toLowerCase())}</span>`).join('') : '';
@@ -1244,11 +1245,12 @@ function buildView() {
     <div class="build"><div class="tbar">${capBtn()}<span class="sp"></span>${o.length ? `<button class="tag o" data-action="clearbuild">Start over</button>` : ''}</div>${capBar()}
       ${stage(o, items)}
       ${o.length ? `<div class="srows">${['Hat', 'Outer', 'Layers', 'Tops', 'Bottoms', 'Belt', 'Shoes', 'Accessory'].map(row).join('')}</div>` : '<p class="sub stagehint">Tap a shape to pick that piece. Best matches show first.</p>'}
+      ${ok ? (n => `<button class="btn sm wide roll" data-action="shufflebuild">${ic('shuffle')} Roll a new look${n ? ` · keeps ${n} locked` : ' · lock what you want to keep'}</button>`)(o.filter(p => S.locks.has(slotOf(p))).length) : ''}
       <div class="addopt">${['Layers', 'Hat', 'Accessory', 'Belt'].filter(sl => !o.some(inS(sl)) && items.some(canS(sl))).map(sl => `<button class="tag o" data-swap="${sl}">+ ${SLOT_LABEL[sl].toLowerCase()}</button>`).join('')}</div>
       ${ok ? (v.score == null ? (w => `<p class="verdict bad">Doesn't work · ${esc(w.note)}</p>${w.piece ? `<div class="tools whyfix"><button class="tag" ${w.fix === 'tag' ? `data-open="${w.piece.id}"` : `data-swap="${slotOf(w.piece)}"`}>${w.fix === 'tag' ? `Check its tags` : `Swap the ${esc(SLOT_LABEL[slotOf(w.piece)].toLowerCase())}`}</button></div>` : ''}`)(whyNot(o))
         : `<p class="verdict">Works as ${MODES[v.mode].label} · ${esc(v.note)}</p>`) : ''}
       ${tags || tip ? `<div class="tags whytags">${tags}${tip ? `<span class="tag bad">${esc(tip)}</span>` : ''}</div>` : ''}
-      ${o.length ? `<div class="tools">${S.past.length ? `<button class="tag o" data-action="undobuild">Undo</button>` : ''}${o.length && !ok ? `<button class="tag" data-action="fillbuild">Fill the rest</button>` : ''}${o.length ? `<button class="tag" data-action="possible">See outfit possibilities</button>` : ''}${ok ? `<button class="tag o" data-action="shufflebuild">${ic('shuffle')} Shuffle</button><button class="tag o" data-action="recolor">Recolor</button><button class="tag o" data-action="sharelook">${ic('share')} Share</button>` : ''}</div>` : `<div class="tools"><button class="tag o" data-go="inspo">Start from a pic</button></div>`}
+      ${o.length ? `<div class="tools">${S.past.length ? `<button class="tag o" data-action="undobuild">Undo</button>` : ''}${o.length && !ok ? `<button class="tag" data-action="fillbuild">Fill the rest</button>` : ''}${o.length ? `<button class="tag" data-action="possible">See outfit possibilities</button>` : ''}${ok ? `<button class="tag o" data-action="recolor">Recolor</button><button class="tag o" data-action="sharelook">${ic('share')} Share</button>` : ''}</div>` : `<div class="tools"><button class="tag o" data-go="inspo">Start from a pic</button></div>`}
       ${ok ? actionsHtml(o) : ''}
       ${o.length ? recentHtml() : `<div class="tags fromlib"><button class="tag o" data-go="inspo" data-inspotab="combos">Start from a color combo</button><button class="tag o" data-go="inspo" data-inspotab="rules">Start from a style rule</button></div>${starters.length ? `<div class="looks-h"><span>Or start from a look</span><span>saved or worn</span></div><div class="looks starters">${starters.map(r => mini(r, isFav(r.key))).join('')}</div>` : ''}
         ${S.draft?.length ? `<button class="tag o resume" data-action="resumebuild">Resume your last look · ${S.draft.length} pieces</button>` : ''}`}
@@ -1265,6 +1267,7 @@ function carouselFor(slot, cur) {
 // The hat / chain / layer you're wearing stay in while the top, bottoms and shoes are picked, so the new fit is chosen to go with them
 // (picking them last used to leave no cap that matched, and the cap vanished). Then each one gets its own turn to change.
 function shuffleBuild() {
+  if (S.build.every(p => S.locks.has(slotOf(p)))) return toast('Everything is locked: unlock a piece to roll');
   let next = S.build.filter(p => S.locks.has(slotOf(p)) || OPTIONAL.includes(slotOf(p)));
   for (const s of ['Bottoms', 'Tops', 'Shoes', 'Layers', 'Hat', 'Belt', 'Accessory']) {
     if (S.locks.has(s) || !S.build.some(inS(s))) continue; // only refill slots you're wearing

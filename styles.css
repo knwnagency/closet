@@ -734,3 +734,5 @@
   .offask { display: block; margin: 14px 0 6px; text-transform: none; letter-spacing: 0; } .offsheet .btn[disabled] { opacity: .5; }
   .ptsway { list-style: none; margin: 4px 0 18px; padding: 0; } .ptsway li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--hair); font-size: 13px; } .ptsway b { font-weight: 600; white-space: nowrap; }
   .nudge .wthumb { flex: none; width: 56px; height: 56px; padding: 4px; background: var(--tile); border-radius: 12px; overflow: hidden; } .nudge .wthumb > * { width: 100%; height: 100%; }
+  .srow.locked { box-shadow: inset 0 0 0 1.5px var(--ink); } .srow .ops .lockbtn { color: var(--muted); } .srow.locked .ops .lockbtn { color: var(--ink); }
+  .build .roll { margin: 10px 0 2px; gap: 8px; } .build .roll svg { width: 16px; height: 16px; }

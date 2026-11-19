@@ -1,2 +1,3 @@
-2026.11.18 · v5.55
-Rules and Never picked now work in the background, so the app never freezes while they check (they took 7 and 25 seconds on your phone) · Never picked is about twice as fast
+2026.11.18 · v5.56
+Build: a lock on every piece and a big Roll button. Lock what you want to keep, Roll for new looks built around it (Undo goes back)
+Rules and Never picked now work in the background, so the app never freezes while they check
