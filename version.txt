@@ -1,2 +1,2 @@
-2026.11.18 · v5.57
-Restoring into a new install now brings your settings too (pop color, theme, colors) · backups no longer leave a little text file next to them · no more "script error" pop-ups from things outside Fitted
+2026.11.18 · v5.58
+Today: swiping no longer jumps back a card. Background work (previews, weather) waits until you stop swiping, and ♡ / Wear today always act on the card you see

@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.57'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.58'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -128,12 +128,17 @@ const src = it => it.broken ? missSrc(it) : it.thumb instanceof Blob ? objUrl(it
 const srcFull = it => it.broken ? missSrc(it) : it.img ? objUrl(it.id, it.img)
   : (imgOf(it).then(b => b && document.querySelectorAll(`img[data-full="${it.id}"]`).forEach(e => { e.src = objUrl(it.id, b); })), src(it));
 const resetSrc = it => { for (const k of [it.id, it.id + ':t']) { URL.revokeObjectURL(urls.get(k)); urls.delete(k); } delete it.thumb; };
+// Background work (previews, weather, photo checks) redraws with bgRender: it waits while you're swiping Today's cards,
+// since a redraw mid-swipe threw you back a card (v5.58).
+// The card Today's deck shows right now (the scroll handler records it only once a swipe settles).
+const deckAtNow = () => { const dk = document.querySelector('.deck'), w = (dk?.firstElementChild?.offsetWidth ?? 0) + 12; if (S.deck && dk && w > 12) S.deck.at = Math.max(0, Math.min(dk.children.length - 1, Math.round(dk.scrollLeft / w))); };
+let lastSwipe = 0, bgT = null; const bgRender = () => { clearTimeout(bgT); if (Date.now() - lastSwipe < 1500) bgT = setTimeout(bgRender, 800); else render(); };
 const thumbQ = new Set(); let thumbBusy = false;
 function queueThumb(it) { if (thumbQ.has(it)) return; thumbQ.add(it); if (!thumbBusy) setTimeout(makeThumbs, 300); }
 async function makeThumbs() {
   thumbBusy = true;
   let n = 0; for (const it of [...thumbQ]) { thumbQ.delete(it); try { const had = it.img; it.thumb = await thumbOf(await imgOf(it)); await putQuiet(S.inspo.includes(it) ? 'inspo' : 'items', it); if (!had) { delete it.img; n++; } } catch (e) { console.warn(e); } }
-  thumbBusy = false; if (n) render();
+  thumbBusy = false; if (n) bgRender();
 }
 async function thumbOf(blob) {
   const b = await createImageBitmap(blob), k0 = Math.min(1, 480 / Math.max(b.width, b.height)), w = Math.round(b.width * k0), h = Math.round(b.height * k0);
@@ -296,7 +301,7 @@ async function refreshWeather() {
     const r = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${w.lat}&longitude=${w.lon}&current=apparent_temperature,weather_code&daily=apparent_temperature_max,apparent_temperature_min,weather_code&forecast_days=14&timezone=auto`)).json();
     const daily = Object.fromEntries(r.daily.time.map((d, i) => [d, { t: r.daily.apparent_temperature_max[i], code: r.daily.weather_code[i] }])); // planned days dress for their own forecast
     Object.assign(w, { t: r.current.apparent_temperature, code: r.current.weather_code, lo: r.daily.apparent_temperature_min?.[0] ?? null, hi: r.daily.apparent_temperature_max[0], daily, at: Date.now() }); await put('profile', S.profile);
-    if (S.mode === 'today') S.ideas = null; if (S.view === 'today' || S.view === 'outfits') render();
+    if (S.mode === 'today') S.ideas = null; if (S.view === 'today' || S.view === 'outfits') bgRender();
   } catch (e) { console.warn(e); } finally { wxBusy = false; }
 }
 function askWeather() {
@@ -549,7 +554,7 @@ const CFP_SAME = 16;
 const backfillFp = () => fpDone ??= (async () => { for (const it of S.items) {
   if (!it.fp) try { const b = await origOf(it); if (b) it.fp = await fpOf(b); await putQuiet('items', it); } catch (e) { console.warn(e); }
   if (!it.cfp) try { const b = await imgOf(it); if (b) it.cfp = await fpOf(b); await putQuiet('items', it); } catch (e) { console.warn(e); } }
-  if (S.items.some(dupOf)) render(); })();
+  if (S.items.some(dupOf)) bgRender(); })();
 // the newer of two pieces with the same cut-out (the older one keeps your tag edits)
 const dupOf = it => !it.dupOk && it.cfp && S.items.find(o => o !== it && o.cfp && ((o.createdAt ?? 0) < (it.createdAt ?? 0) || ((o.createdAt ?? 0) === (it.createdAt ?? 0) && o.id < it.id)) && fpDist(o.cfp, it.cfp) <= CFP_SAME);
 
@@ -972,6 +977,7 @@ function todayView() {
 function deckGo(to) { const dk = document.querySelector('.deck'); if (!dk) return; const n = dk.children.length; S.deck.at = Math.max(0, Math.min(n - 1, to));
   dk.scrollTo({ left: dk.children[S.deck.at].offsetLeft - dk.firstElementChild.offsetLeft, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); put('profile', S.deck); }
 async function deckAct(act) {
+  deckAtNow();
   if (act === 'next' || act === 'prev') return deckGo(S.deck.at + (act === 'next' ? 1 : -1));
   const d = S.deck, l = d?.looks[d.at]; if (!l) return;
   const o = { key: l.key, items: l.ids.map(byId).filter(Boolean), mode: l.mode };
@@ -1730,11 +1736,12 @@ addEventListener('error', e => { if (!e.filename && /^script error\.?$/i.test(e.
 function render() {
   const app = document.getElementById('app'), scrollers = () => document.querySelectorAll('.strip, .colls, .chips, .deck, .occ, .shelf, .tbar.ctrl, .looks');
   const keep = render.view === S.view ? [...scrollers()].map(e => e.scrollLeft) : []; // swapping in the builder keeps each strip where it was
+  if (S.view === 'today' && render.view === 'today' && S.deck && render.deck === S.deck && Date.now() - lastSwipe < 1500) deckAtNow();
   let html; try { html = VIEWS[S.view](); } catch (err) { console.error(err); // a broken screen says why instead of silently not opening
     html = `<div class="empty"><h2>This screen hit an error</h2><p>Screenshot this and send it to Claude. The other tabs still work.</p><pre class="crash">${esc(`${VERSION} · ${S.view}\n${err?.stack ?? err}`.slice(0, 900))}</pre><button class="btn ghost sm" data-action="copyerr">Copy error</button></div>`; }
   app.innerHTML = html;
   scrollers().forEach((e, i) => { e.scrollLeft = keep[i] ?? 0; });
-  render.view = S.view; upPill();
+  render.view = S.view; render.deck = S.deck; upPill();
   if (S.view === 'today' && S.deck) { const dk = document.querySelector('.deck'); if (dk?.children[S.deck.at]) dk.scrollLeft = dk.children[S.deck.at].offsetLeft - dk.firstElementChild.offsetLeft; }
   if (render.qFocus) { const q = document.querySelector('[data-q]'); q?.focus(); q?.setSelectionRange(q.value.length, q.value.length); render.qFocus = false; }
   if (S.view === 'inspo' && S.inspoTab === 'wheel') paintWheel();
@@ -2266,7 +2273,7 @@ async function quickAct(a, id) { const it = byId(id);
   await put('items', it); S.ideas = null; S.deck = null; sheet.close(); toast(a === 'wash' ? (it.dirty ? 'In the laundry' : 'Clean') : it.stored ? 'Stored for the season' : 'Back in rotation'); }
 
 // Today's carousel: when a slide settles, remember which look you're on (heart + Wear this act on it).
-document.addEventListener('scroll', e => { const dk = e.target; if (!dk.classList?.contains('deck')) return; clearTimeout(dk._t);
+document.addEventListener('scroll', e => { const dk = e.target; if (!dk.classList?.contains('deck')) return; clearTimeout(dk._t); lastSwipe = Date.now();
   dk._t = setTimeout(() => { const w = dk.firstElementChild?.offsetWidth + 12 || 1, at = Math.round(dk.scrollLeft / w); if (!S.deck || at === S.deck.at) return;
     S.deck.at = at; put('profile', S.deck); const l = S.deck.looks[at]; document.querySelector('[data-deck="fav"]')?.classList.toggle('on', !!l && isFav(l.key)); }, 120); }, true);
 // Builder slots: when a swipe settles on a new piece, wear it.
@@ -2425,7 +2432,7 @@ ${ps.map(i => `${i.id} · ${i.name} · ${(i.kind || i.cat).toLowerCase()} · ${c
   else if (ds.offwhy) { const [key, k] = ds.offwhy.split('|'); openOff(key); const st = S.offPick; const opp = { cold: 'warm', warm: 'cold' }[k]; st.why = st.why.includes(k) ? st.why.filter(x => x !== k) : [...st.why.filter(x => x !== opp), k]; openOff(key); }
   else if (ds.offpick) { const [key, k, v] = ds.offpick.split('|'); openOff(key); const st = S.offPick; st[k] = st[k].includes(v) ? st[k].filter(x => x !== v) : [...st[k], v]; openOff(key); }
   else if (ds.offsave) await applyOff(ds.offsave);
-  else if (ds.deck === 'back') { S.deck.at = 0; put('profile', S.deck); render(); }
+  else if (ds.deck === 'back') { lastSwipe = 0; S.deck.at = 0; put('profile', S.deck); render(); }
   else if (ds.deck) deckAct(ds.deck === 'next' ? 'next' : ds.deck);
   else if (ds.action === 'unanchor') { S.anchor = null; S.ideas = null; render(); }
   else if (ds.action === 'close') sheet.close();
@@ -2727,7 +2734,7 @@ async function backfillOrient() {
       it.orientChecked = true; await put('items', it);
     } catch (e) { console.warn(e); }
   }
-  if (n) render(); // swap any "?" already on screen for the missing-photo outline
+  if (n) bgRender(); // swap any "?" already on screen for the missing-photo outline
 }
 // Once (v5.1): each piece's photo moves out of its record into its own store, so the app opens on tags + small previews alone.
 // Then: a piece with no photo on disk is flagged (it shows in "Tags that don't add up"), and photos of deleted pieces are cleared.
@@ -2736,7 +2743,7 @@ async function checkPhotos() {
   const ids = new Set(S.items.map(i => i.id)), extra = new Set(S.items.flatMap(i => i.more ?? [])), full = new Set(await store('full', 'readonly', s => s.getAllKeys()));
   for (const name of ['full', 'orig']) for (const k of name === 'full' ? full : await store(name, 'readonly', s => s.getAllKeys())) if (!ids.has(k) && !extra.has(k)) await del(name, k); // extra photos are kept while a piece lists them
   let n = 0; for (const it of S.items) if (!it.img && !full.has(it.id)) { it.broken = true; n++; }
-  if (n && S.view === 'closet') render();
+  if (n && S.view === 'closet') bgRender();
 }
 async function backfillAccents() {
   let n = 0;
@@ -2749,7 +2756,7 @@ async function backfillAccents() {
       it.accents = accentsOf(extractPalette(px, 6, 0.02), it.color); await put('items', it); n++;
     } catch (e) { console.warn(e); }
   }
-  if (n) { S.ideas = null; if (S.view !== 'build') render(); }
+  if (n) { S.ideas = null; if (S.view !== 'build') bgRender(); }
 }
 
 { let n = 0; for (const it of S.items) { let bad = false; // health check: a piece with no type or color breaks whole screens, so fix it and ask you to check it
