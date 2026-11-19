@@ -535,3 +535,15 @@ console.log('edges ok');
 { const { patternOf: po } = await import('./match.js');
   for (const [name, want] of [['Nike Check tee', 'graphic'], ['Checkerboard Vans', 'allover'], ['Check shirt', 'allover'], ['Checked trousers', 'allover']]) if (po({ name, patterned: true }) !== want) throw new Error(`${name} should read ${want}`);
   console.log('check names ok'); }
+
+// Style points, levels, unlocks (2026-11-18)
+{ const pr = await import('./progress.js');
+  const day = (n) => pr.dayKey(new Date(2026, 10, 1 + n)), it = id => ({ id, cat: 'Tops', color: '#111111' });
+  const log = [0, 1, 2].map(n => ({ day: day(n), key: 'k' + n, ids: ['a', 'b'], src: n === 2 ? 'today' : undefined }));
+  const p = pr.points({ items: [it('a'), it('b')], log, saved: [] }, day(2));
+  // days: 10, 12, 14 = 36; first wears a + b = 10; Today pick 3; badges done (First Fit, Hat Trick) = 50
+  assert.equal(p.total, 36 + 10 + 3 + 50, 'points add up');
+  assert.equal(pr.levelOf(0).name, 'Fresh'); assert.equal(pr.levelOf(150).name, 'Rookie'); assert.equal(pr.levelOf(99999).name, 'Legend'); assert.equal(pr.levelOf(899).next[1], 'Sharp');
+  const u = Object.fromEntries(pr.unlocks({ items: [], log, saved: [] }, day(2)).map(x => [x.id, x.done]));
+  assert.ok(u.bestdressed && !u.gold && !u.noir, '3-day streak unlocks Best Dressed only');
+  console.log('points and unlocks ok'); }

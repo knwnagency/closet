@@ -37,3 +37,27 @@ export function badges({ items, log, saved }, today) {
   const c = { items, log, saved, best: streaks(log, today).best };
   return BADGES.map(b => { const v = b.val(c); return { ...b, v: Math.min(v, b.goal), done: v >= b.goal }; });
 }
+
+// ---------- style points, levels, unlocks (Me › Streak) ----------
+// Points come from what you did (logged days, streaks, first wears, saves, badges), so they sync with your backup and never drift.
+export const LEVELS = [[0, 'Fresh'], [150, 'Rookie'], [400, 'Regular'], [900, 'Sharp'], [1800, 'Fly'], [3500, 'Tastemaker'], [7000, 'Icon'], [14000, 'Legend']];
+export function points({ items, log, saved }, today = dayKey()) {
+  const byDay = {}, add = (d, n) => { byDay[d] = (byDay[d] ?? 0) + n; }, worn = new Set();
+  let run = 0, last;
+  for (const d of [...new Set(log.map(l => l.day.slice(0, 10)))].sort()) { run = last && prevDay(d) === last ? run + 1 : 1; last = d; add(d, 10 + Math.min(run - 1, 10) * 2); } // a logged day: 10, plus 2 per streak day (up to +20)
+  for (const l of [...log].sort((a, b) => a.day.localeCompare(b.day) || (a.at ?? 0) - (b.at ?? 0))) { const d = l.day.slice(0, 10);
+    if (l.day.includes('#')) add(d, 5); if (l.src === 'today') add(d, 3); // a second outfit that day, a pick from Today
+    for (const id of l.ids ?? []) if (!worn.has(id)) { worn.add(id); add(d, 5); } } // every piece's first wear: wear your whole closet
+  for (const s of saved) if (s.savedAt) add(dayKey(s.savedAt), 3);
+  const total = Object.values(byDay).reduce((t, n) => t + n, 0) + badges({ items, log, saved }, today).filter(b => b.done).length * 25;
+  return { total, byDay };
+}
+export const levelOf = n => { let i = LEVELS.length - 1; while (i > 0 && n < LEVELS[i][0]) i--; return { i, at: LEVELS[i][0], name: LEVELS[i][1], next: LEVELS[i + 1] ?? null }; };
+// Things you unlock and keep (the app remembers them, so a broken streak never takes them back).
+export const UNLOCKS = [
+  { id: 'bestdressed', name: 'Best Dressed', desc: 'Your best fit of the week, crowned on Me', need: '3-day streak', ok: c => c.best >= 3 },
+  { id: 'gold', name: 'Gold and Chrome', desc: 'Two new pop colors in Settings', need: '7-day streak', ok: c => c.best >= 7 },
+  { id: 'wrapped', name: 'Month in Review', desc: 'Your month: most worn, top colors, best fit', need: 'Sharp level (900 points)', ok: c => c.level >= 3 },
+  { id: 'noir', name: 'Noir', desc: 'A true-black theme', need: '14-day streak', ok: c => c.best >= 14 },
+];
+export const unlocks = (ctx, today = dayKey()) => { const best = streaks(ctx.log, today).best, level = levelOf(points(ctx, today).total).i; return UNLOCKS.map(u => ({ ...u, done: u.ok({ best, level }) })); };

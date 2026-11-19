@@ -1,2 +1,2 @@
-2026.11.18 · v5.47
-Never picked only lists pieces that cannot win a look · Rules and Combos show your own saved looks first · each piece shows the combos and rules it is part of · Undo on merge, season storage and move to Inspo · Settings in sections · worn-from-Today rate on Me · start from a combo or rule in Build
+2026.11.18 · v5.48
+Streaks you can see and things you unlock: a flame on Today, style points and 8 levels (Fresh to Legend), a weekly points graph, and unlocks you keep: Best Dressed (3-day streak), Gold and Chrome pop colors (7), Noir theme (14), Month in Review (Sharp level)

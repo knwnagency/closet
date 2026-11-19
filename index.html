@@ -38,11 +38,11 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
   document.body.append(d); }, 6000);
 </script>
 <script type="module">
-import { dayKey, prevDay, streaks, badges } from './progress.js';
+import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } from './progress.js';
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.47'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.48'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -270,7 +270,14 @@ const MEASURE = [['height', 'Height', `5'10"`], ['weight', 'Weight', '170 lb'], 
   ['hat', 'Hat size', '7 3/8'], ['notes', 'Fit notes', 'Size up in tees']];
 
 const progressCtx = () => ({ items: S.items, log: S.log, saved: S.saved });
-const streakChip = () => { if (!streaks(S.log).cur) return ''; /* no big zero */ const st = streaks(S.log); return `<button class="tag ${st.today ? '' : 'o'} streaktag" data-go="progress" aria-label="${st.cur} day streak">${st.cur} day streak</button>`; };
+const FLAME = 'M12 3c1 3 4 4.5 4 8.5A4 4 0 0 1 8 11.5c0-1.6.8-2.6 1.6-3.4.2 1.4 1 2.2 1.9 2.2C11 7.5 10.8 5 12 3zM12 21a6 6 0 0 1-6-6';
+const streakChip = () => { const st = streaks(S.log); return `<button class="tag ${st.today ? '' : 'o'} streaktag" data-go="progress" aria-label="${st.cur ? `${st.cur} day streak, see points and unlocks` : 'Start a streak'}">${svg(FLAME)} ${st.cur || 'start'}</button>`; };
+// Unlocks stay once earned: a broken streak never takes Gold or Noir back.
+const unlocked = id => S.profile?.unlocked?.includes(id) || false;
+async function checkUnlocks() { const fresh = unlocks(progressCtx()).filter(u => u.done && !unlocked(u.id)); if (!fresh.length || !S.profile) return;
+  S.profile = { ...S.profile, unlocked: [...(S.profile.unlocked ?? []), ...fresh.map(u => u.id)] }; await put('profile', S.profile);
+  if (!sheet.open) showSheet(`<div class="pad unlockpop"><div class="pickhead"><div><div class="eyebrow">Unlocked</div><h2>${fresh.map(u => esc(u.name)).join(' + ')}</h2></div>${closeBtn}</div>
+    ${fresh.map(u => `<p class="sub">${esc(u.desc)}. Earned with ${/streak/.test(u.need) ? 'a ' : ''}${esc(u.need)}.</p>`).join('')}<button class="btn wide" data-go="progress">See your progress</button></div>`); }
 const head = (eyebrow, title, right = '') => `<header><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1></div><div class="right">${right}</div></header>`;
 const subnav = (key, tabs) => `<div class="seg subnav">${tabs.map(([k, label]) => `<button class="${S[key] === k ? 'on' : ''}" data-sub="${key}:${k}">${label}</button>`).join('')}</div>`;
 // ---------- weather (Open-Meteo: free, no key). Only after you tap "Use weather"; location rounded to ~10 km, kept on this phone. ----------
@@ -906,9 +913,11 @@ function todayView() {
   if (!S.profile?.wx && !S.profile?.wxAsked) { S.profile = { k: 'me', ...S.profile, wxAsked: true }; put('profile', S.profile); setTimeout(askWeather, 400); } // once: the phone asks to share location
   else if (S.items.length >= 5 && (S.profile?.backupEvery ?? 7) && Date.now() - (S.profile?.lastBackup ?? 0) > (S.profile?.backupEvery ?? 7) * 864e5 - 36e5 && S.profile?.nudged !== dayKey()) { S.profile = { k: 'me', ...S.profile, nudged: dayKey() }; put('profile', S.profile);
     setTimeout(() => toast(S.profile.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up', { label: 'Back up', fn: exportBackup }), 900); } // once a day, a week after the last backup
+  if (S.profile && S.profile.streakSeen !== dayKey() && S.items.length >= 3) { S.profile = { ...S.profile, streakSeen: dayKey() }; put('profile', S.profile); const st = streaks(S.log), nx = unlocks(progressCtx()).find(u => !u.done && /streak/.test(u.need)), need = nx && +nx.need.match(/\d+/)[0] - st.cur;
+    setTimeout(() => { toast(st.cur ? `Day ${st.cur} streak${st.today ? '' : ' · log today to keep it'}${nx && need > 0 ? ` · ${need} more for ${nx.name}` : ''}` : 'Log what you wear today to start a streak', { label: 'Progress', fn: () => { S.view = 'progress'; render(); } }); checkUnlocks(); }, 1200); }
   const date = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const nf = (S.mode !== 'today' ? 1 : 0) + (S.occ ? 1 : 0) + (S.src ? 1 : 0);
-  const top = `<header class="thead"><div><div class="eyebrow">${greet()} · ${date}</div><h1>Today</h1></div><div class="right">${`<button class="favbtn" data-favs aria-label="Favorites, ${S.saved.length} saved">${heart}<b>${S.saved.length}</b></button>`}</div></header>
+  const top = `<header class="thead"><div><div class="eyebrow">${greet()} · ${date}</div><h1>Today</h1></div><div class="right">${streakChip()}<button class="favbtn" data-favs aria-label="Favorites, ${S.saved.length} saved">${heart}<b>${S.saved.length}</b></button></div></header>
     ${w ? `<div class="wxcard"><span class="wxi">${svg(RAINY(w.code) ? 'M7 15a4 4 0 1 1 .8-7.9A5 5 0 0 1 17.5 9 3.5 3.5 0 0 1 17 16H7zM9 19l-1 2M13 19l-1 2M17 19l-1 2' : w.code >= 2 ? 'M7 18a4 4 0 1 1 .8-7.9A5 5 0 0 1 17.5 11 3.5 3.5 0 0 1 17 18z' : (h => h >= 18 || h < 6)(new Date().getHours()) ? 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z' : 'M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z')}</span>
       <span class="wxt"><b>${tempText(w.t)}</b>${w.hi != null && w.lo != null ? `<small>${tempText(w.hi)} / ${tempText(w.lo)}</small>` : ''}</span><span class="wxl">${esc(wxLine(w))}${(sn => sn && items.length > forWeather(items, null, false, sn).length ? `<small class="wxs">${sn === 'cold' ? 'Fall/winter: no shorts unless it’s hot' : 'Summer: no heavy coats unless it’s cold'}</small>` : '')(seasonNow())}</span></div>` : ''}
     <div class="tbar">${capBtn()}${w ? `<span class="tag" hidden title="${esc(wxLine(w))}">${tempText(w.t)} ${esc(WX[w.code] ?? '')}</span>${w.lo != null && w.lo < w.t - 6 && w.hi == null ? `<span class="tag o"><span class="nc">${tempText(w.lo)}</span> later</span>` : ''}` : `<button class="tag o" data-action="weather">+ Weather</button>`}
@@ -1501,6 +1510,24 @@ function inspoView() {
 
 navigator.storage?.estimate?.().then(e => { S.storage = e.usage > 0 ? `${Math.round(e.usage / 1e6)} MB${e.quota ? ` of ${Math.round(e.quota / 1e9 * 10) / 10} GB` : ''}` : null; }).catch(() => {});
 // This month at a glance + what you could sell (6 months unworn, with what you paid), on Me.
+function bestDressed() {
+  const since = dayKey(new Date(Date.now() - 7 * 864e5)), wk = S.log.filter(l => l.day.slice(0, 10) >= since).map(l => { const ps = l.ids.map(byId).filter(Boolean); return { l, ps, b: complete(ps) ? bestMode(ps) : null }; }).filter(x => x.b?.score != null).sort((a, b) => b.b.score - a.b.score)[0];
+  return wk ? `<section class="bestd glass"><div class="crown">${svg('M4 17l2-9 4 4 2-6 2 6 4-4 2 9z')}</div><div><span class="mono">Best dressed this week · ${matchPct(wk.b.score)} match</span><b>${esc(lookName(wk.ps))}</b><span class="sub">${new Date(wk.l.day.slice(0, 10) + 'T12:00').toLocaleDateString(undefined, { weekday: 'long' })}</span></div><button class="flatbtn" data-buildkey="${wk.l.key}" aria-label="Open in Build">${flat(wk.ps)}</button></section>`
+    : '<p class="sub">Best dressed this week: log a fit and your best one gets crowned here.</p>';
+}
+// Month in review (unlocked at Sharp): this month's fits, the piece you wore most, your top colors, the best fit, points earned.
+function openWrapped() {
+  const ym = dayKey().slice(0, 7), ml = S.log.filter(l => l.day.startsWith(ym)), cnt = {}, cols = {};
+  for (const l of ml) for (const p of l.ids.map(byId).filter(Boolean)) { cnt[p.id] = (cnt[p.id] ?? 0) + 1; if (p.cat !== 'Accessories') cols[colorName(p.color)] = (cols[colorName(p.color)] ?? 0) + 1; }
+  const most = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0], mp = most && byId(most[0]), topC = Object.entries(cols).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n);
+  const best = ml.map(l => { const ps = l.ids.map(byId).filter(Boolean); return { ps, b: complete(ps) ? bestMode(ps) : null }; }).filter(x => x.b?.score != null).sort((a, b) => b.b.score - a.b.score)[0];
+  const pts = Object.entries(points(progressCtx()).byDay).filter(([d]) => d.startsWith(ym)).reduce((t, [, v]) => t + v, 0), name = new Date().toLocaleDateString(undefined, { month: 'long' });
+  showSheet(`<div class="pad wrapped"><div class="pickhead"><div><div class="eyebrow">Month in review</div><h2>${name}</h2></div>${closeBtn}</div>
+    <div class="wstats"><div><b>${new Set(ml.map(l => l.day.slice(0, 10))).size}</b><span class="mono">days logged</span></div><div><b>${streaks(S.log).best}</b><span class="mono">best streak</span></div><div><b>${pts.toLocaleString()}</b><span class="mono">points</span></div></div>
+    ${mp ? `<div class="rrow"><button data-open="${mp.id}"><img src="${src(mp)}" alt=""></button><div><span class="mono">Most worn · ${most[1]}×</span><b>${esc(mp.name)}</b></div></div>` : ''}
+    ${topC.length ? `<div class="cpal"><span class="mono">Your colors this month</span><span>${topC.map(dot).join('')}</span></div><p class="cnames">${topC.join(', ')}</p>` : ''}
+    ${best ? `<span class="mono">Best fit · ${matchPct(best.b.score)} match</span><div class="flatbtn">${flat(best.ps)}</div>` : '<p class="sub">Log a few fits and your month shows up here.</p>'}</div>`);
+}
 function styleReport() {
   const ym = dayKey().slice(0, 7), mlog = S.log.filter(l => l.day.startsWith(ym)), cols = {}, combos = {};
   for (const l of mlog) { const ps = l.ids.map(byId).filter(Boolean);
@@ -1534,6 +1561,7 @@ function meView() {
       <button data-action="rareall" class="wide"><span class="mono">Never picked by Today ›</span><b>${S.rare ? S.rare.n : 'check'}</b></button></div>
     ${(() => { const since = dayKey(new Date(Date.now() - 30 * 864e5)), opened = (p.opens ?? []).filter(d => d >= since).length, fromToday = S.log.filter(l => l.src === 'today' && l.day >= since).length;
       return opened >= 3 ? `<p class="sub hitrate">Last 30 days: you wore a look from Today on <b>${fromToday}</b> of the ${opened} days you opened the app. Higher means the picks fit you better.</p>` : ''; })()}
+    ${unlocked('bestdressed') ? bestDressed() : ''}
     ${styleReport()}
     <h3><span>Closet value</span><span>${priced.length} of ${items.length} priced</span></h3>
     ${priced.length ? `<div class="tiles"><div><span class="mono">Total</span><b>${money(value)}</b></div><div><span class="mono">Cost per wear</span><b>${pricedWears ? money(value / pricedWears) : '$0'}</b>${pricedWears ? '' : '<small class="sub">Log a wear to see it</small>'}</div></div>`
@@ -1550,8 +1578,8 @@ function meView() {
     ${aiCheck()}
     ` : `
     <details class="sgroup" data-sg="look" ${S.sopen?.look || false ? 'open' : ''}><summary><span>Look</span><span class="mono">${document.documentElement.dataset.theme === 'dark' ? 'dark' : document.documentElement.dataset.theme === 'auto' ? 'matches your phone' : 'light'}</span></summary>
-    <div class="seg themeseg">${[['light', 'Light'], ['dark', 'Dark'], ['auto', 'Match my phone']].map(([k, l]) => `<button type="button" class="${(document.documentElement.dataset.theme || 'light') === k ? 'on' : ''}" data-themeset="${k}">${l}</button>`).join('')}</div>
-    <span class="mono">Pop color</span><div class="popsw">${[['racing green', '#004225'], ...Object.entries(SWATCHES).filter(([n]) => !/white|light grey|beige|grey/.test(n))].map(([n, h]) => `<button type="button" class="${(p.pop ?? '#004225') === h ? 'on' : ''}" style="background:${h}" data-popset="${h}" aria-label="${n}"></button>`).join('')}<label aria-label="Pick any color"><input type="color" data-popany value="${p.pop ?? '#004225'}"></label></div>
+    <div class="seg themeseg">${[['light', 'Light'], ['dark', 'Dark'], ...(unlocked('noir') ? [['noir', 'Noir']] : []), ['auto', 'Match my phone']].map(([k, l]) => `<button type="button" class="${(document.documentElement.dataset.theme || 'light') === k ? 'on' : ''}" data-themeset="${k}">${l}</button>`).join('')}</div>
+    <span class="mono">Pop color</span><div class="popsw">${[['racing green', '#004225'], ...(unlocked('gold') ? [['gold', '#a8842f'], ['chrome', '#7d868f']] : []), ...Object.entries(SWATCHES).filter(([n]) => !/white|light grey|beige|grey/.test(n))].map(([n, h]) => `<button type="button" class="${(p.pop ?? '#004225') === h ? 'on' : ''}" style="background:${h}" data-popset="${h}" aria-label="${n}"></button>`).join('')}<label aria-label="Pick any color"><input type="color" data-popany value="${p.pop ?? '#004225'}"></label></div>
     </details>
     <details class="sgroup" data-sg="colors" ${S.sopen?.colors || false ? 'open' : ''}><summary><span>Your colors</span><span class="mono">${mySeason() ? `${mySeason().label} · ${colorsOn() ? 'on' : 'off'}` : 'not set'}</span></summary>
     ${colorsSection(p)}
@@ -1600,11 +1628,26 @@ function meView() {
     `}`;
 }
 
+// The level badge: the Fitted diamond, filling in as you climb (an outline at Fresh, solid with a crown line at Legend).
+const levelIcon = i => `<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 36 20 20 36 4 20Z" fill="${i >= 4 ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2.5"/>${i >= 1 && i < 4 ? `<path d="M20 ${30 - i * 5} 30 20 20 30 10 20Z" fill="currentColor" opacity="${0.35 + i * 0.2}"/>` : ''}${i >= 5 ? `<path d="M20 11 29 20 20 29 11 20Z" fill="var(--bg)"/>` : ''}${i >= 6 ? `<path d="M20 15 25 20 20 25 15 20Z" fill="currentColor"/>` : ''}${i >= 7 ? '<path d="M12 7l4 3 4-5 4 5 4-3" fill="none" stroke="currentColor" stroke-width="2"/>' : ''}</svg>`;
 function progressView() {
   const st = streaks(S.log), bs = badges(progressCtx()), today = dayKey();
   const week = Array.from({ length: 7 }, (_, i) => { let k = today; for (let j = 0; j < 6 - i; j++) k = prevDay(k); return k; });
   const wd = k => 'SMTWTFS'[new Date(k + 'T12:00').getDay()];
+  const pts = points(progressCtx()), lv = levelOf(pts.total), un = unlocks(progressCtx()).map(u => ({ ...u, done: u.done || unlocked(u.id) }));
+  const trend = week.map(k => pts.byDay[k] ?? 0), top = Math.max(10, ...trend), xy = trend.map((v, i) => [i * 100 / 6, 38 - v / top * 34]);
+  const line = xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  setTimeout(checkUnlocks, 300);
   return `<header><div><div class="eyebrow">Progress</div><h1>Streak</h1></div><div class="right"><button class="icon" data-go="me" aria-label="Back">${xIcon}</button></div></header>
+    <section class="level glass"><div class="lvicon">${levelIcon(lv.i)}</div><div><span class="mono">Level ${lv.i + 1} of ${LEVELS.length}</span><b>${lv.name}</b>
+      <span class="sub">${pts.total.toLocaleString()} style points${lv.next ? ` · ${(lv.next[0] - pts.total).toLocaleString()} to ${lv.next[1]}` : ' · the top level'}</span>
+      ${lv.next ? `<div class="bar"><i style="width:${Math.round((pts.total - lv.at) / (lv.next[0] - lv.at) * 100)}%"></i></div>` : ''}</div></section>
+    <div class="trend"><span class="mono">Points this week · ${trend.reduce((t, v) => t + v, 0)}</span><svg viewBox="0 -2 100 44" preserveAspectRatio="none" aria-label="Points per day this week: ${trend.join(', ')}"><polygon points="0,40 ${line} 100,40" class="area"/><polyline points="${line}" class="ln"/>${xy.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.4"/>`).join('')}</svg>
+      <div class="tdays">${week.map(k => `<span>${wd(k)}</span>`).join('')}</div></div>
+    <p class="sub">Points: 10 for each day you log a fit, up to +20 more a day while your streak runs, 5 for each piece's first wear, 3 for a Today pick or a saved look, 25 per badge.</p>
+    <h3><span>Unlocks</span><span>${un.filter(u => u.done).length}/${un.length}</span></h3>
+    <div class="unlocks">${un.map(u => `<div class="unl ${u.done ? 'done' : ''}"><b>${esc(u.name)}</b><small>${esc(u.desc)}</small><span class="mono">${u.done ? (u.id === 'wrapped' ? '<button class="tag" data-action="wrapped">Open</button>' : 'Unlocked') : (/streak/.test(u.need) ? `Unlocks with a ${esc(u.need)}` : `Unlocks at ${esc(u.need)}`)}</span></div>`).join('')}</div>
+    <details class="more"><summary><span>All levels</span><span class="mono">you're ${lv.name}</span></summary><div class="levels">${LEVELS.map(([at, n], i) => `<div class="${i === lv.i ? 'now' : i < lv.i ? 'past' : ''}"><span class="lvicon sm">${levelIcon(i)}</span><span><small>${at.toLocaleString()}${LEVELS[i + 1] ? ` to ${(LEVELS[i + 1][0] - 1).toLocaleString()}` : '+'}</small><b>${n}</b></span>${i === lv.i ? '<span class="mono">You</span>' : ''}</div>`).join('')}</div></details>
     <section class="hud glass"><div><div class="big">${st.cur}</div><div class="mono">Day streak${st.today ? '' : st.cur ? ' · log today to keep it' : ''}</div></div>
       <div class="stats"><div><span class="mono">Best</span><b>${st.best}</b></div><div><span class="mono">Outfits worn</span><b>${S.log.length}</b></div></div></section>
     <div class="week">${week.map(k => `<div class="${st.days.has(k) ? 'on' : ''} ${k === today ? 'now' : ''}"><span class="mono">${wd(k)}</span><i></i></div>`).join('')}</div>
@@ -2271,6 +2314,7 @@ document.addEventListener('click', async e => {
       if (r?.installing || r?.waiting) await new Promise(res => { navigator.serviceWorker.addEventListener('controllerchange', res, { once: true }); setTimeout(res, 5000); }); } catch (e) { console.warn(e); } location.reload(); }
   else if (ds.action === 'copyerr') { try { await navigator.clipboard.writeText(document.querySelector('.crash').textContent); toast('Copied. Paste it to Claude'); } catch { toast('Copy blocked. Take a screenshot instead'); } }
   else if (ds.action === 'rareall') openRareAll();
+  else if (ds.action === 'wrapped') openWrapped();
   else if (ds.action === 'rdskip') { S.profile = { k: 'me', ...S.profile, rdSkip: dayKey() }; await put('profile', S.profile); render(); }
   else if (ds.action === 'askwx') askWeather();
   else if (ds.action === 'seasonswap' || ds.action === 'seasonlater') { const sw = seasonSwap(); if (!sw) return; const asked = S.profile?.seasonAsked, was = [...(sw.back ?? []), ...(sw.out ?? [])].map(it => [it, it.stored, it.storedSeason]);
