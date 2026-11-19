@@ -1,8 +1,9 @@
 // Before shipping a rule change: compare the rules in this folder with the last commit (or any git ref) on your real pieces.
-// node rules-check.mjs [ref] [backup.json]   (defaults: HEAD, the newest closet-backup*.json in iCloud Drive › Fitted Backups, iCloud Drive, Downloads or hauls/)
+// node rules-check.mjs [ref] [backup.json]   (defaults: HEAD, the newest closet-backup*.json anywhere in iCloud Drive, Downloads or hauls/)
 // Prints: looks you saved or wore that now fail, pattern-on-pattern per day, how much the Best tab moved, which reasons show up more or less.
 import { execSync } from 'child_process';
-import { mkdtempSync, writeFileSync, readFileSync, readdirSync, statSync } from 'fs';
+import { mkdtempSync, writeFileSync, readFileSync } from 'fs';
+import { newestBackup } from './backups.mjs';
 import { join, dirname } from 'path';
 import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
@@ -12,12 +13,10 @@ const old = mkdtempSync(join(tmpdir(), 'rules-'));
 for (const f of ['match.js', 'style.js']) writeFileSync(join(old, f), execSync(`git show ${ref}:${f}`, { cwd: here }));
 const A = await import(join(old, 'match.js')), B = await import(join(here, 'match.js'));
 
-// Newest backup from iCloud Drive › Fitted Backups (saved from your phone), iCloud Drive, Downloads or hauls/.
-const icloud = join(process.env.HOME, 'Library/Mobile Documents/com~apple~CloudDocs');
-const backups = [join(icloud, 'Fitted Backups'), icloud, join(process.env.HOME, 'Downloads'), join(here, 'hauls')].flatMap(d => { try { return readdirSync(d).filter(f => /^closet-backup.*\.json$/.test(f)).map(f => join(d, f)); } catch { return []; } });
-const file = process.argv[3] ?? backups.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
-if (!file) { console.log('No backup found. On your phone: Me › Settings › Backup and sync › Save backup › Save to Files › iCloud Drive › Fitted Backups.'); process.exit(1); }
-const b = JSON.parse(readFileSync(file, 'utf8')), items = b.items.map(({ img, photo, ...i }) => i), byId = new Map(items.map(i => [i.id, i]));
+// Newest backup anywhere in iCloud Drive, Downloads or hauls/ (or pass a file), with newer "-changes" backups laid on top.
+const nb = process.argv[3] ? { file: process.argv[3], data: JSON.parse(readFileSync(process.argv[3], 'utf8')) } : newestBackup();
+if (!nb) { console.log('No backup found. On your phone: Me › Settings › Backup and sync › Save backup › Save to Files › iCloud Drive.'); process.exit(1); }
+const file = nb.file, b = nb.data, items = b.items.map(({ img, photo, ...i }) => i), byId = new Map(items.map(i => [i.id, i]));
 console.log(`${file.split('/').pop()} · ${items.length} pieces · rules now vs ${ref}\n`);
 
 // 1. Your own looks must never start failing

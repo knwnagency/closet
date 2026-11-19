@@ -2,27 +2,24 @@
 // Closet MCP server: lets Claude (Desktop or Code) read your closet and suggest outfits with the app's own rules (match.js + style.js).
 // Your clothes live on your phone, so it reads your latest Export backup (closet-backup-*.json) from iCloud Drive, Downloads or closet/hauls.
 // Everything stays on this Mac. Plain stdio JSON-RPC, no dependencies.
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { backupFiles, newestBackup, ROOTS } from '../backups.mjs';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { MODES, FITS, colorName, isNeutral, generate, rankSwaps, bestMode, fixTip, madeWith, today, SLOTS } from '../match.js';
 
 const here = dirname(fileURLToPath(import.meta.url)), home = homedir();
-const DIRS = [process.env.CLOSET_BACKUP_DIR, join(home, 'Library/Mobile Documents/com~apple~CloudDocs/Fitted Backups'), join(home, 'Library/Mobile Documents/com~apple~CloudDocs'), join(home, 'Library/Mobile Documents/com~apple~CloudDocs/Downloads'),
-  join(home, 'Downloads'), join(here, '../hauls')].filter(Boolean);
-
-// Newest backup wins. Cached until the file changes.
-let cache = { path: null, mtime: 0, data: null };
+// Newest backup wins (anywhere in iCloud Drive, Downloads or hauls/), newer "-changes" backups laid on top. Cached until a file changes.
+let cache = { sig: null, data: null };
 function load() {
-  const files = DIRS.filter(existsSync).flatMap(d => readdirSync(d).filter(f => /^closet-backup.*\.json$/.test(f)).map(f => join(d, f)));
-  if (!files.length) throw new Error(`No closet backup found. In the app: Me › Settings › Backup and sync › Save backup, then Save to Files › iCloud Drive › Fitted Backups. Looked in: ${DIRS.join(', ')}`);
-  const path = files.map(f => [f, statSync(f).mtimeMs]).sort((a, b) => b[1] - a[1])[0];
-  if (cache.path !== path[0] || cache.mtime !== path[1]) {
-    const b = JSON.parse(readFileSync(path[0], 'utf8'));
-    const imgs = new Map(b.items.map(i => [i.id, i.img])); // kept aside for show_pieces; the rest of the tools only need the text
+  const files = backupFiles(), sig = files.map(f => f.path + f.mtime).join();
+  if (cache.sig !== sig) {
+    const nb = newestBackup(files);
+    if (!nb) throw new Error(`No closet backup found. In the app: Me › Settings › Backup and sync › Save backup, then Save to Files › iCloud Drive (any folder). Looked in: ${ROOTS.join(', ')}`);
+    const b = nb.data, imgs = new Map(b.items.map(i => [i.id, i.img])); // kept aside for show_pieces; the rest of the tools only need the text
     for (const i of b.items) { delete i.img; delete i.photo; } for (const w of b.wish ?? []) delete w.img; for (const i of b.inspo ?? []) delete i.img; // text only
-    cache = { path: path[0], mtime: path[1], data: b, imgs };
+    cache = { sig, path: nb.file, data: b, imgs };
   }
   return cache.data;
 }

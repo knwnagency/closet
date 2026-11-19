@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.52'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.53'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -277,7 +277,7 @@ const FLAME = 'M12 3c1 3 4 4.5 4 8.5A4 4 0 0 1 8 11.5c0-1.6.8-2.6 1.6-3.4.2 1.4 
 const streakChip = () => { const st = streaks(S.log); return `<button class="tag ${st.today ? '' : 'o'} streaktag" data-go="progress" aria-label="${st.cur ? `${st.cur} day streak, see points and unlocks` : 'Start a streak'}">${svg(FLAME)} ${st.cur}</button>`; };
 // Unlocks stay once earned: a broken streak never takes Gold or Noir back.
 const unlocked = id => S.profile?.unlocked?.includes(id) || false;
-async function checkUnlocks() { const fresh = unlocks(progressCtx()).filter(u => u.done && !unlocked(u.id)); if (!fresh.length || !S.profile) return;
+async function checkUnlocks() { const fresh = unlocks(progressCtx()).filter(u => u.done && !unlocked(u.id)); if (!fresh.length || !S.profile || sheet.open) return; // a sheet is up: try again next time
   S.profile = { ...S.profile, unlocked: [...(S.profile.unlocked ?? []), ...fresh.map(u => u.id)] }; await put('profile', S.profile);
   if (!sheet.open) showSheet(`<div class="pad unlockpop"><div class="pickhead"><div><div class="eyebrow">Unlocked</div><h2>${fresh.map(u => esc(u.name)).join(' + ')}</h2></div>${closeBtn}</div>
     ${fresh.map(u => `<p class="sub">${esc(u.desc)}. Earned with ${/streak/.test(u.need) ? 'a ' : ''}${esc(u.need)}.</p>`).join('')}<button class="btn wide" data-go="progress">See your progress</button></div>`); }
@@ -834,9 +834,11 @@ const band = w => w ? (w.t < 12 ? 'cold' : w.t >= 24 ? 'hot' : 'mild') + (RAINY(
 const deckSig = () => ['v2', VERSION, colorsOn() && S.profile.colorSeason, !!S.profile?.hoodieAlone, !!S.profile?.twoShirts, S.profile?.season ?? '', dayKey(), S.items.length, new Date().getHours() >= 16, S.profile?.tempBias ?? 0, S.profile?.dressBias ?? 0, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
 function getDeck(items) {
   if (S.deck?.sig === deckSig()) return S.deck;
+  const old = S.deck, seen = old?.day && old.day !== dayKey() && !old.src && old.looks[old.at];
+  if (seen && S.profile) { S.profile = { ...S.profile, lastSeen: { day: old.day, key: seen.key, ids: seen.ids } }; putQuiet('profile', S.profile); }
   const recs = S.src === 'saved' ? S.saved : S.src === 'worn' ? wornLooks() : null; // looks you already know, instead of fresh picks
   const w = weatherNow(), list = recs ? recs.map(r => ({ key: r.key, items: r.ids.map(byId).filter(Boolean), mode: r.mode })) : S.mode === 'today' || !MODES[S.mode] ? todayPicks(items, w?.t) : generate(items, S.mode, { n: 12, palette: S.palette, inspo: S.inspoColors });
-  S.deck = { k: 'deck', sig: deckSig(), at: 0, looks: list.map(o => ({ key: o.key, ids: o.items.map(p => p.id), mode: o.mode ?? S.mode, note: o.note })), blocked: list.blocked ?? null };
+  S.deck = { k: 'deck', sig: deckSig(), day: dayKey(), src: S.src ?? '', at: 0, looks: list.map(o => ({ key: o.key, ids: o.items.map(p => p.id), mode: o.mode ?? S.mode, note: o.note })), blocked: list.blocked ?? null };
   put('profile', S.deck); return S.deck;
 }
 const pad2 = n => String(n).padStart(2, '0');
@@ -940,13 +942,15 @@ function todayView() {
   if (!looks.length) return top + `<div class="empty"><h2>No ${MODES[S.mode]?.label ?? ''} matches</h2><p>${d.blocked ? `Most combos break a proportion rule: <b>${esc(d.blocked.toLowerCase())}</b>. If a fit tag is wrong, fix it on the piece.` : 'Your closet needs more colors for this rule. Try another filter.'}</p><button class="btn" data-action="filters">Change filter</button></div>`;
   const cur = looks[Math.min(at, looks.length - 1)];
   const lh = lessHint(), lb = S.profile?.lastBackup, changed = lb ? S.items.filter(i => (i.updatedAt ?? i.createdAt ?? 0) > lb).length : 0, every = S.profile?.backupEvery ?? 7, needBk = S.items.length >= 5 && ((every && Date.now() - (lb ?? 0) > every * 864e5 - 36e5) || changed >= 15); // every: days between reminders (Settings › Backup)
-  const bk = needBk ? `<button class="nudge glass" data-action="export"><div><span class="mono">${lb ? `Last backup ${ago(lb)}${changed ? ` · ${changed} pieces changed since` : ''}` : 'Never backed up'}</span><b>Your ${S.items.length} pieces live only on this phone</b></div><span class="plus">Back up →</span></button>` : '';
+  const bk = needBk ? `<button class="nudge glass" data-action="${lb && Date.now() - (S.profile.lastFull ?? lb) < 30 * 864e5 ? 'exportnew' : 'export'}"><div><span class="mono">${lb ? `Last backup ${ago(lb)}${changed ? ` · ${changed} pieces changed since` : ''}` : 'Never backed up'}</span><b>Your ${S.items.length} pieces live only on this phone</b></div><span class="plus">Back up →</span></button>` : '';
   const tip = S.profile?.tipsSeen ? '' : `<div class="nudge glass tip"><div><span class="mono">How Today works</span><b>Slide for more looks · ♡ saves one · Wear today logs it · Not for me teaches it what's off · ↻ swaps just that look</b></div><button class="tag o" data-action="tipsok">Got it</button></div>`;
   const plain = S.items.filter(plainName).length, rnDay = S.profile?.renameDay, rn = !bk && !tip && plain >= 10 && (rnDay === dayKey() || !rnDay || Date.now() - new Date(rnDay).getTime() > 7 * 864e5);
   if (rn && rnDay !== dayKey()) { S.profile = { k: 'me', ...S.profile, renameDay: dayKey() }; put('profile', S.profile); }
   const rd = !tip && rediscover(items, w), days = rd && Math.round((Date.now() - (rd.lastWorn ?? rd.createdAt ?? Date.now())) / 864e5);
   const rdCard = rd ? `<div class="nudge glass rd"><button data-open="${rd.id}" aria-label="Open ${esc(rd.name)}"><img src="${src(rd)}" alt=""></button><div><span class="mono">${rd.wears ? `Not worn in ${days} days` : 'Never worn yet'}</span><b>${esc(rd.name)}</b></div><button class="tag" data-quick="made|${rd.id}">See looks</button><button class="icon" data-action="rdskip" aria-label="Not today">${xIcon}</button></div>` : '';
-  const below = tip + rdCard + bk + (rn ? `<button class="nudge glass" data-action="rename"><div><span class="mono">${plain} pieces named just by type</span><b>Name them so Today's picks read like your closet</b></div><span class="plus">Go →</span></button>` : '') + (lh ? `<div class="nudge glass"><div><span class="mono">You keep passing on looks with it</span><b>Suggest the ${esc(lh.name.toLowerCase())} less?</b></div><button class="tag" data-rate="${lh.id}|-1">Less</button><button class="tag o" data-rate="${lh.id}|0">Keep</button></div>` : '');
+  const ls = S.profile?.lastSeen, lsPs = ls?.day === prevDay(dayKey()) && !S.log.some(l => l.day.slice(0, 10) === ls.day) && ls.ids.map(byId).filter(Boolean);
+  const woreCard = lsPs?.length && lsPs.length === ls.ids.length ? `<div class="nudge glass rd"><span class="wthumb">${flat(lsPs)}</span><div><span class="mono">Yesterday's pick</span><b>Did you wear it?</b></div><button class="tag" data-woreit="yes">Yes</button><button class="tag o" data-woreit="no">No</button></div>` : '';
+  const below = tip + woreCard + rdCard + bk + (rn ? `<button class="nudge glass" data-action="rename"><div><span class="mono">${plain} pieces named just by type</span><b>Name them so Today's picks read like your closet</b></div><span class="plus">Go →</span></button>` : '') + (lh ? `<div class="nudge glass"><div><span class="mono">You keep passing on looks with it</span><b>Suggest the ${esc(lh.name.toLowerCase())} less?</b></div><button class="tag" data-rate="${lh.id}|-1">Less</button><button class="tag o" data-rate="${lh.id}|0">Keep</button></div>` : '');
   return top    + `<div class="deck" aria-label="Today's looks, slide for more">${(used => looks.map((o, k) => deckCard(o, k, looks.length, 'slide', used)).join(''))(new Set())}${moreWays()}</div>
     <div class="dbtns"><button class="round" data-deck="prev" aria-label="Previous look">${svg('M15 5l-7 7 7 7')}</button><button class="round ${isFav(cur.key) ? 'on' : ''}" data-deck="fav" aria-label="Save look">${heart}</button><button class="btn go" data-deck="wear">Wear today ${ic('arrow')}</button><button class="round" data-deck="next" aria-label="Next look">${svg('M9 5l7 7-7 7')}</button></div>
     <p class="mono swipehint">Slide for more · tap a look to open it</p>${below}`;
@@ -1376,6 +1380,7 @@ async function logDay(day, o, quiet = false, how = null) {
   const entry = { day, key: o.key, ids: o.items.map(i => i.id), mode, at, ...(o.src ? { src: o.src } : {}), ...(wt != null ? { t: wt } : {}) }; // the day's temperature, for "what did I wear when it was this cold" 
   await put('log', entry); S.log = [...S.log.filter(l => l.day !== day), entry]; syncTaste();
   const fresh = badges(progressCtx()).find(b => b.done && !before.has(b.id));
+  setTimeout(checkUnlocks, 1200);
   if (!quiet || fresh) toast(fresh ? `Badge unlocked · ${fresh.name}` : how === 'add' ? `Logged outfit ${same.length + 1} for the day` : date !== dayKey() ? 'Logged' : prev ? "Swapped today's fit" : `Day ${streaks(S.log).cur} streak`);
   return entry;
 }
@@ -1624,7 +1629,7 @@ function meView() {
     <label class="cell"><span>Remind me</span><select data-bkevery aria-label="Backup reminder">${[[1, 'Every day'], [3, 'Every 3 days'], [7, 'Every week'], [0, 'Only after big changes']].map(([v, l]) => `<option value="${v}" ${(p.backupEvery ?? 7) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="chk"><input type="checkbox" data-action="fullbackup" ${p.fullBackup ? 'checked' : ''}> Include original photos (bigger file, keeps Remove background working)</label>
     <details class="more remind"><summary><span>How backup and sync work</span><span class="mono">${p.lastSync ? `synced ${ago(p.lastSync.at)}` : 'phone + computer'}</span></summary>
-      <ol class="steps"><li>iPhone doesn't let web apps save files on their own: tap the reminder, then <b>Save › Save to Files › iCloud Drive › Fitted Backups</b> (make that folder once; it remembers it). Your computer and Claude find it there.</li>
+      <ol class="steps"><li>iPhone doesn't let web apps save files on their own: tap the reminder, then <b>Save › Save to Files › iCloud Drive</b>, any folder (Files remembers the last one). Your computer and Claude find it there.</li>
       <li>Phone and computer: save a backup on one, then <b>Restore or sync</b> on the other. The newer edit wins and deletes carry over.</li>
       ${p.lastSync ? `<li>Last restore or sync ${ago(p.lastSync.at)} from ${esc(p.lastSync.file)}.</li>` : ''}</ol>
       ${p.lastBackup ? `<button class="btn ghost sm" data-action="exportnew">Save changes only · ${S.items.filter(i => (i.updatedAt ?? i.createdAt ?? 0) > p.lastBackup).length} pieces</button>` : ''}</details>
@@ -1656,16 +1661,16 @@ function progressView() {
     <section class="level glass"><div class="lvicon">${levelIcon(lv.i)}</div><div><span class="mono">Level ${lv.i + 1} of ${LEVELS.length}</span><b>${lv.name}</b>
       <span class="sub">${pts.total.toLocaleString()} style points${lv.next ? ` · ${(lv.next[0] - pts.total).toLocaleString()} to ${lv.next[1]}` : ' · the top level'}</span>
       ${lv.next ? `<div class="bar"><i style="width:${Math.round((pts.total - lv.at) / (lv.next[0] - lv.at) * 100)}%"></i></div>` : ''}</div></section>
+    <section class="hud glass"><div><div class="big">${st.cur}</div><div class="mono">Day streak${st.today ? '' : st.cur ? ' · log today to keep it' : ''}</div></div>
+      <div class="stats"><div><span class="mono">Best</span><b>${st.best}</b></div><div><span class="mono">Outfits worn</span><b>${S.log.length}</b></div></div></section>
+    <div class="week">${week.map(k => `<div class="${st.days.has(k) ? 'on' : ''} ${k === today ? 'now' : ''}"><span class="mono">${wd(k)}</span><i></i></div>`).join('')}</div>
+    ${st.today ? '' : `<button class="btn go wide" data-go="outfits">Pick today's fit</button>`}
     <div class="trend"><span class="mono">Points this week · ${trend.reduce((t, v) => t + v, 0)}</span><svg viewBox="0 -2 100 44" preserveAspectRatio="none" aria-label="Points per day this week: ${trend.join(', ')}"><polygon points="0,40 ${line} 100,40" class="area"/><polyline points="${line}" class="ln"/>${xy.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.4"/>`).join('')}</svg>
       <div class="tdays">${week.map(k => `<span>${wd(k)}</span>`).join('')}</div></div>
     <ul class="ptsway"><li><span>Log a fit</span><b>10 a day</b></li><li><span>Streak running</span><b>up to +20 a day</b></li><li><span>First wear of a piece</span><b>5</b></li><li><span>Today pick or saved look</span><b>3</b></li><li><span>Badge</span><b>25</b></li></ul>
     <h3><span>Unlocks</span><span>${un.filter(u => u.done).length}/${un.length}</span></h3>
     <div class="unlocks">${un.map(u => `<div class="unl ${u.done ? 'done' : ''}"><b>${esc(u.name)}</b><small>${esc(u.desc)}</small><span class="mono">${u.done ? (u.id === 'wrapped' ? '<button class="tag" data-action="wrapped">Open</button>' : 'Unlocked') : (/streak/.test(u.need) ? `Unlocks with a ${esc(u.need)}` : `Unlocks at ${esc(u.need)}`)}</span></div>`).join('')}</div>
     <details class="more"><summary><span>All levels</span><span class="mono">you're ${lv.name}</span></summary><div class="levels">${LEVELS.map(([at, n], i) => `<div class="${i === lv.i ? 'now' : i < lv.i ? 'past' : ''}"><span class="lvicon sm">${levelIcon(i)}</span><span><small>${at.toLocaleString()}${LEVELS[i + 1] ? ` to ${(LEVELS[i + 1][0] - 1).toLocaleString()}` : '+'}</small><b>${n}</b></span>${i === lv.i ? '<span class="mono">You</span>' : ''}</div>`).join('')}</div></details>
-    <section class="hud glass"><div><div class="big">${st.cur}</div><div class="mono">Day streak${st.today ? '' : st.cur ? ' · log today to keep it' : ''}</div></div>
-      <div class="stats"><div><span class="mono">Best</span><b>${st.best}</b></div><div><span class="mono">Outfits worn</span><b>${S.log.length}</b></div></div></section>
-    <div class="week">${week.map(k => `<div class="${st.days.has(k) ? 'on' : ''} ${k === today ? 'now' : ''}"><span class="mono">${wd(k)}</span><i></i></div>`).join('')}</div>
-    ${st.today ? '' : `<button class="btn go wide" data-go="outfits">Pick today's fit</button>`}
     <h3><span>Badges</span><span>${bs.filter(b => b.done).length}/${bs.length}</span></h3>
     <div class="badges">${bs.map(b => `<div class="badge glass ${b.done ? 'done' : ''}"><div class="medal">${svg(ICON[b.icon])}</div><b>${b.name}</b><small>${b.desc}</small>
       ${b.done ? '<span class="mono">Unlocked</span>' : `<div class="bar"><i style="width:${b.v / b.goal * 100}%"></i></div><span class="mono">${b.unit === '%' ? `${b.v}% worn` : `${b.v} of ${b.goal}`}</span>`}</div>`).join('')}</div>`;
@@ -2036,7 +2041,7 @@ async function exportBackup() {
   download(S.backupFile); await backedUp();
 }
 const download = f => { const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(f), download: f.name }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); };
-async function backedUp() { S.profile = { k: 'me', ...S.profile, lastBackup: Date.now() }; await put('profile', S.profile); toast('Backup saved'); render(); }
+async function backedUp() { const now = Date.now(), full = !S.backupFile?.name.includes('-changes'); S.profile = { k: 'me', ...S.profile, lastBackup: now, ...(full ? { lastFull: now } : {}) }; await put('profile', S.profile); toast('Backup saved'); render(); }
 async function shareBackup() {
   try { await navigator.share({ files: [S.backupFile], title: 'Fitted backup' }); sheet.close(); await backedUp(); }
   catch (e) { if (e.name !== 'AbortError') { download(S.backupFile); sheet.close(); await backedUp(); } }
@@ -2283,7 +2288,7 @@ document.addEventListener('pointerdown', e => { if (!e.target.closest('.clearnam
 // and the menu floats mid-screen. When the keyboard goes away, put the page back where it was.
 // The phone's top bar follows the theme. A theme saved in the profile wins over this browser's memory (a restored backup brings it back).
 // Your pop color (Me › Look): the light version as picked, a lifted one for dark mode, and black or white text, whichever reads.
-const popVars = h => { const { h: hh, s: ss, l } = hexToHsl(h), d = l < 0.35 ? hslToHex(hh, ss, Math.min(0.5, l + 0.2)) : h, on = x => lum(x) > 0.18 ? '#141414' : '#fbfaf6';
+const popVars = h => { const { h: hh, s: ss, l } = hexToHsl(h), d = l < 0.35 ? hslToHex(hh, ss, Math.min(0.5, l + 0.2)) : h, on = x => (lum(x) + .05) ** 2 > (lum('#141414') + .05) * (lum('#fbfaf6') + .05) ? '#141414' : '#fbfaf6';
   return { '--pop-l': h, '--on-pop-l': on(h), '--pop-d': d, '--on-pop-d': on(d) }; };
 const applyPop = h => { const vars = h ? popVars(h) : null, st = document.documentElement.style; for (const k of ['--pop-l', '--on-pop-l', '--pop-d', '--on-pop-d']) vars ? st.setProperty(k, vars[k]) : st.removeProperty(k);
   try { vars ? localStorage.setItem('pop', JSON.stringify(vars)) : localStorage.removeItem('pop'); } catch {} };
@@ -2329,6 +2334,8 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'copyerr') { try { await navigator.clipboard.writeText(document.querySelector('.crash').textContent); toast('Copied. Paste it to Claude'); } catch { toast('Copy blocked. Take a screenshot instead'); } }
   else if (ds.action === 'rareall') openRareAll();
   else if (ds.action === 'wrapped') openWrapped();
+  else if (ds.woreit) { const ls = S.profile.lastSeen; S.profile = { ...S.profile, lastSeen: null }; await put('profile', S.profile);
+    if (ds.woreit === 'yes') { await logDay(ls.day, { key: ls.key, items: ls.ids.map(byId).filter(Boolean), src: 'today' }, true); toast('Logged for yesterday'); } render(); }
   else if (ds.action === 'rdskip') { S.profile = { k: 'me', ...S.profile, rdSkip: dayKey() }; await put('profile', S.profile); render(); }
   else if (ds.action === 'askwx') askWeather();
   else if (ds.action === 'seasonswap' || ds.action === 'seasonlater') { const sw = seasonSwap(); if (!sw) return; const asked = S.profile?.seasonAsked, was = [...(sw.back ?? []), ...(sw.out ?? [])].map(it => [it, it.stored, it.storedSeason]);

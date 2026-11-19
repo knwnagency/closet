@@ -1,2 +1,2 @@
-2026.11.18 · v5.52
-QA fixes: long messages wrap instead of getting cut off · Gold and Chrome buttons use dark text so they are readable · Too cold and Too warm can't both be picked · Progress shows your level up top and points as a list · empty rules fold away at the bottom · suggested capsules can be starred or combined right away
+2026.11.18 · v5.53
+Today asks if you wore yesterday's pick: one tap logs it · unlocks pop up the moment you earn them · the backup reminder saves only what changed (a full backup about once a month) · Progress shows your streak right under your level
