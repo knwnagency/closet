@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.58'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.19 · v5.59'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -268,12 +268,12 @@ const ICON = {
 const PRESET_COLLS = ['Everyday', 'Vacation', 'Club', 'Dressy', 'Work', 'Gym', 'Date night'];
 // Builder slots. Outer = a second layer over the first (tee + flannel + jacket), tracked by id in S.outer.
 const extraTop = () => { const by = bySlot(S.build ?? [], S.outer); return [by.Layers, by.Outer].find(p => p?.cat === 'Tops'); }; // a shirt worn open over the tee
-const inS = sl => sl === 'Outer' ? p => p.id === S.outer : sl === 'Layers' ? (x => p => (p.cat === 'Layers' || p === x) && p.id !== S.outer)(extraTop()) : sl === 'Tops' ? (x => p => p.cat === 'Tops' && p !== x)(extraTop()) : SLOTS[sl];
-const canS = sl => sl === 'Outer' ? SLOTS.Layers : sl === 'Layers' ? p => p.cat === 'Layers' || openShirt(p) && (S.build ?? []).some(q => q.cat === 'Tops' && q !== p && !openShirt(q)) : SLOTS[sl]; // a shirt goes under a jacket, never over it // what can go in a slot (a button-up only once a tee is on)
+const inS = sl => sl === 'Extra' ? p => p.id === S.acc2 : sl === 'Accessory' ? p => SLOTS.Accessory(p) && p.id !== S.acc2 : sl === 'Outer' ? p => p.id === S.outer : sl === 'Layers' ? (x => p => (p.cat === 'Layers' || p === x) && p.id !== S.outer)(extraTop()) : sl === 'Tops' ? (x => p => p.cat === 'Tops' && p !== x)(extraTop()) : SLOTS[sl];
+const canS = sl => sl === 'Extra' ? (m => p => SLOTS.Accessory(p) && p !== m)((S.build ?? []).find(inS('Accessory'))) : sl === 'Outer' ? SLOTS.Layers : sl === 'Layers' ? p => p.cat === 'Layers' || openShirt(p) && (S.build ?? []).some(q => q.cat === 'Tops' && q !== p && !openShirt(q)) : SLOTS[sl]; // a shirt goes under a jacket, never over it // what can go in a slot (a button-up only once a tee is on)
 // Ranked options for a slot. With two layers, the other layer stays out of the list (and out of the scoring, which knows one layer).
 const swapsFor = (slot, outfit) => { const other = slot === 'Outer' ? outfit.find(inS('Layers')) : slot === 'Layers' ? outfit.find(inS('Outer')) : null;
   const cur = outfit.filter(inS(slot)); return rankSwaps(buildItems().filter(p => p !== other), outfit.filter(p => p !== other), slot === 'Outer' ? 'Layers' : slot, undefined, { rest: outfit.filter(p => p !== other && !cur.includes(p)), fits: canS(slot) }); };
-const SLOT_LABEL = { Tops: 'Top', Layers: 'Layer', Outer: 'Outer layer', Bottoms: 'Bottoms', Shoes: 'Shoes', Hat: 'Hat', Belt: 'Belt', Accessory: 'Accessory' };
+const SLOT_LABEL = { Tops: 'Top', Layers: 'Layer', Outer: 'Outer layer', Bottoms: 'Bottoms', Shoes: 'Shoes', Hat: 'Hat', Belt: 'Belt', Accessory: 'Accessory', Extra: 'Another accessory' };
 const MEASURE = [['height', 'Height', `5'10"`], ['weight', 'Weight', '170 lb'], ['chest', 'Chest', '40 in'], ['waist', 'Waist', '32 in'], ['hips', 'Hips', '38 in'],
   ['inseam', 'Inseam', '32 in'], ['shoulder', 'Shoulder', '18 in'], ['top', 'Top size', 'L'], ['bottom', 'Bottom size', '32x32'], ['shoe', 'Shoe size', '10.5'],
   ['hat', 'Hat size', '7 3/8'], ['notes', 'Fit notes', 'Size up in tees']];
@@ -1013,7 +1013,7 @@ function openFilters() {
 }
 
 // Builder: one card per slot (like Cladwell). Tap a card or Swap to pick from a list, best matches first.
-const ROWS = ['Layers', 'Tops', 'Bottoms', 'Shoes'], EXTRAS = ['Hat', 'Belt', 'Accessory'], OPTIONAL = ['Layers', 'Hat', 'Belt', 'Accessory'];
+const ROWS = ['Layers', 'Tops', 'Bottoms', 'Shoes'], EXTRAS = ['Hat', 'Belt', 'Accessory', 'Extra'], OPTIONAL = ['Layers', 'Hat', 'Belt', 'Accessory', 'Extra'];
 const isFav = k => S.saved.some(s => s.key === k);
 // Today's picks, one big card at a time: swipe for the next. Each card says why it fits the weather.
 const wxWhy = o => { const w = weatherNow(); if (!w) return '';
@@ -1134,7 +1134,7 @@ const recentHtml = () => { const list = wornLooks().filter(h => h.key !== keyOf(
 
 // What you can pick from: the collection, plus whatever the outfit is already wearing (it may come from outside it).
 const buildItems = () => [...new Set([...pool(), ...S.build])];
-const PICK_TITLE = { Tops: 'Pick a top', Layers: 'Pick a layer', Outer: 'Pick an outer layer', Bottoms: 'Pick bottoms', Shoes: 'Pick shoes', Hat: 'Pick a hat', Belt: 'Pick a belt or wallet chain', Accessory: 'Pick an accessory' };
+const PICK_TITLE = { Tops: 'Pick a top', Layers: 'Pick a layer', Outer: 'Pick an outer layer', Bottoms: 'Pick bottoms', Shoes: 'Pick shoes', Hat: 'Pick a hat', Belt: 'Pick a belt or wallet chain', Accessory: 'Pick an accessory', Extra: 'Pick another accessory' };
 // Builder = one flat-lay canvas. Each piece sits where it would lie and swipes in place; tap a piece for its list, lock, remove.
 const REQ = ['Tops', 'Bottoms', 'Shoes'];
 // The whole outfit on one big flat lay, every piece where it'd lie. Tap a piece to swap it. Missing must-haves wait as outlines.
@@ -1233,6 +1233,15 @@ function colorsSection(p) {
     <button class="btn ghost sm" data-capsel="smart:mine">${S.coll === 'smart:mine' ? 'Using' : 'Use'} My colors collection · ${n} pieces</button>`
     : '<p class="sub">Not sure? Warm or cool undertone, light or deep coloring, clear or soft contrast: pick the closest, you can switch any time.</p>'}`;
 }
+// Hat and shoes for this outfit: the best-scoring neutral one and the best-scoring color pop, one tap to wear. Cached per outfit.
+function quickPicks(o) {
+  const key = [o.map(p => p.id).sort().join(), S.coll ?? '', closetVer].join('|'); if (S.quick?.key === key) return S.quick.html;
+  const html = ['Hat', 'Shoes'].map(sl => { const r = swapsFor(sl, o).filter(x => x.score != null && x.score > -9), cur = o.find(inS(sl));
+    const n = r.find(x => isNeutral(x.item.color)), p = r.find(x => !isNeutral(x.item.color)); if (!n && !p) return '';
+    const b = (lab, x) => x ? `<button class="qp ${cur?.id === x.item.id ? 'on' : ''}" data-wearpick="${sl}:${x.item.id}" aria-label="Wear ${esc(x.item.name)}, best ${lab} ${SLOT_LABEL[sl].toLowerCase()}, ${matchPct(x.score)} match"><small><i class="sw" style="background:${x.item.color}"></i>${lab} · ${matchPct(x.score)}</small><span>${esc(x.item.name)}</span></button>` : '<span></span>';
+    return `<div class="quick"><span class="mono">${sl === 'Hat' ? 'hat' : 'shoes'}</span>${b('neutral', n)}${b('pop', p)}</div>`; }).join('');
+  S.quick = { key, html }; return html;
+}
 function buildView() {
   const o = S.build, ok = complete(o), v = ok ? bestMode(o) : null, items = buildItems();
   const pct = v?.score == null ? 0 : matchPct(v.score);
@@ -1250,9 +1259,10 @@ function buildView() {
       <div class="right">${ok ? `<button class="ring ${v?.score == null ? 'bad' : ''}" style="--p:${pct}" data-action="why" aria-label="Match ${pct} of 100. Why it works"><b>${v?.score == null ? '✕' : pct}</b><span>match</span></button>` : ''}</div></header>
     <div class="build"><div class="tbar">${capBtn()}<span class="sp"></span>${o.length ? `<button class="tag o" data-action="clearbuild">Start over</button>` : ''}</div>${capBar()}
       ${stage(o, items)}
-      ${o.length ? `<div class="srows">${['Hat', 'Outer', 'Layers', 'Tops', 'Bottoms', 'Belt', 'Shoes', 'Accessory'].map(row).join('')}</div>` : '<p class="sub stagehint">Tap a shape to pick that piece. Best matches show first.</p>'}
+      ${o.length ? `<div class="srows">${['Hat', 'Outer', 'Layers', 'Tops', 'Bottoms', 'Belt', 'Shoes', 'Accessory', 'Extra'].map(row).join('')}</div>` : '<p class="sub stagehint">Tap a shape to pick that piece. Best matches show first.</p>'}
       ${ok ? (n => `<button class="btn sm wide roll" data-action="shufflebuild">${ic('shuffle')} Roll a new look${n ? ` · keeps ${n} locked` : ' · lock what you want to keep'}</button>`)(o.filter(p => S.locks.has(slotOf(p))).length) : ''}
-      <div class="addopt">${['Layers', 'Hat', 'Accessory', 'Belt'].filter(sl => !o.some(inS(sl)) && items.some(canS(sl))).map(sl => `<button class="tag o" data-swap="${sl}">+ ${SLOT_LABEL[sl].toLowerCase()}</button>`).join('')}</div>
+      ${ok ? quickPicks(o) : ''}
+      <div class="addopt">${['Layers', 'Hat', 'Accessory', 'Belt', 'Extra'].filter(sl => !o.some(inS(sl)) && (sl !== 'Extra' || o.some(inS('Accessory'))) && items.some(canS(sl))).map(sl => `<button class="tag o" data-swap="${sl}">+ ${SLOT_LABEL[sl].toLowerCase()}</button>`).join('')}</div>
       ${ok ? (v.score == null ? (w => `<p class="verdict bad">Doesn't work · ${esc(w.note)}</p>${w.piece ? `<div class="tools whyfix"><button class="tag" ${w.fix === 'tag' ? `data-open="${w.piece.id}"` : `data-swap="${slotOf(w.piece)}"`}>${w.fix === 'tag' ? `Check its tags` : `Swap the ${esc(SLOT_LABEL[slotOf(w.piece)].toLowerCase())}`}</button></div>` : ''}`)(whyNot(o))
         : `<p class="verdict">Works as ${MODES[v.mode].label} · ${esc(v.note)}</p>`) : ''}
       ${tags || tip ? `<div class="tags whytags">${tags}${tip ? `<span class="tag bad">${esc(tip)}</span>` : ''}</div>` : ''}
@@ -1275,7 +1285,7 @@ function carouselFor(slot, cur) {
 function shuffleBuild() {
   if (S.build.every(p => S.locks.has(slotOf(p)))) return toast('Everything is locked: unlock a piece to roll');
   let next = S.build.filter(p => S.locks.has(slotOf(p)) || OPTIONAL.includes(slotOf(p)));
-  for (const s of ['Bottoms', 'Tops', 'Shoes', 'Layers', 'Hat', 'Belt', 'Accessory']) {
+  for (const s of ['Bottoms', 'Tops', 'Shoes', 'Layers', 'Hat', 'Belt', 'Accessory', 'Extra']) {
     if (S.locks.has(s) || !S.build.some(inS(s))) continue; // only refill slots you're wearing
     const cur = S.build.find(inS(s)), rest = next.filter(p => !inS(s)(p));
     const good = swapsFor(s, rest).filter(r => r.score != null).slice(0, 5), fresh = good.filter(r => r.item.id !== cur.id);
@@ -1323,7 +1333,7 @@ function openWhy(ps = S.build) {
 // Every builder change goes through here: undo history, re-rank the other slots, keep the draft.
 function setBuild(next, keepSlot = null) {
   S.past = [...S.past, S.build ?? []].slice(-20); S.build = next;
-  S.outer = bySlot(next, S.outer).Outer?.id ?? null; // two layers (or a shirt worn open + a jacket): one is Outer
+  const by = bySlot(next, S.outer, S.acc2); S.outer = by.Outer?.id ?? null; S.acc2 = by.Extra?.id ?? null; // two layers: one is Outer; two accessories: one is Extra
   for (const k of Object.keys(S.cs)) if (k !== keepSlot) delete S.cs[k];
   S.draft = S.build.map(p => p.id); put('profile', { k: 'draft', ids: S.draft }); render();
 }
@@ -2281,7 +2291,7 @@ document.addEventListener('scroll', e => {
   const c = e.target; if (!c.classList?.contains('carousel')) return;
   clearTimeout(c._t); c._t = setTimeout(() => {
     const slot = c.dataset.cslot, cs = S.cs[slot], at = Math.round(c.scrollLeft / c.clientWidth); if (!cs || at === cs.at || !cs.ids[at]) return;
-    cs.at = at; { const pick = byId(cs.ids[at]), rest = S.build.filter(p => !inS(slot)(p) && p !== pick); if (slot === 'Outer') S.outer = pick.id; setBuild([...rest, pick], slot); } // take the old piece off first, then mark the new outer layer
+    cs.at = at; { const pick = byId(cs.ids[at]), rest = S.build.filter(p => !inS(slot)(p) && p !== pick); if (slot === 'Outer') S.outer = pick.id; if (slot === 'Extra') S.acc2 = pick.id; setBuild([...rest, pick], slot); } // take the old piece off first, then mark the new outer layer
   }, 160);
 }, true);
 document.addEventListener('change', async e => {
@@ -2445,7 +2455,7 @@ ${ps.map(i => `${i.id} · ${i.name} · ${(i.kind || i.cat).toLowerCase()} · ${c
   else if (ds.action === 'build') startBuild();
   else if (ds.action === 'clearbuild') setBuild([]);
   else if (ds.action === 'resumebuild') setBuild(S.draft.map(byId).filter(Boolean));
-  else if (ds.cyc) { const [sl, d] = ds.cyc.split('|'), cs = S.cs[sl]; if (!cs) return; const at = Math.max(0, Math.min(cs.ids.length - 1, cs.at + +d)); if (at === cs.at) return; cs.at = at; S.dropped = sl; const pick = byId(cs.ids[at]), rest = S.build.filter(p => !inS(sl)(p) && p !== pick); if (sl === 'Outer') S.outer = pick.id; setBuild([...rest, pick], sl); } // same as the swipe: the outer layer row had no slot test, and the layer row took the jacket off too
+  else if (ds.cyc) { const [sl, d] = ds.cyc.split('|'), cs = S.cs[sl]; if (!cs) return; const at = Math.max(0, Math.min(cs.ids.length - 1, cs.at + +d)); if (at === cs.at) return; cs.at = at; S.dropped = sl; const pick = byId(cs.ids[at]), rest = S.build.filter(p => !inS(sl)(p) && p !== pick); if (sl === 'Outer') S.outer = pick.id; if (sl === 'Extra') S.acc2 = pick.id; setBuild([...rest, pick], sl); } // same as the swipe: the outer layer row had no slot test, and the layer row took the jacket off too
   else if (ds.action === 'undobuild') { S.build = S.past.pop() ?? []; S.cs = {}; put('profile', { k: 'draft', ids: S.build.map(p => p.id) }); render(); }
   else if (ds.nope) {
     const o = outfitByKey(ds.nope); if (!o) return;
@@ -2571,7 +2581,7 @@ ${ps.map(i => `${i.id} · ${i.name} · ${(i.kind || i.cat).toLowerCase()} · ${c
   else if (ds.buildwith) buildWith(byId(ds.buildwith));
   else if (ds.swap) openSwap(ds.swap);
   else if (ds.unwear) { if (sheet.open) { sheet.onclose = null; sheet.close(); } setBuild(S.build.filter(p => !inS(ds.unwear)(p))); }
-  else if (ds.wearpick) { const [slot, id] = ds.wearpick.split(':'); sheet.onclose = null; sheet.close(); S.dropped = slot; const rest = S.build.filter(p => !inS(slot)(p)); if (slot === 'Outer') S.outer = id; setBuild([...rest, byId(id)]); }
+  else if (ds.wearpick) { const [slot, id] = ds.wearpick.split(':'); sheet.onclose = null; sheet.close(); S.dropped = slot; const rest = S.build.filter(p => !inS(slot)(p)); if (slot === 'Outer') S.outer = id; if (slot === 'Extra') S.acc2 = id; setBuild([...rest, byId(id)]); }
   else if (ds.rotate) { const it = byId(ds.rotate); await rotate(it); const im = sheet.querySelector('.hero img'); if (im) im.src = src(it); S.ideas = null; }
   else if (ds.replace) { replacing = ds.replace; replaceInput.click(); }
   else if (ds.brandok) { const it = byId(ds.brandok), b = it.brandGuess?.brand; if (b) { it.name = brandName(it, b); it.brand = b; } delete it.brandGuess; await put('items', it); S.deck = null; if (t.closest('.brandlist')) openBrands(); else openSheet(it.id); toast(`Named ${it.name}`); }

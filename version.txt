@@ -1,2 +1,2 @@
-2026.11.18 · v5.58
-Today: swiping no longer jumps back a card. Background work (previews, weather) waits until you stop swiping, and ♡ / Wear today always act on the card you see
+2026.11.19 · v5.59
+Build: under Roll, the best neutral and best color-pop hat and shoes for your outfit, one tap to wear · add a second accessory (chain + bag) with + another accessory; suggestions add two only now and then

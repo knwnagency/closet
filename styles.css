@@ -736,3 +736,7 @@
   .nudge .wthumb { flex: none; width: 56px; height: 56px; padding: 4px; background: var(--tile); border-radius: 12px; overflow: hidden; } .nudge .wthumb > * { width: 100%; height: 100%; }
   .srow.locked { box-shadow: inset 0 0 0 1.5px var(--ink); } .srow .ops .lockbtn { color: var(--muted); } .srow.locked .ops .lockbtn { color: var(--ink); }
   .build .roll { margin: 10px 0 2px; gap: 8px; } .build .roll svg { width: 16px; height: 16px; }
+  .build .quick { display: grid; grid-template-columns: 44px 1fr 1fr; gap: 6px; align-items: stretch; margin: 8px 0 0; } .build .quick > .mono { align-self: center; font-size: 11px; color: var(--muted); }
+  .build .qp { min-width: 0; min-height: 44px; padding: 6px 10px; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--hair); text-align: left; display: grid; gap: 1px; } .build .qp.on { box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .build .qp small { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); } .build .qp span { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .build .quick .sw { flex: none; width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }

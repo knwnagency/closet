@@ -452,14 +452,15 @@ export const slotOf = p => Object.keys(SLOTS).find(k => SLOTS[k](p));
 // Stacked the way it's worn: hat on top, layer + top, chain or bag beside the torso, pants, shoes at the bottom.
 // Pieces get as much room as the card allows (big and even beats true-to-scale), but a cap still stays smaller than a tee.
 export function flatLayout(slots) {
-  const has = x => slots.includes(x), hat = has('Hat'), acc = has('Accessory'), belt = has('Belt'), layer = has('Layers'), outer = layer && has('Outer');
-  const y0 = hat ? 20 : 3, th = hat ? 38 : 50, side = acc || belt ? 22 : 0, tw = 100 - side - 4, box = {};
+  const has = x => slots.includes(x), hat = has('Hat'), acc = has('Accessory'), belt = has('Belt'), extra = has('Extra'), layer = has('Layers'), outer = layer && has('Outer');
+  const y0 = hat ? 20 : 3, th = hat ? 38 : 50, side = acc || belt || extra ? 22 : 0, tw = 100 - side - 4, box = {};
   if (hat) box.Hat = [38, 1, 24, 18];
   if (outer) { box.Outer = [2, y0, tw * 0.36, th]; box.Layers = [2 + tw * 0.34, y0 + 1, tw * 0.34, th - 2]; box.Tops = [2 + tw * 0.68, y0 + 2, tw * 0.32, th - 4]; } // jacket, flannel, tee: outermost on the left
   else if (layer) { box.Layers = [2, y0, tw * 0.52, th]; box.Tops = [2 + tw * 0.52, y0 + 2, tw * 0.48, th - 4]; }
   else box.Tops = [2 + tw * 0.1, y0, tw * 0.8, th];
   if (acc) box.Accessory = [100 - side, y0 + 6, side - 2, 24];
   if (belt) box.Belt = [100 - side, y0 + (acc ? 32 : 6), side - 2, 18]; // under the chain or bag, beside the waist
+  if (extra) box.Extra = [100 - side, y0 + (acc ? 32 : 6) + (belt ? 20 : 0), side - 2, 18]; // a second accessory under the first
   const by = y0 + th + 2; box.Bottoms = [26, by, 48, 100 - by]; box.Shoes = [24, 101, 52, 21]; // shoes big enough to read
   return Object.fromEntries(Object.entries(box).filter(([k]) => slots.includes(k)).map(([k, [x, y, w, h]]) => [k, [x, y / 1.25, w, h / 1.25].map(v => +v.toFixed(2))]));
 }
@@ -468,13 +469,15 @@ export function flatLayout(slots) {
 // A button-up worn open over a tee is a layer: tee + denim shirt + jacket = Tops, Layers, Outer.
 const layerLevel = p => openShirt(p) ? 1 : level(p); // a shirt worn open is a shirt, whatever its name says (flannel)
 export const openShirt = p => p.cat === 'Tops' && /button|denim shirt|chambray|oxford|camp shirt|bowling|work shirt|western|overshirt|flannel/i.test(`${p.kind ?? ''} ${p.name ?? ''}`);
-export function bySlot(ps, outerId = null) {
+export function bySlot(ps, outerId = null, acc2Id = null) {
   const tops = ps.filter(p => p.cat === 'Tops').sort((a, b) => openShirt(a) - openShirt(b) || level(a) - level(b)); // the tee goes under
   const by = {}, ls = [...tops.slice(1), ...ps.filter(p => p.cat === 'Layers')];
   for (const p of ps) { const sl = slotOf(p); if (sl && sl !== 'Layers' && !(sl === 'Tops' && p !== tops[0])) by[sl] ??= p; }
   const out = ls.length > 1 ? ls.find(p => p.id === outerId) ?? [...ls].sort((a, b) => level(b) - level(a))[0] : null;
   if (ls.length) by.Layers = ls.find(p => p !== out); if (out) by.Outer = out;
   if (!by.Tops && by.Layers && !by.Outer && level(by.Layers) <= 2) { by.Tops = by.Layers; delete by.Layers; } // a hoodie on its own is the top
+  const accs = ps.filter(p => slotOf(p) === 'Accessory'); // a chain AND a bag: the second one is Extra
+  if (accs.length > 1) { by.Extra = accs.find(p => p.id === acc2Id) ?? accs.at(-1); by.Accessory = accs.find(p => p !== by.Extra); }
   return by;
 }
 // A wearable look: something on top, bottoms, shoes. Hoodies, sweaters and quarter zips live in Layers but still count as the top
@@ -534,7 +537,7 @@ export function generate(items, mode, { anchor, fixed = [], palette, inspo, n = 
   for (let t = 0; t < tries; t++) {
     const ps = [pick(by.Tops), pick(by.Bottoms), pick(by.Shoes)];
     const add = (slot, odds) => { const left = by[slot].filter(p => !ps.includes(p)); if (left.length && (forced.has(slot) || rand() < odds)) ps.push(pick(left)); }; // never the same piece twice
-    add('Layers', layerOdds); add('Hat', 0.8); add('Accessory', 0.5); add('Belt', 0.05); // hats + chains/bags in most fits, a belt rarely
+    add('Layers', layerOdds); add('Hat', 0.8); add('Accessory', 0.5); add('Accessory', 0.06); add('Belt', 0.05); // hats + chains/bags in most fits, a belt rarely
     const key = ps.map(p => p.id).sort().join();
     if (seen.has(key)) continue;
     const r = scoreOutfit(ps, mode, opts);
