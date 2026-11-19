@@ -45,7 +45,7 @@ export function colorName(hex) {
   if (s < 0.18) return l > 0.6 ? 'light grey' : 'grey';
   if (h >= 190 && h <= 250 && l < 0.3) return s >= 0.28 ? 'navy' : 'black'; // a black tee shot in cool light reads blue-ish, not navy
   if (h >= 190 && h <= 250 && s < 0.45) return 'denim';
-  if (h >= 15 && h <= 50 && s < 0.5) return l > 0.6 ? 'beige' : l > 0.42 ? 'camel' : 'brown';
+  if (h >= 15 && h <= 50 && (s < 0.5 || (h >= 28 && h <= 45 && s < 0.6 && l >= 0.3 && l <= 0.62))) return l > 0.6 ? 'beige' : l > 0.42 ? 'camel' : 'brown'; // wheat Timbs and tan suede (s .5 to .6) are camel, not orange
   if (h >= 50 && h <= 100 && s < 0.35 && l < 0.45) return 'olive';
   if ((h < 15 || h >= 345) && s < 0.45 && l < 0.42) return 'brown'; // dull dark red-brown (tan shoes in shadow) isn't burgundy
   if ((h < 15 || h >= 340) && l < 0.35) return 'burgundy';
@@ -112,13 +112,15 @@ export const level = p => LEVELS.find(([re]) => re.test(`${p.kind ?? ''} ${p.nam
 // Works on half-built outfits too (the builder ranks picks before you have all three): a rule only fires when its pieces are there.
 export function proportion(ps) {
   const get = c => ps.find(p => p.cat === c);
-  const top = get('Tops'), layer = get('Layers'), bottom = get('Bottoms'), shoes = get('Shoes');
+  const by = bySlot(ps), top = by.Tops, layer = by.Layers, outer = by.Outer, bottom = get('Bottoms'), shoes = get('Shoes'); // tee, then a shirt or knit, then the jacket: a flannel between a tee and a jacket is a layer, not a second jacket
   const legs = !!bottom && !/short/i.test(bottom.kind || bottom.name); // shorts show the leg, so pant-width rules don't apply
   const shoeFit = p => knownFit(p) ?? (/sneaker|trainer|court|superstar|skate/i.test(`${p.kind ?? ''} ${p.name ?? ''}`) ? Math.max(1, fit(p)) : fit(p)); // the AI calls lots of sneakers sleek; Vans and court shoes are regular
   const up = top || layer ? Math.max(top ? fit(top) : 0, layer ? fit(layer) : 0) : null, down = bottom ? fit(bottom) : null, feet = shoes ? shoeFit(shoes) : null;
   const notes = [], add = (s, note) => notes.push([s, note]);
-  if (layer && top && level(layer) < level(top)) add(-2, `A ${layer.kind || 'layer'} doesn't go over a ${top.kind || 'heavier top'}`);
-  if (layer && top && level(layer) === level(top) && level(top) >= 2) add(-2, level(top) === 2 ? 'Two knits or hoodies stacked is too bulky' : 'Two jackets at once, drop one');
+  const lvl = layerLevel;
+  if (layer && top && lvl(layer) < lvl(top)) add(-2, `A ${layer.kind || 'layer'} doesn't go over a ${top.kind || 'heavier top'}`);
+  if (layer && top && lvl(layer) === lvl(top) && lvl(top) >= 2) add(-2, lvl(top) === 2 ? 'Two knits or hoodies stacked is too bulky' : 'Two jackets at once, drop one');
+  if (outer && layer && lvl(outer) === lvl(layer) && lvl(layer) >= 3) add(-2, 'Two jackets at once, drop one');
   if (legs && down === 2 && feet === 0) add(-1, 'Sleek shoes can get lost under wide pants'); // a nudge, not a ban: loafers with wide trousers is a real look
   if (legs && down === 0 && feet === 2) add(-1.5, 'Chunky shoes overpower slim pants');
   if (legs && down === 2 && feet === 2) add(1, 'Wide pants anchored by chunky shoes');
@@ -347,8 +349,9 @@ export function style(ps) {
   const d = ps.filter(p => (p.cat === 'Bottoms' || p.cat === 'Layers' || p.cat === 'Tops') && isDenim(p));
   if (d.length >= 2) { // double denim: far apart or an exact match. One shade off reads as a miss.
     const gap = Math.abs(WASH(hexToHsl(d[0].color)) - WASH(hexToHsl(d[1].color)));
+    const covered = d.some(p => p.cat !== 'Bottoms' && ps.some(q => q.cat === 'Layers' && q !== p && !isDenim(q) && layerLevel(q) > layerLevel(p))); // a denim shirt under a work jacket barely shows
     out.push(gap >= 2 ? [0.6, 'Denim washes far apart, clearly on purpose'] : colorDist(d[0].color, d[1].color) < 30 ? [0.6, 'Same denim head to toe, a matching set']
-      : [-1.5, gap ? 'Denim washes one shade apart look like a near miss' : 'Almost-matching denim looks like a mistake']);
+      : covered ? [0.2, 'Denim shirt under a jacket, a quiet layer'] : [-1.5, gap ? 'Denim washes one shade apart look like a near miss' : 'Almost-matching denim looks like a mistake']);
   }
   return out.sort((x, y) => Math.abs(y[0]) - Math.abs(x[0]));
 }
@@ -387,7 +390,7 @@ const taste = ps => {
 };
 
 // Known sneakers have a known shape: the AI's fit guess shouldn't call Air Force 1s sleek. null = not a model we know.
-const SHOE_FITS = [[/yeezy ?(500|700)|foam|bapesta|triple ?s|platform|chunky|runner/i, 2], [/air ?force|af1|dunk|jordan ?1|aj1|350|vans|converse|chuck/i, 1], [/loafer|oxford|derby|chelsea|samba|gazelle|spezial|ballet/i, 0]];
+const SHOE_FITS = [[/yeezy ?(500|700)|foam|bapesta|triple ?s|platform|chunky|runner|timberland|\btimbs?\b|work ?boot|6 ?inch/i, 2], [/air ?force|af1|dunk|jordan ?1|aj1|350|vans|converse|chuck/i, 1], [/loafer|oxford|derby|chelsea|samba|gazelle|spezial|ballet/i, 0]];
 const BRAND_FITS = [[/essentials|fear of god|\bfog\b|gallery dept|balenciaga|vetements|represent|cole buxton|entire studios/i, 2]]; // tops these brands cut oversized
 export const knownFit = p => p.cat === 'Shoes' ? SHOE_FITS.find(([re]) => re.test(`${p.name ?? ''}`))?.[1] ?? null
   : (p.cat === 'Tops' || p.cat === 'Layers') && p.fit !== 3 ? BRAND_FITS.find(([re]) => re.test(`${p.brand ?? ''} ${p.name ?? ''}`))?.[1] ?? null : null;
@@ -458,6 +461,7 @@ export function flatLayout(slots) {
 
 // A look's pieces by slot. Two layers (tee + flannel + jacket): the lighter one is Layers, the heavier one Outer.
 // A button-up worn open over a tee is a layer: tee + denim shirt + jacket = Tops, Layers, Outer.
+const layerLevel = p => openShirt(p) ? 1 : level(p); // a shirt worn open is a shirt, whatever its name says (flannel)
 export const openShirt = p => p.cat === 'Tops' && /button|denim shirt|chambray|oxford|camp shirt|bowling|work shirt|western|overshirt|flannel/i.test(`${p.kind ?? ''} ${p.name ?? ''}`);
 export function bySlot(ps, outerId = null) {
   const tops = ps.filter(p => p.cat === 'Tops').sort((a, b) => openShirt(a) - openShirt(b) || level(a) - level(b)); // the tee goes under

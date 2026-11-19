@@ -1,2 +1,2 @@
-2026.11.18 · v5.49
-Combine collections: in the capsule picker, + adds one to what is on (Streetwear + Casual), − takes it out · ☆ keeps a collection at the top · plus streaks, style points, levels and unlocks
+2026.11.18 · v5.50
+Taught by your 10 favorite fits: a flannel between a tee and a jacket now works (it was called two jackets), a denim shirt under a jacket is fine, wheat Timbs read camel and count as chunky boots
