@@ -1,2 +1,2 @@
-2026.11.18 · v5.51
-Not for me: tap every reason that fits and Save once · pick as many pieces or colors as you need (3 pieces that do not go = none of them paired again) · new: Too busy, for calmer looks (undo on Me)
+2026.11.18 · v5.52
+QA fixes: long messages wrap instead of getting cut off · Gold and Chrome buttons use dark text so they are readable · Too cold and Too warm can't both be picked · Progress shows your level up top and points as a list · empty rules fold away at the bottom · suggested capsules can be starred or combined right away

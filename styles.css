@@ -199,7 +199,7 @@
   .switch::after { content: ''; position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); transition: transform .25s cubic-bezier(.3, .7, .4, 1), background .2s; }
   .switch:checked { background: var(--ink); } .switch:checked::after { transform: translateX(20px); background: var(--bg); }
 
-  #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 14px); transform: translate(-50%, -180%); background: var(--ink); color: var(--bg); padding: 13px 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; transition: transform .35s cubic-bezier(.2, .9, .3, 1); z-index: 9; max-width: 92vw; white-space: nowrap; }
+  #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 14px); transform: translate(-50%, -180%); background: var(--ink); color: var(--bg); padding: 13px 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; transition: transform .35s cubic-bezier(.2, .9, .3, 1); z-index: 9; max-width: 92vw; white-space: normal; text-align: left; line-height: 1.45; }
   #toast.show { transform: translate(-50%, 0); }
 
   /* flat-lay outfit: pieces laid out at real-world scale, never overlapping (flatLayout in match.js) */
@@ -393,7 +393,7 @@
   nav .add { background: var(--accent); color: #fff; }
       
   
-  #toast { font-family: var(--mono); display: flex; align-items: center; gap: 14px; white-space: nowrap; } #toast button { color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 0 2px; height: 28px; }
+  #toast { font-family: var(--mono); display: flex; align-items: center; gap: 14px; width: max-content; } #toast button { flex: none; } #toast button { color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 0 2px; height: 28px; }
   /* Today */
   .thead { margin-bottom: 12px; } .tbar { display: flex; gap: 5px; align-items: center; margin: 0 0 14px; } .tbar .sp { flex: 1; } .tbar svg { width: 16px; height: 16px; }
   .stack { position: relative; display: grid; } .stack > * { grid-area: 1 / 1; }
@@ -464,7 +464,7 @@
   /* favorites */
   .favbtn { display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 10px; box-shadow: inset 0 0 0 2px var(--ink); font: 700 13px/1 var(--mono); } .favbtn svg { width: 16px; height: 16px; fill: var(--accent); stroke: var(--accent); }
   .feed.favs .outfit { background: var(--s1); padding: 8px; box-shadow: inset 0 0 0 2px var(--ink); } .ftitle { font-size: 20px; margin: 8px 0 6px; border: 0; padding: 0; letter-spacing: .01em; font-family: var(--display); font-weight: 400; }
-  .facts { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 4px; align-items: center; } .facts .btn { height: 40px; padding: 0 8px; } .facts .icon.on svg { fill: var(--accent); stroke: var(--accent); }
+  .facts { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 4px; align-items: center; } .facts .btn { height: 44px; padding: 0 8px; } .facts .icon.on svg { fill: var(--accent); stroke: var(--accent); }
   .feed.favs > .outfit:first-child { grid-column: auto; } .feed.favs > .outfit:first-child .flat { max-width: none; }
   .seeall { font: 600 11px/1 var(--mono); text-transform: uppercase; color: var(--accent); min-height: 32px; }
   /* update banner */
@@ -732,3 +732,4 @@
   .capstar.on { color: var(--pop); } .capmix.on { color: var(--ink); } .caprow .capsel { padding-right: 96px; } .caprow:has(.capmenu) .capsel { padding-right: 136px; }
   .mixnow { margin: 0 0 6px; font-size: 13px; }
   .offask { display: block; margin: 14px 0 6px; text-transform: none; letter-spacing: 0; } .offsheet .btn[disabled] { opacity: .5; }
+  .ptsway { list-style: none; margin: 4px 0 18px; padding: 0; } .ptsway li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--hair); font-size: 13px; } .ptsway b { font-weight: 600; white-space: nowrap; }
