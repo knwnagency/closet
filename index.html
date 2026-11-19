@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges } from './progress.js';
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.18 · v5.45'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.18 · v5.46'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -885,6 +885,11 @@ function deckCard(o, i, n, cls, used) {
 const lessHint = () => { const liked = new Set([...S.saved, ...S.log].flatMap(r => r.ids)), n = new Map();
   for (const ids of S.nope) for (const id of ids) n.set(id, (n.get(id) ?? 0) + 1);
   return S.items.find(i => (n.get(i.id) ?? 0) >= 4 && !liked.has(i.id) && i.rate == null && !i.rateAsked); };
+// Rediscover (Today): on about one day in three, one piece you haven't worn in 30+ days (or ever), in season for today's weather,
+// picked at random for the day. "See looks" builds around it; × hides it until tomorrow.
+const rediscover = (items, w) => { const day = dayKey(); if (S.profile?.rdSkip === day || dayHash(day + 'rd') % 3) return null;
+  const pick = forWeather(items, dressTemp(w?.t), RAINY(S.profile?.wx?.code ?? 0), seasonNow()).filter(i => i.cat !== 'Accessories' && !(i.rate < 0) && (!i.wears || stale(i)));
+  return pick.length ? pick[dayHash(day + 'pick') % pick.length] : null; };
 function todayView() {
   const items = pool(), w = weatherNow(), c = S.coll && collById(S.coll);
   if (!MODES[S.mode] && S.mode !== 'today') S.mode = 'today';
@@ -909,7 +914,9 @@ function todayView() {
   const tip = S.profile?.tipsSeen ? '' : `<div class="nudge glass tip"><div><span class="mono">How Today works</span><b>Slide for more looks · ♡ saves one · Wear today logs it · Not for me teaches it what's off · ↻ swaps just that look</b></div><button class="tag o" data-action="tipsok">Got it</button></div>`;
   const plain = S.items.filter(plainName).length, rnDay = S.profile?.renameDay, rn = !bk && !tip && plain >= 10 && (rnDay === dayKey() || !rnDay || Date.now() - new Date(rnDay).getTime() > 7 * 864e5);
   if (rn && rnDay !== dayKey()) { S.profile = { k: 'me', ...S.profile, renameDay: dayKey() }; put('profile', S.profile); }
-  const below = tip + bk + (rn ? `<button class="nudge glass" data-action="rename"><div><span class="mono">${plain} pieces named just by type</span><b>Name them so Today's picks read like your closet</b></div><span class="plus">Go →</span></button>` : '') + (lh ? `<div class="nudge glass"><div><span class="mono">You keep passing on looks with it</span><b>Suggest the ${esc(lh.name.toLowerCase())} less?</b></div><button class="tag" data-rate="${lh.id}|-1">Less</button><button class="tag o" data-rate="${lh.id}|0">Keep</button></div>` : '');
+  const rd = !tip && rediscover(items, w), days = rd && Math.round((Date.now() - (rd.lastWorn ?? rd.createdAt ?? Date.now())) / 864e5);
+  const rdCard = rd ? `<div class="nudge glass rd"><button data-open="${rd.id}" aria-label="Open ${esc(rd.name)}"><img src="${src(rd)}" alt=""></button><div><span class="mono">${rd.wears ? `Not worn in ${days} days` : 'Never worn yet'}</span><b>${esc(rd.name)}</b></div><button class="tag" data-quick="made|${rd.id}">See looks</button><button class="tag o" data-action="rdskip" aria-label="Not today">×</button></div>` : '';
+  const below = tip + rdCard + bk + (rn ? `<button class="nudge glass" data-action="rename"><div><span class="mono">${plain} pieces named just by type</span><b>Name them so Today's picks read like your closet</b></div><span class="plus">Go →</span></button>` : '') + (lh ? `<div class="nudge glass"><div><span class="mono">You keep passing on looks with it</span><b>Suggest the ${esc(lh.name.toLowerCase())} less?</b></div><button class="tag" data-rate="${lh.id}|-1">Less</button><button class="tag o" data-rate="${lh.id}|0">Keep</button></div>` : '');
   return top    + `<div class="deck" aria-label="Today's looks, slide for more">${(used => looks.map((o, k) => deckCard(o, k, looks.length, 'slide', used)).join(''))(new Set())}${moreWays()}</div>
     <div class="dbtns"><button class="round" data-deck="prev" aria-label="Previous look">${svg('M15 5l-7 7 7 7')}</button><button class="round ${isFav(cur.key) ? 'on' : ''}" data-deck="fav" aria-label="Save look">${heart}</button><button class="btn go" data-deck="wear">Wear today ${ic('arrow')}</button><button class="round" data-deck="next" aria-label="Next look">${svg('M9 5l7 7-7 7')}</button></div>
     <p class="mono swipehint">Slide for more · tap a look to open it</p>${below}`;
@@ -2226,6 +2233,7 @@ document.addEventListener('click', async e => {
       if (r?.installing || r?.waiting) await new Promise(res => { navigator.serviceWorker.addEventListener('controllerchange', res, { once: true }); setTimeout(res, 5000); }); } catch (e) { console.warn(e); } location.reload(); }
   else if (ds.action === 'copyerr') { try { await navigator.clipboard.writeText(document.querySelector('.crash').textContent); toast('Copied. Paste it to Claude'); } catch { toast('Copy blocked. Take a screenshot instead'); } }
   else if (ds.action === 'rareall') openRareAll();
+  else if (ds.action === 'rdskip') { S.profile = { k: 'me', ...S.profile, rdSkip: dayKey() }; await put('profile', S.profile); render(); }
   else if (ds.action === 'askwx') askWeather();
   else if (ds.action === 'seasonswap' || ds.action === 'seasonlater') { const sw = seasonSwap(); if (!sw) return; if (ds.action === 'seasonswap') { for (const it of sw.back ?? []) { delete it.stored; delete it.storedSeason; await put('items', it); }
       for (const it of sw.out ?? []) { it.stored = true; it.storedSeason = seasonNow(); await put('items', it); } toast(sw.back ? `Brought back ${sw.back.length}` : `Stored ${sw.out.length} for the season`); }

@@ -1,2 +1,2 @@
-2026.11.18 · v5.45
-Fixed: the bottom menu could get stuck mid-screen after typing in a search (it covered Build options) · plus Inspo › Rules: tap a style rule to see the looks that follow it
+2026.11.18 · v5.46
+Today, now and then: one piece you have not worn in a while (or ever), picked at random for the day, with See looks · plus Inspo › Rules and the stuck bottom menu fix
