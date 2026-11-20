@@ -1,2 +1,2 @@
-2026.11.20 · v5.65
-Which one? scores each color out of 100 so the gaps are clear. Buy next favors staples you own none of, and colors far from what you have. Exploring a piece: More ways to wear it, 6 at a time
+2026.11.20 · v5.66
+Build: the arrows go through every piece that matches, not just 16. Each row says how many match out of all you own, and the pick list counts both groups

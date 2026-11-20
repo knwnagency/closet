@@ -575,7 +575,7 @@
   .stagehint { text-align: center; }
   .srows { display: grid; gap: 6px; max-width: 520px; margin: 0 auto; }
   .srow { display: flex; align-items: center; gap: 2px; padding: 0 2px 0 14px; min-height: 52px; background: var(--s1); border-radius: 14px; }
-  .srname { flex: 1; min-width: 0; text-align: left; display: grid; gap: 2px; padding: 6px 0; } .srname .lab { font: 500 11px/1 var(--mono); color: var(--muted); text-transform: lowercase; }
+  .srname { flex: 1; min-width: 0; text-align: left; display: grid; gap: 2px; padding: 6px 0; } .srname .lab { font: 500 11px/1 var(--mono); color: var(--muted); text-transform: lowercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .srname b { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .srow .ops { display: flex; align-items: center; } .srow .ops .mono { min-width: 34px; text-align: center; font-size: 11px; }
   .srow .ops button { width: 40px; height: 44px; display: grid; place-items: center; } .srow .ops svg { width: 18px; height: 18px; } .srow .ops button:disabled { opacity: .25; }

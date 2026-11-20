@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt, PRINTS, BASICS, basicPiece, sameJob } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.20 · v5.65'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.20 · v5.66'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -1328,8 +1328,8 @@ function buildView() {
   const row = sl => { const cur = o.find(inS(sl)), lab = SLOT_LABEL[sl]; if (!cur) return '';
     const cs = carouselFor(sl, cur);
     const lk = S.locks.has(sl);
-    return `<div class="srow ${lk ? 'locked' : ''}"><button class="srname" data-swap="${sl}"><span class="lab">${lab}${lk ? ' · locked' : ''}</span><b>${esc(cur.name)}</b></button>
-      <div class="ops"><button data-cyc="${sl}|-1" aria-label="Previous ${lab.toLowerCase()} option" ${cs.at ? '' : 'disabled'}>${svg('M15 5l-7 7 7 7')}</button><span class="mono">${cs.at + 1}/${cs.ids.length}</span><button data-cyc="${sl}|1" aria-label="Next best ${lab.toLowerCase()}" ${cs.at < cs.ids.length - 1 ? '' : 'disabled'}>${svg('M9 5l7 7-7 7')}</button><button class="lockbtn" data-lock="${sl}" aria-pressed="${lk}" aria-label="${lk ? 'Unlock' : 'Lock'} the ${lab.toLowerCase()}: Roll keeps it">${ic(lk ? 'lock' : 'unlock')}</button><button data-unwear="${sl}" aria-label="Remove ${lab.toLowerCase()}">${ic('x')}</button></div></div>`; };
+    return `<div class="srow ${lk ? 'locked' : ''}"><button class="srname" data-swap="${sl}"><span class="lab">${lab}${lk ? ' · locked' : ''} · ${cs.match === cs.total ? (cs.total === 1 ? 'your only one' : cs.total === 2 ? 'both match' : `all ${cs.total} match`) : cs.match ? `${cs.match} of ${cs.total} match` : `none of ${cs.total} match`}</span><b>${esc(cur.name)}</b></button>
+      <div class="ops"><button data-cyc="${sl}|-1" aria-label="Previous ${lab.toLowerCase()} option" ${cs.at ? '' : 'disabled'}>${svg('M15 5l-7 7 7 7')}</button><span class="mono" aria-label="Option ${cs.at + 1} of ${cs.ids.length}">${cs.at + 1}/${cs.ids.length}</span><button data-cyc="${sl}|1" aria-label="Next best ${lab.toLowerCase()}" ${cs.at < cs.ids.length - 1 ? '' : 'disabled'}>${svg('M9 5l7 7-7 7')}</button><button class="lockbtn" data-lock="${sl}" aria-pressed="${lk}" aria-label="${lk ? 'Unlock' : 'Lock'} the ${lab.toLowerCase()}: Roll keeps it">${ic(lk ? 'lock' : 'unlock')}</button><button data-unwear="${sl}" aria-label="Remove ${lab.toLowerCase()}">${ic('x')}</button></div></div>`; };
   S.dropped = null;
   const why = ok ? explain(o) : null, tip = ok && v?.score != null ? fixTip(o) : null;
   const tags = why ? why.rows.filter(([l, val]) => Math.abs(val) >= 0.3 && !/^Color rule|^Finished with/.test(l)).slice(0, 3).map(([l, val]) => `<span class="tag ${val < 0 ? 'bad' : 'o'}">${esc(l.replace(/ · .*|, .*/, '').toLowerCase())}</span>`).join('') : '';
@@ -1355,7 +1355,9 @@ function buildView() {
 // The order is frozen while you swipe that slot, so swiping back finds the piece you just left. Any other change re-ranks it.
 function carouselFor(slot, cur) {
   let cs = S.cs[slot];
-  if (!cs || cs.ids[cs.at] !== cur.id) { const r = swapsFor(slot, S.build); cs = S.cs[slot] = { ids: [cur.id, ...r.filter(x => x.item.id !== cur.id).slice(0, 15).map(x => x.item.id)], at: 0 }; }
+  // v5.66: every piece that goes with the outfit, no cap (it stopped at 16, so 30 hats read as "16/16"); total counts them all
+  if (!cs || cs.ids[cs.at] !== cur.id) { const r = swapsFor(slot, S.build), good = r.filter(x => x.score != null), use = good.length ? good : r;
+    cs = S.cs[slot] = { ids: [cur.id, ...use.filter(x => x.item.id !== cur.id).map(x => x.item.id)], at: 0, total: r.length, match: good.length }; }
   return cs;
 }
 // Shuffle: each unlocked slot gets a random pick from its 5 best matches (given what's already chosen).
@@ -1427,12 +1429,12 @@ function openSwap(slot) {
   const tile = r => `<button class="${r.item.id === cur ? 'on' : ''}" data-wearpick="${slot}:${r.item.id}" data-n="${esc(`${r.item.name} ${r.item.brand ?? ''} ${r.item.kind ?? ''} ${colorName(r.item.color)}`.toLowerCase())}"><img src="${src(r.item)}" alt=""><span>${esc(nm(r.item))}</span>${r.note && r.note !== DEFAULT_NOTE && rest0 ? `<small class="why ${r.score == null ? 'neg' : ''}">${esc(r.note.replace(/ · .*/, ''))}</small>` : ''}</button>`;
   const good = opts.filter(r => r.score != null), rest = opts.filter(r => r.score == null), best = S.build.length && good[0];
   const wearing = S.build.some(inS(slot));
-  showSheet(`<div class="pickhead"><div><div class="eyebrow">Outfit</div><h2>${PICK_TITLE[slot]}</h2></div>${closeBtn}</div>
+  showSheet(`<div class="pickhead"><div><div class="eyebrow">Outfit · you own ${opts.length}</div><h2>${PICK_TITLE[slot]}</h2></div>${closeBtn}</div>
     ${wearing ? `<div class="tags slotops"><button class="tag ${S.locks.has(slot) ? '' : 'o'}" data-lock="${slot}">${ic(S.locks.has(slot) ? 'lock' : 'unlock')} ${S.locks.has(slot) ? 'Locked' : 'Lock'}</button><button class="tag o" data-unwear="${slot}">Remove</button>${slot === 'Layers' && !S.outer && buildItems().filter(canS('Outer')).length > 1 ? `<button class="tag o" data-swap="Outer">+ Layer on top</button>` : ''}</div>` : ''}
     <div class="picksearch"><input type="search" data-pickq placeholder="search: black, cargo, nike" aria-label="Search this list"></div>
     ${best && rest0 ? `<p class="pickbest"><b>Best match: ${esc(nm(best.item))}</b><span class="sub">${esc(best.note === DEFAULT_NOTE ? '' : best.note ?? '')}</span></p>` : ''}
-    ${good.length ? `<p class="pickh">${rest0 ? 'Goes with this outfit' : 'Your best picks'}</p><div class="pickgrid">${good.map(tile).join('')}</div>` : ''}
-    ${rest.length ? `<p class="pickh">${good.length ? 'Also yours · doesn\'t pass your rules' : 'Nothing here matches perfectly'}</p><div class="pickgrid">${rest.map(tile).join('')}</div>` : ''}`);
+    ${good.length ? `<p class="pickh">${rest0 ? 'Goes with this outfit' : 'Your best picks'} · ${good.length}</p><div class="pickgrid">${good.map(tile).join('')}</div>` : ''}
+    ${rest.length ? `<p class="pickh">${good.length ? 'Also yours · doesn\'t pass your rules' : 'Nothing here matches perfectly'} · ${rest.length}</p><div class="pickgrid">${rest.map(tile).join('')}</div>` : ''}`);
 }
 
 
