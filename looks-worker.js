@@ -1,7 +1,8 @@
 // Slow outfit checks off the main thread, so taps never freeze (on the phone: Rules took 7s, Never picked 25s).
 // Gets the closet without photos plus your taste; sends back piece ids. The page also imports `jobs` to run them itself
 // when a browser can't start a module worker.
-import { setTaste, today, madeWith, lookPool, lookRules, compareBuys } from './match.js';
+import { setTaste, today, madeWith, lookPool, lookRules, compareBuys, nextBasics } from './match.js';
+const flatBuy = r => ({ ...r, twins: r.twins.map(p => p.id), examples: r.examples.map(o => ({ score: o.score, ids: o.items.map(p => p.ghost ? null : p.id) })) }); // ids only across the worker line
 
 export const jobs = {
   // Inspo › Rules: the wide pool of looks, each with the rules it follows
@@ -17,7 +18,9 @@ export const jobs = {
     return { hits, med, made };
   },
   // Wishlist › Which one: each candidate tested against every piece it has to go with (about 30ms a color on a Mac)
-  buy: d => ({ list: compareBuys(d.items, d.cands, d.opts).map(r => ({ ...r, twins: r.twins.map(p => p.id), examples: r.examples.map(o => ({ score: o.score, ids: o.items.map(p => p.ghost ? null : p.id) })) })) }),
+  buy: d => ({ list: compareBuys(d.items, d.cands, d.opts).map(flatBuy) }),
+  // Wishlist › Suggested: every basic you don't own yet, ranked (a few seconds on a phone)
+  basics: d => ({ list: nextBasics(d.items, d.opts).map(flatBuy) }),
 };
 
 if (typeof WorkerGlobalScope !== 'undefined') onmessage = ({ data }) => { setTaste(data.taste); postMessage({ id: data.id, ...jobs[data.job](data) }); };

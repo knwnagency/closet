@@ -1,2 +1,2 @@
-2026.11.20 · v5.63
-Now called Already. New: Which one? in Wishlist tests colors before you buy, base colors first. Add a pile of clothes in one photo, or quick add without photos. What you wear on Me, Plan my week in one tap, Roll changes every piece
+2026.11.20 · v5.64
+Buy suggestions stick to wardrobe basics (jeans, pants, tees, sneakers) in the colors they usually come in. No more sage caps or rust chunky sneakers

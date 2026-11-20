@@ -715,7 +715,7 @@ export function tryPiece(items, piece, { tries = 150, rand = seeded() } = {}) {
 
 // ---------- which one should I buy? ----------
 // What a piece is for, so "black dress pants" only counts your black trousers as the same thing, not your black jeans.
-const ROLES = [['jeans', /jean|denim|jort/i], ['shorts', /short/i], ['sweats', /sweat|jogger|track|lounge/i], ['cargo', /cargo|utility|parachute/i], ['trousers', /trouser|slack|dress pant|chino|pleat|suit/i],
+const ROLES = [['jeans', /jean|denim|jort/i], ['shorts', /short/i], ['sweats', /sweat|jogger|track|lounge/i], ['cargo', /cargo|utility|parachute/i], ['chinos', /chino|khaki/i], ['trousers', /trouser|slack|dress pant|pleat|suit/i],
   ['button-up', /button|oxford|dress shirt|flannel|overshirt|shacket/i], ['polo', /polo/i], ['tee', /\btees?\b|t-?shirt|tank|long ?sleeve/i], ['hoodie', /hoodie|sweatshirt|crewneck|quarter zip|zip-up/i], ['knit', /sweater|knit|cardigan/i],
   ['coat', /coat|parka|puffer|trench/i], ['jacket', /jacket|bomber|blazer|vest|windbreaker|anorak/i],
   ['dress shoes', /loafer|derby|oxford|dress shoe|chelsea/i], ['boots', /boot|timb/i], ['sneakers', /sneaker|trainer|dunk|jordan|runner|shoe/i], ['hat', /cap|hat|beanie/i]];
@@ -757,10 +757,38 @@ export function compareBuys(items, cands, opts = {}) {
     r.season > 0 ? 'in your colors' : r.season < 0 ? 'outside your colors' : ''].filter(Boolean).join(' · ');
   return out;
 }
-// Colors worth testing for a buy: the neutrals, your season's good colors, and colors you already wear. Never a random cyan.
-export function buyColors(items, { good = [], avoid = [] } = {}) {
-  const wear = new Set(items.filter(i => i.cat !== 'Accessories').map(i => colorName(i.color)));
-  return Object.entries(SWATCHES).filter(([n, h]) => !avoid.includes(n) && (isNeutral(h) || good.includes(n) || wear.has(n))).map(([n, h]) => ({ name: n, color: h }));
+// ---------- wardrobe basics ----------
+// The staples a wardrobe is built from, each only in the colors people actually buy it in. Buy suggestions come from this list alone:
+// a sage cap or rust chunky sneakers can pass a color rule and still be a strange thing to own (2026-11-20).
+// type: [category, kind, vibe, colors, best first]
+export const BASICS = {
+  jeans: ['Bottoms', 'jeans', 'casual', ['denim', 'black', 'light blue']],
+  'dress pants': ['Bottoms', 'trousers', 'formal', ['black', 'grey', 'navy', 'cream', 'camel', 'brown', 'olive', 'beige']],
+  chinos: ['Bottoms', 'chinos', 'casual', ['beige', 'olive', 'navy', 'brown', 'cream']],
+  'cargo pants': ['Bottoms', 'cargo pants', 'casual', ['olive', 'black', 'beige', 'brown']],
+  sweatpants: ['Bottoms', 'sweatpants', 'casual', ['grey', 'black', 'navy']],
+  shorts: ['Bottoms', 'shorts', 'casual', ['beige', 'navy', 'black', 'olive', 'denim']],
+  tee: ['Tops', 't-shirt', 'casual', ['white', 'black', 'grey', 'navy', 'cream', 'olive', 'brown']],
+  'long sleeve tee': ['Tops', 'long sleeve tee', 'casual', ['white', 'black', 'grey', 'cream']],
+  'button-up': ['Tops', 'button-up shirt', 'casual', ['white', 'light blue', 'denim', 'black']],
+  polo: ['Tops', 'polo shirt', 'casual', ['navy', 'white', 'black', 'cream']],
+  hoodie: ['Layers', 'hoodie', 'casual', ['grey', 'black', 'navy', 'cream', 'brown']],
+  sweater: ['Layers', 'sweater', 'casual', ['navy', 'cream', 'grey', 'camel', 'brown', 'forest']],
+  flannel: ['Layers', 'flannel overshirt', 'casual', ['burgundy', 'forest', 'brown', 'navy']],
+  jacket: ['Layers', 'jacket', 'casual', ['black', 'brown', 'olive', 'denim', 'camel', 'navy']],
+  coat: ['Layers', 'coat', 'formal', ['camel', 'black', 'navy', 'grey']],
+  sneakers: ['Shoes', 'sneakers', 'casual', ['white', 'black', 'grey', 'cream']],
+  boots: ['Shoes', 'boots', 'casual', ['brown', 'black', 'camel']],
+  loafers: ['Shoes', 'loafers', 'formal', ['black', 'brown']],
+  cap: ['Accessories', 'baseball cap', 'casual', ['black', 'navy', 'white', 'brown']],
+};
+export const basicPiece = (type, cname) => { const [cat, kind, vibe] = BASICS[type]; return { id: `buy:${type}:${cname}`, cat, kind, vibe, fit: 1, color: SWATCHES[cname], name: `${cap(cname)} ${type}` }; };
+// What to buy next: every basic you don't own yet (nothing in that color doing the same job), ranked like Which one?: base colors first.
+export function nextBasics(items, opts = {}) {
+  const cands = [];
+  for (const [type, [cat, , , colors]] of Object.entries(BASICS)) for (const c of colors) { const p = basicPiece(type, c);
+    if ((opts.avoid ?? []).includes(c) || items.some(i => i.cat === cat && !i.stored && roleOf(i) === roleOf(p) && colorName(i.color) === c)) continue; cands.push(p); }
+  return compareBuys(items, cands, opts);
 }
 
 // ponytail: sampled with a fixed seed (stable between renders), so counts are estimates. ~220 ghosts × 5 styles.

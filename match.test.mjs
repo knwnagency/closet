@@ -599,8 +599,10 @@ console.log('edges ok');
   const [first, second] = m.compareBuys(items, [cand('black'), cand('grey')]);
   assert.equal(first.cname, 'grey', `grey beats a second black (${first.value} vs ${second.value})`); assert.equal(second.twins.length, 1, 'the black trousers you own are the twin');
   assert.match(second.why, /already own 1 black trousers/); assert.equal(m.roleOf({ kind: 'trousers', name: 'Denim dress pants' }), 'trousers', 'the type wins over a color word');
-  const names = m.buyColors(items, { good: ['rust'], avoid: ['blue'] }).map(c => c.name);
-  assert.ok(names.includes('grey') && names.includes('rust') && !names.includes('blue') && !names.includes('teal'), 'neutrals, your colors, colors you wear; not random ones');
+  const next = m.nextBasics(items, { avoid: ['white'] }), types = Object.keys(m.BASICS);
+  assert.ok(next.length && next.every(r => types.some(t => m.BASICS[t][3].includes(r.cname) && r.ghost.name.toLowerCase().endsWith(t))), 'only basics, in their usual colors');
+  assert.ok(!next.some(r => r.ghost.name === 'Black dress pants'), 'skips what you own'); assert.ok(!next.some(r => r.cname === 'white'), 'skips colors you avoid');
+  assert.ok(!next.some(r => /sage|rust|teal/.test(r.cname) && r.ghost.cat === 'Accessories'), 'no sage caps');
   console.log('which one ok'); }
 
 // A pile in one photo (v5.63): three pieces apart are three boxes; a pair of shoes a few pixels apart is one
