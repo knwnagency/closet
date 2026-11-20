@@ -122,6 +122,8 @@ export function proportion(ps) {
   if (layer && top && lvl(layer) < lvl(top)) add(-2, `A ${layer.kind || 'layer'} doesn't go over a ${top.kind || 'heavier top'}`);
   if (layer && top && lvl(layer) === lvl(top) && lvl(top) >= 2) add(-2, lvl(top) === 2 ? 'Two knits or hoodies stacked is too bulky' : 'Two jackets at once, drop one');
   if (outer && layer && lvl(outer) === lvl(layer) && lvl(layer) >= 3) add(-2, 'Two jackets at once, drop one');
+  // shirt on shirt: a button-up under a flannel or overshirt (two collars, two sets of long sleeves). A tee goes under a flannel instead.
+  if (ps.filter(shirtish).length > 1) add(-2, 'Two collared shirts stacked, put a tee under the flannel instead');
   if (legs && down === 2 && feet === 0) add(-1, 'Sleek shoes can get lost under wide pants'); // a nudge, not a ban: loafers with wide trousers is a real look
   if (legs && down === 0 && feet === 2) add(-1.5, 'Chunky shoes overpower slim pants');
   if (legs && down === 2 && feet === 2) add(1, 'Wide pants anchored by chunky shoes');
@@ -469,6 +471,8 @@ export function flatLayout(slots) {
 // A look's pieces by slot. Two layers (tee + flannel + jacket): the lighter one is Layers, the heavier one Outer.
 // A button-up worn open over a tee is a layer: tee + denim shirt + jacket = Tops, Layers, Outer.
 const layerLevel = p => openShirt(p) ? 1 : level(p); // a shirt worn open is a shirt, whatever its name says (flannel)
+// a collared shirt, whether it's saved as a top (button-up) or a layer (flannel overshirt, shacket). Jackets, vests and knits aren't.
+const shirtish = p => openShirt(p) || p.cat === 'Layers' && /flannel|overshirt|shacket|\bshirt\b/i.test(p.kind || p.name || '') && !/jacket|vest/i.test(p.kind || '');
 export const openShirt = p => p.cat === 'Tops' && /button|denim shirt|chambray|oxford|camp shirt|bowling|work shirt|western|overshirt|flannel/i.test(`${p.kind ?? ''} ${p.name ?? ''}`);
 export function bySlot(ps, outerId = null, acc2Id = null) {
   const tops = ps.filter(p => p.cat === 'Tops').sort((a, b) => openShirt(a) - openShirt(b) || level(a) - level(b)); // the tee goes under
