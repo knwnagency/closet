@@ -771,3 +771,5 @@
   .staple.done .shead b { color: var(--muted); }
   .brow b { display: flex; justify-content: space-between; gap: 8px; } .bscore { font-style: normal; font-weight: 600; font-variant-numeric: tabular-nums; }
   .madeall { text-align: center; margin: 12px 0 0; font-size: 11px; color: var(--muted); } #made .btn.wide { margin-top: 12px; }
+
+  .bown { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 4px 0 14px; } .bown .linkbtn { min-height: 44px; }

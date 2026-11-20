@@ -2,7 +2,7 @@
 // Gets the closet without photos plus your taste; sends back piece ids. The page also imports `jobs` to run them itself
 // when a browser can't start a module worker.
 import { setTaste, today, madeWith, lookPool, lookRules, compareBuys, nextBasics } from './match.js';
-const flatBuy = r => ({ ...r, twins: r.twins.map(p => p.id), examples: r.examples.map(o => ({ score: o.score, ids: o.items.map(p => p.ghost ? null : p.id) })) }); // ids only across the worker line
+const flatBuy = r => ({ ...r, twins: r.twins.map(p => p.id), kin: r.kin.map(p => p.id), examples: r.examples.map(o => ({ score: o.score, ids: o.items.map(p => p.ghost ? null : p.id) })) }); // ids only across the worker line
 
 export const jobs = {
   // Inspo › Rules: the wide pool of looks, each with the rules it follows

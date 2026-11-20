@@ -738,6 +738,7 @@ export function buyValue(items, cand, { good = [], avoid = [], worn = {}, myDres
   // your top colors: the partner colors you wear most (by logged wears, then by how many you own)
   const heat = {}; for (const x of partners) { const n = colorName(x.color); heat[n] = (heat[n] ?? 0) + 1 + 3 * (worn[x.id] ?? 0); }
   const topColors = Object.entries(heat).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n);
+  const kin = items.filter(i => sameJob(i, cand) && !i.stored);
   let fits = 0, sum = 0, q = 0, hot = 0, hotN = 0; const best = [], tops = [];
   for (const x of partners) { let top = -9, look = null;
     for (const f of fillers) for (const t of topUp) { const ps = [ghost, x, f, t].filter(Boolean), r = bestMode(ps); if (r?.score != null && r.score > top) { top = r.score; look = ps; } }
@@ -746,16 +747,17 @@ export function buyValue(items, cand, { good = [], avoid = [], worn = {}, myDres
     if (top >= 3.5) { fits++; sum += top; best.push({ items: look, score: top }); } }
   // Base first: a neutral is the safe buy. A color has to earn it by pairing really well with the colors you wear most.
   const base = isNeutral(cand.color), pairTop = hotN ? hot / hotN : 0, priority = base ? 1.2 : 0.5 + 0.7 * pairTop;
-  const cname = colorName(cand.color), role = roleOf(cand);
-  const twins = items.filter(i => sameJob(i, cand) && colorName(i.color) === cname && !i.stored);
+  const cname = tone(cand), role = roleOf(cand);
+  const twins = items.filter(i => sameJob(i, cand) && tone(i) === cname && !i.stored && (cand.cut == null || fit(i) === cand.cut));
   const season = good.includes(cname) ? 1 : avoid.includes(cname) ? -1 : 0;
   // Owning none of a staple opens up a new kind of outfit (no cargos yet): a push. Owning some (tan trousers): a color far from them counts
   // more than a near shade (black over cream). And it has to match how dressy you actually dress (myDress: the average of your worn looks, 0 to 2).
-  const kin = items.filter(i => sameJob(i, cand) && !i.stored), near = kin.map(i => [i, colorDist(i.color, cand.color)]).sort((a, b) => a[1] - b[1])[0];
-  const spread = near ? Math.max(0, Math.min(1, (near[1] - 120) / 220)) : 1, fresh = kin.length ? 0.75 + 0.5 * spread : 1.25; // colorDist: tan to beige 88, to cream 179, to olive 261, to black 425
+  // shopping a cut: only pieces in that cut are near or far (your boxy white tees don't make a fitted one a repeat)
+  const cutKin = cand.cut == null ? kin : kin.filter(i => fit(i) === cand.cut), near = cutKin.map(i => [i, colorDist(i.color, cand.color)]).sort((a, b) => a[1] - b[1])[0];
+  const spread = near ? Math.max(0, Math.min(1, (near[1] - 120) / 220)) : 1, fresh = cutKin.length ? 0.75 + 0.5 * spread : 1.25; // colorDist: tan to beige 88, to cream 179, to olive 261, to black 425
   const fitsYou = myDress == null ? 1 : [1.1, 1, 0.8][Math.min(2, Math.round(Math.abs(dress(cand) - myDress)))];
   const value = Math.round(q * priority * fresh * fitsYou / (1 + 0.5 * twins.length) * (1 + 0.12 * season) * 10) / 10;
-  return { ghost, base, pairTop, topColors, fits, tops, q, newKind: !kin.length, near: near && spread < 0.35 ? near[0] : null, far: near && spread >= 0.7 ? near[0] : null, fitsYou, of: partners.length, avg: fits ? sum / fits : 0, partnerCat: pc, twins, season, cname, role, value, examples: best.sort((a, b) => b.score - a.score).slice(0, 3) };
+  return { ghost, base, pairTop, topColors, fits, tops, q, newKind: !kin.length, newCut: !!kin.length && !cutKin.length ? CUTS[cand.cat][cand.cut] : null, near: near && spread < 0.35 ? near[0] : null, far: near && spread >= 0.7 ? near[0] : null, fitsYou, kin, of: partners.length, avg: fits ? sum / fits : 0, partnerCat: pc, twins, season, cname, role, value, examples: best.sort((a, b) => b.score - a.score).slice(0, 3) };
 }
 // Rank a few candidates (or every sensible color for one type). Best first, each with a one-line reason.
 export function compareBuys(items, cands, opts = {}) {
@@ -767,8 +769,10 @@ export function compareBuys(items, cands, opts = {}) {
   for (const r of out) { r.great = r.tops.filter(t => t >= bar).length; delete r.tops; }
   const many = (n, word) => `${n} ${word}${n > 1 && !/s$/.test(word) ? 's' : ''}`; // "3 grey tees", "2 brown trousers"
   // what you own comes first: it's what moves the score most
-  for (const r of out) r.why = [r.twins.length ? `you already own ${many(r.twins.length, `${r.cname} ${roleOf(r.twins[0])}`)}` : r.newKind ? `you own no ${r.role} yet: a new kind of outfit` : r.far ? `a change from your ${colorName(r.far.color)} ${roleOf(r.far)}` : r.near ? `close to your ${colorName(r.near.color)} ${roleOf(r.near)}` : `your first ${r.cname} ${r.role}`,
-    `great with ${r.great} of your ${r.of} ${r.partnerCat.toLowerCase()}`, r.base ? 'a base color' : r.pairTop >= 0.6 ? `pairs really well with your ${r.topColors.slice(0, 2).join(' and ')}` : `weak with your ${r.topColors.slice(0, 2).join(' and ')}`,
+  const pc = r => r.partnerCat.toLowerCase();
+  // what it adds first: a color (or cut) you don't have makes new outfits; a twin only repeats the looks you can already make
+  for (const r of out) r.why = [r.twins.length ? `you have this: your ${r.twins.length > 1 ? many(r.twins.length, `${r.cname} ${roleOf(r.twins[0])}`) : `${r.cname} ${roleOf(r.twins[0])}`} already make${r.twins.length > 1 || /s$/.test(roleOf(r.twins[0])) ? '' : 's'} these looks` : r.newKind ? `you own no ${r.role} yet: ${many(r.great, 'new outfit')} with your ${pc(r)}` : r.newCut ? `you own no ${r.newCut} ${plural(r.role)} yet: ${many(r.great, 'new outfit')} with your ${pc(r)}` : r.near ? `${many(r.great, 'outfit')}, but close to your ${tone(r.near)} ${roleOf(r.near)} so they'd feel like repeats` : `${many(r.great, 'new outfit')} with your ${pc(r)}`,
+    !r.twins.length && r.far ? `a change from your ${tone(r.far)} ${roleOf(r.far)}` : '', r.base ? 'a base color' : r.pairTop >= 0.6 ? `pairs really well with your ${r.topColors.slice(0, 2).join(' and ')}` : `weak with your ${r.topColors.slice(0, 2).join(' and ')}`,
     r.fitsYou > 1 ? 'matches how you dress' : r.fitsYou < 1 ? 'dressier or sportier than you usually wear' : '', r.season > 0 ? 'in your colors' : r.season < 0 ? 'outside your colors' : ''].filter(Boolean).join(' · ');
   return out;
 }
@@ -777,7 +781,7 @@ export function compareBuys(items, cands, opts = {}) {
 // a sage cap or rust chunky sneakers can pass a color rule and still be a strange thing to own (2026-11-20).
 // type: [category, kind, vibe, colors, best first]
 export const BASICS = {
-  jeans: ['Bottoms', 'jeans', 'casual', ['denim', 'black', 'light blue']],
+  jeans: ['Bottoms', 'jeans', 'casual', ['dark wash', 'mid wash', 'light wash', 'black', 'white']],
   'dress pants': ['Bottoms', 'trousers', 'formal', ['black', 'grey', 'navy', 'cream', 'camel', 'brown', 'olive', 'beige']],
   chinos: ['Bottoms', 'chinos', 'casual', ['beige', 'olive', 'navy', 'brown', 'cream']],
   'cargo pants': ['Bottoms', 'cargo pants', 'casual', ['olive', 'black', 'beige', 'brown']],
@@ -797,12 +801,21 @@ export const BASICS = {
   loafers: ['Shoes', 'loafers', 'formal', ['black', 'brown']],
   cap: ['Accessories', 'baseball cap', 'casual', ['black', 'navy', 'white', 'brown']],
 };
-export const basicPiece = (type, cname) => { const [cat, kind, vibe] = BASICS[type]; return { id: `buy:${type}:${cname}`, cat, kind, vibe, fit: 1, color: SWATCHES[cname], name: `${cap(cname)} ${type}` }; };
+// Jeans come in washes, not colors (the WASH scale above): dark wash, not navy.
+export const WASHES = { 'dark wash': '#2b3b57', 'mid wash': '#4d6a8c', 'light wash': '#9cbcd9' };
+const TONES = ['white', 'light wash', 'mid wash', 'dark wash', 'raw denim', 'black'];
+export const swatch = n => SWATCHES[n] ?? WASHES[n];
+export const tone = p => roleOf(p) === 'jeans' ? TONES[WASH(hexToHsl(p.color))] : colorName(p.color);
+const plural = w => /s$/.test(w) ? w : `${w}s`;
+// The cut you're shopping for (Which one?): fit 0 / 1 / 2, null = any. Only tops, layers and pants have one worth choosing.
+export const CUTS = { Tops: ['fitted', 'regular', 'oversized'], Layers: ['fitted', 'regular', 'oversized'], Bottoms: ['slim', 'straight', 'wide'] };
+export const basicPiece = (type, cname, cut = null) => { const [cat, kind, vibe] = BASICS[type], c = CUTS[cat]?.[cut];
+  return { id: `buy:${type}:${cname}${c ? `:${c}` : ''}`, cat, kind, vibe, fit: c ? cut : 1, cut: c ? cut : null, color: swatch(cname), name: `${cap(c ? `${c} ${cname}` : cname)} ${type}` }; };
 // What to buy next: every basic you don't own yet (nothing in that color doing the same job), ranked like Which one?: base colors first.
 export function nextBasics(items, opts = {}) {
   const cands = [];
   for (const [type, [cat, , , colors]] of Object.entries(BASICS)) for (const c of colors) { const p = basicPiece(type, c);
-    if ((opts.avoid ?? []).includes(c) || items.some(i => !i.stored && sameJob(i, p) && colorName(i.color) === c)) continue; cands.push(p); }
+    if ((opts.avoid ?? []).includes(c) || items.some(i => !i.stored && sameJob(i, p) && tone(i) === c)) continue; cands.push(p); }
   return compareBuys(items, cands, opts);
 }
 

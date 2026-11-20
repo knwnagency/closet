@@ -598,7 +598,7 @@ console.log('edges ok');
   const cand = c => ({ id: 'buy:' + c, cat: 'Bottoms', kind: 'trousers', vibe: 'formal', color: m.SWATCHES[c], name: `${c} dress pants` });
   const [first, second] = m.compareBuys(items, [cand('black'), cand('grey')]);
   assert.equal(first.cname, 'grey', `grey beats a second black (${first.value} vs ${second.value})`); assert.equal(second.twins.length, 1, 'the black trousers you own are the twin');
-  assert.match(second.why, /already own 1 black trousers/); assert.equal(m.roleOf({ kind: 'trousers', name: 'Denim dress pants' }), 'trousers', 'the type wins over a color word');
+  assert.match(second.why, /you have this: your black trousers already make these looks/); assert.equal(m.roleOf({ kind: 'trousers', name: 'Denim dress pants' }), 'trousers', 'the type wins over a color word');
   const next = m.nextBasics(items, { avoid: ['white'] }), types = Object.keys(m.BASICS);
   assert.ok(next.length && next.every(r => types.some(t => m.BASICS[t][3].includes(r.cname) && r.ghost.name.toLowerCase().endsWith(t))), 'only basics, in their usual colors');
   assert.ok(!next.some(r => r.ghost.name === 'Black dress pants'), 'skips what you own'); assert.ok(!next.some(r => r.cname === 'white'), 'skips colors you avoid');
@@ -627,4 +627,8 @@ console.log('edges ok');
   assert.equal(first.cname, 'black', 'black over camel when you own tan'); assert.match(first.why, /a change from your/);
   const cargo = m.buyValue(base, m.basicPiece('cargo pants', 'olive')), more = m.buyValue([...base, mk('c', 'Bottoms', 'cargo pants', '#1b1a19')], m.basicPiece('cargo pants', 'olive'));
   assert.ok(cargo.newKind && cargo.value > more.value, 'first cargos rank above a second pair'); assert.ok(m.sameJob({ cat: 'Bottoms', kind: 'chinos' }, { cat: 'Bottoms', kind: 'trousers' }), 'chinos = trousers');
+  { const boxy = [...tan, { id: 'bx', cat: 'Tops', kind: 't-shirt', name: 'White tee', color: '#f6f5f1', fit: 4 }];
+    const [fitted] = m.compareBuys(boxy, [m.basicPiece('tee', 'white', 0)]), [any] = m.compareBuys(boxy, [m.basicPiece('tee', 'white')]);
+    assert.ok(!fitted.twins.length && /no fitted tees yet/.test(fitted.why), `a fitted white tee is new when yours are boxy: ${fitted.why}`); assert.ok(any.twins.some(p => p.id === 'bx'), 'any cut: the boxy one counts');
+    assert.equal(m.tone({ cat: 'Bottoms', kind: 'jeans', color: '#2b3b57' }), 'dark wash', 'jeans are named by wash'); }
   console.log('buy next ok'); }

@@ -39,10 +39,10 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } from './progress.js';
-import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt, PRINTS, BASICS, basicPiece, sameJob } from './match.js';
+import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.20 · v5.66'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.20 · v5.67'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -604,7 +604,7 @@ async function standIn(cat, color) {
   return new Promise(r => c.toBlob(r, 'image/png'));
 }
 async function quickAdd(type, cname) {
-  const [cat, kind, vibe = 'casual'] = BASICS[type], color = SWATCHES[cname], img = await standIn(cat, color);
+  const [cat, kind, vibe = 'casual'] = BASICS[type], color = swatch(cname), img = await standIn(cat, color);
   const item = { id: uid(), img, color, cat, kind, vibe, fit: 1, patterned: false, pattern: 'solid', name: `${cname[0].toUpperCase() + cname.slice(1)} ${type}`, noPhoto: true, dupOk: true, cfp: STAND_FP, fp: STAND_FP, review: false, wears: 0, lastWorn: null, createdAt: Date.now() };
   try { item.thumb = await thumbOf(img); } catch (e) { console.warn(e); }
   await put('items', item); S.items.push(item); S.ideas = null; S.deck = null; return item;
@@ -614,7 +614,7 @@ function openQuickAdd() {
   showSheet(`<div class="pad qadd"><div class="pickhead"><div><div class="eyebrow">Quick add · photos later</div><h2>What do you own?</h2></div>${closeBtn}</div>
     <p class="sub">Pick a type, then tap each color you have. Every tap adds one piece with a stand-in picture, so outfits start working right away. Swap in real photos whenever.</p>
     <div class="chips wrap">${Object.keys(BASICS).map(k => `<button class="chip ${q.type === k ? 'on' : ''}" data-qatype="${k}">${k}</button>`).join('')}</div>
-    <div class="qcolors">${Object.entries(SWATCHES).map(([n, h]) => `<button data-qacolor="${n}" aria-label="Add a ${n} ${q.type}"><i style="background:${h}"></i><span>${n}</span></button>`).join('')}</div>
+    <div class="qcolors">${Object.entries(q.type === 'jeans' ? { ...WASHES, ...SWATCHES } : SWATCHES).map(([n, h]) => `<button data-qacolor="${n}" aria-label="Add a ${n} ${q.type}"><i style="background:${h}"></i><span>${n}</span></button>`).join('')}</div>
     <p class="mono qcount">${S.items.filter(i => i.noPhoto).length} quick-added so far</p><button class="btn wide" data-action="qadone">Done</button></div>`);
 }
 
@@ -1627,7 +1627,7 @@ function suggestions() {
   const staple = type => { const p = basicPiece(type, BASICS[type][3][0]);
     const have = S.items.filter(i => !i.stored && sameJob(i, p)), next = list.filter(r => r.ghost.id.startsWith(`buy:${type}:`));
     return { type, have, next, best: next[0]?.value ?? -1 }; };
-  const dots = ps => [...new Map(ps.map(p => [colorName(p.color), p.color])).entries()].map(([n, h]) => `<span class="sown"><i class="cdot" style="background:${h}"></i>${n}</span>`).join('');
+  const dots = ps => [...new Map(ps.map(p => [tone(p), p.color])).entries()].map(([n, h]) => `<span class="sown"><i class="cdot" style="background:${h}"></i>${n}</span>`).join('');
   const row = st => `<div class="staple ${st.next.length ? '' : 'done'}"><div class="shead"><b>${st.type}</b><span class="mono">${st.have.length ? `you have ${st.have.length}` : 'none yet'}</span></div>
     ${st.have.length ? `<div class="sowned">${dots(st.have)}</div>` : ''}
     ${st.next.length ? `<div class="snext">${ghostEl(st.next[0].ghost)}<div><span class="mono">Add next</span><b>${esc(st.next[0].ghost.name)}</b>${st.next[1] ? `<small>then ${esc(st.next.slice(1, 3).map(r => r.cname).join(', '))}</small>` : ''}</div>
@@ -1652,13 +1652,17 @@ function buyOpts() { const s = colorsOn() ? mySeason() : null, worn = {}; for (c
 async function runBuy(all) {
   const b = S.buy, names = all ? BASICS[b.type][3].filter(c => !buyOpts().avoid.includes(c)) : b.colors;
   b.busy = true; b.res = null; b.all = all; render();
-  const r = await runJob('buy', { items: S.items, cands: names.map(n => basicPiece(b.type, n)), opts: buyOpts() });
-  b.busy = false; b.res = r.list.map(x => ({ ...x, twins: x.twins.map(byId).filter(Boolean), examples: x.examples.map(o => ({ ...o, items: o.ids.map((id, i) => id ? byId(id) : x.ghost).filter(Boolean) })) })); render();
+  const r = await runJob('buy', { items: S.items, cands: names.map(n => basicPiece(b.type, n, b.cut ?? null)), opts: buyOpts() });
+  b.busy = false; b.res = r.list.map(x => ({ ...x, twins: x.twins.map(byId).filter(Boolean), kin: x.kin.map(byId).filter(Boolean), examples: x.examples.map(o => ({ ...o, items: o.ids.map((id, i) => id ? byId(id) : x.ghost).filter(Boolean) })) })); render();
 }
 function whichOne() {
   if (S.items.length < 3) return `<div class="empty"><h2>Add a few pieces first</h2><p>This tests a piece you're thinking of buying against everything you own.</p><button class="btn" data-action="add">Add clothes</button></div>`;
   const b = S.buy ??= { type: 'dress pants', colors: [], res: null }, opts = buyOpts(), sensible = BASICS[b.type][3].filter(c => !opts.avoid.includes(c)); // the colors this piece usually comes in
-  const shown = b.more ? Object.keys(SWATCHES) : [...new Set([...sensible, ...b.colors])];
+  const shown = b.more ? [...new Set([...sensible, ...Object.keys(SWATCHES)])] : [...new Set([...sensible, ...b.colors])];
+  // what you already own of this staple, up top: if the black jeans you just bought aren't here, the advice can't know about them
+  const probe = basicPiece(b.type, sensible[0] ?? 'black'), have = S.items.filter(i => !i.stored && sameJob(i, probe)), cuts = CUTS[BASICS[b.type][0]];
+  const owned = `<div class="bown"><span class="mono">You own ${have.length ? `${have.length} · ` : 'none yet'}</span>${[...new Map(have.map(p => [`${cuts ? `${(fitLabel(p) || '').toLowerCase()} ` : ''}${tone(p)}`, p])).entries()].map(([n, p]) => `<span class="sown"><i class="cdot" style="background:${p.color}"></i>${esc(n.trim())}</span>`).join('')}
+    <button class="linkbtn" data-qaof="${esc(b.type)}">Missing one? Add it</button></div>`;
   const res = b.res, win = res?.[0], second = res?.[1];
   const bar = r => `<span class="bbar" title="score against the winner"><i style="width:${r.score}%"></i></span>`; // the whole score (looks, twins, new kind, your colors), scaled to the winner
   const verdict = !win ? '' : !win.q ? `<p class="sub">None of these go well with what you own. Try a neutral.</p>`
@@ -1667,8 +1671,10 @@ function whichOne() {
       ${win.examples.length ? `<div class="minis">${win.examples.map(o => flat(o.items)).join('')}</div>` : ''}</div>`;
   return `<p class="sub">Torn between colors? Pick the type and the colors. Each one is tested against every ${b.type && BASICS[b.type][0] === 'Tops' || BASICS[b.type][0] === 'Layers' ? 'pair of pants' : 'top'} you own.</p>
     <span class="mono">Type</span><div class="chips wrap">${Object.keys(BASICS).map(k => `<button class="chip ${b.type === k ? 'on' : ''}" data-buytype="${k}">${k}</button>`).join('')}</div>
-    <span class="mono">Colors you're deciding between · the usual ones for ${esc(b.type)}</span>
-    <div class="chips wrap">${shown.map(n => `<button class="chip ${b.colors.includes(n) ? 'on' : ''}" data-buycolor="${n}"><i class="cdot" style="background:${SWATCHES[n]}"></i>${n}</button>`).join('')}${b.more ? '' : `<button class="chip o" data-action="buymore">more colors</button>`}</div>
+    ${owned}
+    ${cuts ? `<span class="mono">Fit</span><div class="chips wrap">${[null, 0, 1, 2].map(c => `<button class="chip ${(b.cut ?? null) === c ? 'on' : ''}" data-buycut="${c ?? ''}">${c == null ? 'any fit' : cuts[c]}</button>`).join('')}</div>` : ''}
+    <span class="mono">${b.type === 'jeans' ? 'Washes' : 'Colors'} you're deciding between · the usual ones for ${esc(b.type)}</span>
+    <div class="chips wrap">${shown.map(n => `<button class="chip ${b.colors.includes(n) ? 'on' : ''}" data-buycolor="${n}"><i class="cdot" style="background:${swatch(n)}"></i>${n}</button>`).join('')}${b.more ? '' : `<button class="chip o" data-action="buymore">more colors</button>`}</div>
     <div class="row2 buyacts"><button class="btn sm go" data-action="buygo" ${b.colors.length < 1 || b.busy ? 'disabled' : ''}>${b.colors.length > 1 ? `Compare ${b.colors.length}` : 'Test it'}</button><button class="btn sm ghost" data-action="buyall" ${b.busy ? 'disabled' : ''}>Best color for ${esc(b.type)}</button></div>
     ${b.busy ? `<div class="scan"><i></i><span class="mono">Testing against your closet</span></div>` : ''}
     ${verdict}
@@ -2539,6 +2545,8 @@ document.addEventListener('click', async e => {
     go(); } // no fade-in: on iPhone it left the top of the new screen blank until you scrolled
   else if (ds.sub) { const [k, v] = ds.sub.split(':'); S[k] = v; render(); }
   else if (ds.listtab) { S.listTab = ds.listtab; render(); }
+  else if (ds.buycut !== undefined) { S.buy.cut = ds.buycut === '' ? null : +ds.buycut; S.buy.res = null; render(); }
+  else if (ds.qaof) { (S.qa ??= {}).type = ds.qaof; S.buy.res = null; openQuickAdd(); }
   else if (ds.buytype) { S.buy = { ...S.buy, type: ds.buytype, res: null }; render(); }
   else if (ds.buycolor) { const b = S.buy, c = ds.buycolor; b.colors = b.colors.includes(c) ? b.colors.filter(x => x !== c) : [...b.colors, c].slice(-4); b.res = null; render(); }
   else if (ds.action === 'buymore') { S.buy.more = true; render(); }
