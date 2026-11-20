@@ -618,3 +618,13 @@ console.log('edges ok');
   const bad = m.style([tee, mk('b', 'Bottoms', 'cargo pants', '#5c5b33'), loaf]), ok = m.style([tee, mk('b2', 'Bottoms', 'trousers', '#5c5b33'), loaf]);
   assert.ok(bad.some(([v, n]) => v < 0 && /too dressy/.test(n)), 'loafers + cargos flagged'); assert.ok(!ok.some(([, n]) => /too dressy/.test(n)), 'loafers + trousers fine');
   console.log('dress shoes ok'); }
+
+// Buy next (v5.65): no cargos at all gets a push as a new kind of outfit; with tan trousers, black beats a near shade like camel
+{ const m = await import('./match.js'), mk = (id, cat, kind, color, x = {}) => ({ id, cat, kind, color, name: `${kind} ${id}`, vibe: 'casual', fit: 1, ...x });
+  const base = [mk('t1', 'Tops', 't-shirt', '#f2f2f0'), mk('t2', 'Tops', 't-shirt', '#1c1c1c'), mk('t3', 'Tops', 't-shirt', '#5c5b33'), mk('j', 'Bottoms', 'jeans', '#4d6a8c'), mk('s1', 'Shoes', 'sneakers', '#f4f4f2')];
+  const tan = [...base, mk('tan', 'Bottoms', 'trousers', '#c8a97e')];
+  const [first] = m.compareBuys(tan, ['camel', 'black'].map(c => m.basicPiece('dress pants', c)));
+  assert.equal(first.cname, 'black', 'black over camel when you own tan'); assert.match(first.why, /a change from your/);
+  const cargo = m.buyValue(base, m.basicPiece('cargo pants', 'olive')), more = m.buyValue([...base, mk('c', 'Bottoms', 'cargo pants', '#1b1a19')], m.basicPiece('cargo pants', 'olive'));
+  assert.ok(cargo.newKind && cargo.value > more.value, 'first cargos rank above a second pair'); assert.ok(m.sameJob({ cat: 'Bottoms', kind: 'chinos' }, { cat: 'Bottoms', kind: 'trousers' }), 'chinos = trousers');
+  console.log('buy next ok'); }

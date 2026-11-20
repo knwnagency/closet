@@ -39,10 +39,10 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } from './progress.js';
-import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt, PRINTS, BASICS, basicPiece, roleOf } from './match.js';
+import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt, PRINTS, BASICS, basicPiece, sameJob } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.20 · v5.64'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.20 · v5.65'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -1621,8 +1621,9 @@ function suggestions() {
   const top = list[0];
   // Staple by staple (jeans, dress pants, sneakers, boots...): what you own of it, and the best color to add next
   const GROUPS = [['Bottoms', 'Pants and shorts'], ['Tops', 'Shirts'], ['Layers', 'Jackets and layers'], ['Shoes', 'Shoes'], ['Accessories', 'Hats']];
-  const staple = type => { const role = roleOf(basicPiece(type, BASICS[type][3][0])), cat = BASICS[type][0];
-    const have = S.items.filter(i => i.cat === cat && !i.stored && roleOf(i) === role), next = list.filter(r => r.ghost.id.startsWith(`buy:${type}:`));
+  // chinos list your trousers too: same job
+  const staple = type => { const p = basicPiece(type, BASICS[type][3][0]);
+    const have = S.items.filter(i => !i.stored && sameJob(i, p)), next = list.filter(r => r.ghost.id.startsWith(`buy:${type}:`));
     return { type, have, next, best: next[0]?.value ?? -1 }; };
   const dots = ps => [...new Map(ps.map(p => [colorName(p.color), p.color])).entries()].map(([n, h]) => `<span class="sown"><i class="cdot" style="background:${h}"></i>${n}</span>`).join('');
   const row = st => `<div class="staple ${st.next.length ? '' : 'done'}"><div class="shead"><b>${st.type}</b><span class="mono">${st.have.length ? `you have ${st.have.length}` : 'none yet'}</span></div>
@@ -1643,7 +1644,9 @@ function suggestions() {
 // ---------- Which one should I buy? ----------
 // "Black or grey dress pants?" Each color is tested against every top you own (with your most worn shoes), straight, no dice rolls.
 // The winner goes with the most of your pieces, and loses points for being a twin of something you already have.
-function buyOpts() { const s = colorsOn() ? mySeason() : null, worn = {}; for (const l of S.log) for (const id of l.ids) worn[id] = (worn[id] ?? 0) + 1; return { good: s?.good ?? [], avoid: s?.avoid ?? [], worn }; }
+function buyOpts() { const s = colorsOn() ? mySeason() : null, worn = {}; for (const l of S.log) for (const id of l.ids) worn[id] = (worn[id] ?? 0) + 1;
+  const cl = [...S.log, ...S.saved].flatMap(r => r.ids.map(byId)).filter(p => p && p.cat !== 'Accessories'); // how dressy you actually dress: your worn and saved looks
+  return { good: s?.good ?? [], avoid: s?.avoid ?? [], worn, myDress: cl.length >= 15 ? cl.reduce((t, p) => t + dress(p), 0) / cl.length : null }; }
 async function runBuy(all) {
   const b = S.buy, names = all ? BASICS[b.type][3].filter(c => !buyOpts().avoid.includes(c)) : b.colors;
   b.busy = true; b.res = null; b.all = all; render();
@@ -1655,7 +1658,7 @@ function whichOne() {
   const b = S.buy ??= { type: 'dress pants', colors: [], res: null }, opts = buyOpts(), sensible = BASICS[b.type][3].filter(c => !opts.avoid.includes(c)); // the colors this piece usually comes in
   const shown = b.more ? Object.keys(SWATCHES) : [...new Set([...sensible, ...b.colors])];
   const res = b.res, win = res?.[0], second = res?.[1];
-  const bar = r => `<span class="bbar" title="how well it goes with what you own"><i style="width:${r.of ? Math.round(100 * r.q / r.of) : 0}%"></i></span>`; // strength, not just the count: a look that barely passes fills less
+  const bar = r => `<span class="bbar" title="score against the winner"><i style="width:${r.score}%"></i></span>`; // the whole score (looks, twins, new kind, your colors), scaled to the winner
   const verdict = !win ? '' : !win.q ? `<p class="sub">None of these go well with what you own. Try a neutral.</p>`
     : `<div class="bwin glass"><span class="mono">${b.all ? `Best ${esc(b.type)} for your closet` : 'Get this one'}</span><h2>${esc(win.ghost.name)}</h2>
       <p>${esc(win.why)}.${second ? ` Runner-up: ${esc(second.ghost.name.toLowerCase())}, ${second.twins.length > win.twins.length ? `but it would be your ${second.twins.length + 1}${['', '', 'nd', 'rd'][second.twins.length + 1] ?? 'th'} ${esc(second.cname)} ${esc(second.role)}` : second.value < win.value * 0.9 ? `with weaker looks across your ${esc(win.partnerCat.toLowerCase())}` : 'close behind'}.` : ''}</p>
@@ -1667,7 +1670,7 @@ function whichOne() {
     <div class="row2 buyacts"><button class="btn sm go" data-action="buygo" ${b.colors.length < 1 || b.busy ? 'disabled' : ''}>${b.colors.length > 1 ? `Compare ${b.colors.length}` : 'Test it'}</button><button class="btn sm ghost" data-action="buyall" ${b.busy ? 'disabled' : ''}>Best color for ${esc(b.type)}</button></div>
     ${b.busy ? `<div class="scan"><i></i><span class="mono">Testing against your closet</span></div>` : ''}
     ${verdict}
-    ${res?.length > 1 ? `<div class="brows">${res.map((r, i) => `<div class="brow"><i class="cdot" style="background:${r.ghost.color}"></i><div><b>${i + 1}. ${esc(r.ghost.name)}</b>${bar(r)}<span class="mono">${esc(r.why)}</span></div><button class="tag ${onList(r.ghost.id) ? '' : 'o'}" data-buywish="${i}">${onList(r.ghost.id) ? 'Listed' : '+ List'}</button></div>`).join('')}</div>` : ''}
+    ${res?.length > 1 ? `<div class="brows">${res.map((r, i) => `<div class="brow"><i class="cdot" style="background:${r.ghost.color}"></i><div><b>${i + 1}. ${esc(r.ghost.name)}<em class="bscore">${r.score}</em></b>${bar(r)}<span class="mono">${esc(r.why)}</span></div><button class="tag ${onList(r.ghost.id) ? '' : 'o'}" data-buywish="${i}">${onList(r.ghost.id) ? 'Listed' : '+ List'}</button></div>`).join('')}</div>` : ''}
     ${res?.length === 1 ? `<button class="btn ghost sm" data-buywish="0">${onList(win.ghost.id) ? 'On your list' : 'Add to wishlist'}</button>` : ''}`;
 }
 
@@ -2376,12 +2379,16 @@ function partOf(it) {
 }
 function showMade(it) {
   const box = sheet.querySelector('#made'); if (!box) return;
-  S.made = madeWith([...new Set([...pool(), it])], it).sort((a, b) => !!a.warn - !!b.warn); // a look with a warning never leads
+  if (S.madeIt !== it.id) { S.madeIt = it.id; S.madeN = 5; } // a new piece starts at 5; More ways adds 6 at a time
+  const was = S.made?.length ?? 0, more = was && S.madeN > 5;
+  S.made = madeWith([...new Set([...pool(), it])], it, S.madeN).sort((a, b) => !!a.warn - !!b.warn); // a look with a warning never leads
   box.innerHTML = S.made.length ? `<div class="decide"><div class="looks-h"><span>${S.made.length} ways to wear it</span><span>best first · slide</span></div><div class="deck made">${(used => S.made.map((o, k) => { const [t] = vibeOf(o, used);
       return `<article class="dcard slide"><div class="dtop"><span class="mono">${pad2(k + 1)} / ${pad2(S.made.length)}</span></div><h2 class="display dtitle">${esc(t)}</h2>
         <button class="flatwrap" data-buildkey="${o.key}" aria-label="Open in the builder">${flat(o.items)}</button><p class="madewhy">${esc([colorsLine(o.items), o.warn ? '' : o.note].filter(Boolean).join(' · '))}</p>
-        <div class="row"><button class="btn ghost" data-save="${o.key}">${heart} ${isFav(o.key) ? 'Saved' : 'Save'}</button><button class="btn" data-wear="${o.key}">Wear today</button></div></article>`; }).join(''))(new Set())}</div></div>`
+        <div class="row"><button class="btn ghost" data-save="${o.key}">${heart} ${isFav(o.key) ? 'Saved' : 'Save'}</button><button class="btn" data-wear="${o.key}">Wear today</button></div></article>`; }).join(''))(new Set())}</div>
+      ${S.made.length >= S.madeN ? `<button class="btn ghost wide" data-mademore="${it.id}">More ways to wear it · 6 more</button>` : `<p class="mono madeall">That's every look that passes your rules</p>`}</div>`
     : `<p class="sub">Nothing complete yet. Add more tops, bottoms or shoes, or try Build with it.</p>`;
+  if (more) { const dk = box.querySelector('.deck'), c = dk?.children[Math.min(was, dk.children.length - 1)]; if (c) dk.scrollLeft = c.offsetLeft - dk.firstElementChild.offsetLeft; return; } // land on the first new look
   box.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -2536,6 +2543,7 @@ document.addEventListener('click', async e => {
   else if (ds.action === 'buygo' || ds.action === 'buyall') runBuy(ds.action === 'buyall');
   else if (ds.buywish) { const r = S.buy?.res?.[+ds.buywish]; if (!r || onList(r.ghost.id)) return; const g = r.ghost;
     const w = { id: g.id, name: g.name, cat: g.cat, color: g.color, fit: 1, kind: g.kind, got: false, at: Date.now(), note: r.why }; await put('wish', w); S.wish.push(w); toast('Added to your wishlist'); render(); }
+  else if (ds.mademore) { const it = byId(ds.mademore); if (!it) return; t.textContent = 'Finding more…'; t.disabled = true; S.madeN = (S.madeN ?? 5) + 6; setTimeout(() => showMade(it), 30); }
   else if (ds.staplecmp) { const t = ds.staplecmp, next = (S.basics?.list ?? []).filter(r => r.ghost.id.startsWith(`buy:${t}:`)).slice(0, 3).map(r => r.cname);
     S.buy = { type: t, colors: next, res: null }; S.listTab = 'buy'; scrollTo(0, 0); runBuy(false); }
   else if (ds.basicwish) { if (onList(ds.basicwish)) return; const r = S.basics?.list?.find(x => x.ghost.id === ds.basicwish); if (!r) return; const g = r.ghost;
