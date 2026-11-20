@@ -1,2 +1,2 @@
-2026.11.19 · v5.62
-No more two shirts stacked: a button-up never goes under a flannel or overshirt. Flannels go over a tee instead
+2026.11.20 · v5.63
+Now called Already. New: Which one? in Wishlist tests colors before you buy, base colors first. Add a pile of clothes in one photo, or quick add without photos. What you wear on Me, Plan my week in one tap, Roll changes every piece

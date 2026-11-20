@@ -590,3 +590,29 @@ console.log('edges ok');
   assert.equal(nameColor({ name: 'Baseball cap', color: '#16286d' }), null, 'no color word, no flag');
   assert.ok(brightNavy({ color: '#16286d' }), 'royal cap in shade'); assert.ok(!brightNavy({ color: '#1e2a45' }), 'real navy stays navy'); assert.ok(!brightNavy({ color: '#14274b' }), 'dark navy polo stays navy');
   console.log('name colors ok'); }
+
+// Which one should I buy (v5.63): a second pair of black trousers loses to a first grey pair; the reason says why
+{ const m = await import('./match.js'), mk = (id, cat, kind, color, x = {}) => ({ id, cat, kind, color, name: `${kind} ${id}`, vibe: 'casual', fit: 1, ...x });
+  const items = [mk('t1', 'Tops', 't-shirt', '#f2f2f0'), mk('t2', 'Tops', 't-shirt', '#1c1c1c'), mk('t3', 'Tops', 't-shirt', '#5c5b33'), mk('t4', 'Tops', 'button-up shirt', '#9cc3e6'),
+    mk('b1', 'Bottoms', 'trousers', '#1b1a19'), mk('b2', 'Bottoms', 'jeans', '#4d6a8c'), mk('s1', 'Shoes', 'sneakers', '#f4f4f2'), mk('s2', 'Shoes', 'loafers', '#1a1a1a')];
+  const cand = c => ({ id: 'buy:' + c, cat: 'Bottoms', kind: 'trousers', vibe: 'formal', color: m.SWATCHES[c], name: `${c} dress pants` });
+  const [first, second] = m.compareBuys(items, [cand('black'), cand('grey')]);
+  assert.equal(first.cname, 'grey', `grey beats a second black (${first.value} vs ${second.value})`); assert.equal(second.twins.length, 1, 'the black trousers you own are the twin');
+  assert.match(second.why, /already own 1 black trousers/); assert.equal(m.roleOf({ kind: 'trousers', name: 'Denim dress pants' }), 'trousers', 'the type wins over a color word');
+  const names = m.buyColors(items, { good: ['rust'], avoid: ['blue'] }).map(c => c.name);
+  assert.ok(names.includes('grey') && names.includes('rust') && !names.includes('blue') && !names.includes('teal'), 'neutrals, your colors, colors you wear; not random ones');
+  console.log('which one ok'); }
+
+// A pile in one photo (v5.63): three pieces apart are three boxes; a pair of shoes a few pixels apart is one
+{ const { pileBoxes } = await import('./cutout.js'), w = 200, h = 100, a = new Uint8Array(w * h), fill = (x0, y0, x1, y1) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) a[y * w + x] = 255; };
+  fill(5, 5, 60, 60); fill(80, 10, 120, 70); fill(150, 20, 165, 50); fill(168, 20, 183, 50); fill(100, 95, 101, 96);
+  const b = pileBoxes(a, w, h);
+  assert.equal(b.length, 3, `3 pieces, got ${b.length}`); assert.deepEqual(b[2], { x: 150, y: 20, w: 33, h: 30 }, 'the shoe pair is one box'); assert.equal(b[0].x, 5, 'reading order');
+  console.log('pile split ok'); }
+
+// Dress shoes with cargos (v5.63): patent loafers on cargo pants lose points; the same loafers with trousers don't
+{ const m = await import('./match.js'), mk = (id, cat, kind, color, x = {}) => ({ id, cat, kind, color, name: `${kind} ${id}`, vibe: 'casual', fit: 1, ...x });
+  const tee = mk('t', 'Tops', 't-shirt', '#f2f2f0'), loaf = mk('s', 'Shoes', 'loafers', '#1a1a1a', { name: 'Black patent loafers' });
+  const bad = m.style([tee, mk('b', 'Bottoms', 'cargo pants', '#5c5b33'), loaf]), ok = m.style([tee, mk('b2', 'Bottoms', 'trousers', '#5c5b33'), loaf]);
+  assert.ok(bad.some(([v, n]) => v < 0 && /too dressy/.test(n)), 'loafers + cargos flagged'); assert.ok(!ok.some(([, n]) => /too dressy/.test(n)), 'loafers + trousers fine');
+  console.log('dress shoes ok'); }

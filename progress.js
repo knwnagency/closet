@@ -30,6 +30,9 @@ export const BADGES = [
   // ponytail: badges are derived, not stored — Full Rotation can relock when new pieces arrive. Persist unlocks if that annoys.
   { id: 'rotation', name: 'Full Rotation', desc: 'Wear every piece once', icon: 'loop', goal: 100, unit: '%', val: c => c.items.length < 5 ? 0 : Math.round(100 * c.items.filter(i => i.wears).length / c.items.length) },
   { id: 'saved5', name: 'Collector', desc: 'Favorite 5 outfits', icon: 'heart', goal: 5, val: c => c.saved.length },
+  // wearing what you already own: a piece's first wear counts once it has sat in the closet 2+ weeks
+  { id: 'digdeep', name: 'Dig Deep', desc: 'Wear 10 pieces you had never worn', icon: 'loop', goal: 10, val: c => { const first = {}; for (const l of c.log) for (const id of l.ids ?? []) { const d = l.day.slice(0, 10); if (!(first[id] <= d)) first[id] = d; }
+    return c.items.filter(i => first[i.id] && i.createdAt && first[i.id] > dayKey(i.createdAt + 14 * 864e5)).length; } },
   { id: 'spectrum', name: 'Full Spectrum', desc: 'Own 6 different colors', icon: 'prism', goal: 6, val: c => new Set(c.items.filter(i => !isNeutral(i.color)).map(i => colorName(i.color))).size },
 ];
 
@@ -57,7 +60,7 @@ export const levelOf = n => { let i = LEVELS.length - 1; while (i > 0 && n < LEV
 export const UNLOCKS = [
   { id: 'bestdressed', name: 'Best Dressed', desc: 'Your best fit of the week, crowned on Me', need: '3-day streak', ok: c => c.best >= 3 },
   { id: 'gold', name: 'Gold and Chrome', desc: 'Two new pop colors in Settings', need: '7-day streak', ok: c => c.best >= 7 },
-  { id: 'wrapped', name: 'Month in Review', desc: 'Your month: most worn, top colors, best fit', need: 'Sharp level (900 points)', ok: c => c.level >= 3 },
+  { id: 'wrapped', name: 'Month in Review', desc: 'Your month: most worn, top colors, best fit', need: 'Rookie level (150 points)', ok: c => c.level >= 1 }, // was Sharp: too far off to be worth anything
   { id: 'noir', name: 'Noir', desc: 'A true-black theme', need: '14-day streak', ok: c => c.best >= 14 },
 ];
 export const unlocks = (ctx, today = dayKey()) => { const best = streaks(ctx.log, today).best, level = levelOf(points(ctx, today).total).i; return UNLOCKS.map(u => ({ ...u, done: u.ok({ best, level }) })); };

@@ -7,9 +7,9 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#ffffff">
-<meta name="apple-mobile-web-app-title" content="Fitted">
+<meta name="apple-mobile-web-app-title" content="Already">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Fitted</title>
+<title>Already</title>
 <script>try { document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light'; const p = JSON.parse(localStorage.getItem('pop') || 'null'); if (p) for (const [k, v] of Object.entries(p)) document.documentElement.style.setProperty(k, v); } catch { document.documentElement.dataset.theme = 'light'; }</script>
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -39,15 +39,16 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } from './progress.js';
-import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt } from './match.js';
-import { cleanAlpha, floodOut, keyOut, orient, smoothEdges } from './cutout.js';
+import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, gaps, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt, buyColors, PRINTS } from './match.js';
+import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.19 · v5.62'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.20 · v5.63'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
+const DBQ = new URLSearchParams(location.search).get('db');
 const db = await new Promise((res, rej) => {
-  const r = indexedDB.open(new URLSearchParams(location.search).get('db') === 'selftest' ? 'closet-selftest' : 'closet', 5); // ?db=selftest: a throwaway closet for the self-test's Restore check // v2 wear log, v3 wishlist, v4 collections + inspo board + profile, v5 photos apart from tags + upload queue
+  const r = indexedDB.open({ selftest: 'closet-selftest', demo: 'closet-demo' }[DBQ] ?? 'closet', 5); // ?db=selftest: a throwaway closet for the self-test's Restore check. ?db=demo: a sample closet to show people // v2 wear log, v3 wishlist, v4 collections + inspo board + profile, v5 photos apart from tags + upload queue
   r.onupgradeneeded = () => { for (const [n, k] of STORES) if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n, { keyPath: k }); };
   r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
 });
@@ -106,7 +107,7 @@ S.cs = {}; S.past = []; S.q = ''; S.sort = 'type'; S.calOff = 0; S.locks = new S
 const learnedDress = () => { const looks = [...S.saved, ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(p => p && p.cat !== 'Accessories')).filter(ps => ps.length);
   if (looks.length < 5) return 0; const avg = looks.reduce((t, ps) => t + ps.reduce((u, p) => u + dress(p), 0) / ps.length, 0) / looks.length; return Math.max(-0.6, Math.min(0.6, (avg - 1) * 0.5)); };
 const mySeason = () => COLOR_SEASONS[S.profile?.colorSeason] ?? null, colorsOn = () => !!mySeason() && !S.profile?.colorsOff; // Me › Settings › Your colors
-const tasteArgs = () => ({ liked: S.saved.map(s => s.ids), worn: S.log.map(l => l.ids), nope: S.nope, good: [...(colorsOn() ? mySeason().good : []), ...(S.profile?.colors?.good ?? [])], avoid: [...(colorsOn() ? mySeason().avoid : []), ...(S.profile?.colors?.avoid ?? [])],
+const tasteArgs = () => ({ shirtStack: !!S.profile?.shirtStack, liked: S.saved.map(s => s.ids), worn: S.log.map(l => l.ids), nope: S.nope, good: [...(colorsOn() ? mySeason().good : []), ...(S.profile?.colors?.good ?? [])], avoid: [...(colorsOn() ? mySeason().avoid : []), ...(S.profile?.colors?.avoid ?? [])],
   hair: S.profile?.hair ?? null, never: S.profile?.never ?? [], colorNo: S.profile?.colorNo ?? [], dressBias: (S.profile?.dressBias ?? 0) + learnedDress(), busyBias: S.profile?.busyBias ?? 0, likedColors: [...S.saved, ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean).map(p => colorName(p.color))) });
 const syncTaste = () => setTaste(tasteArgs());
 syncTaste();
@@ -174,7 +175,7 @@ const PAT_LABEL = { solid: 'plain', logo: 'small logo', graphic: 'big graphic', 
 const FACET = { suggest: i => i.rate > 0 ? 'suggest more' : i.rate < 0 ? 'suggest less' : null, color: i => colorName(i.color), fit: i => i.cat === 'Accessories' ? null : (FITS[i.cat] ?? FITS.default)[i.fit ?? 1], material: i => i.material ?? null, pattern: i => PRINTABLE.includes(i.cat) ? patternOf(i) : null };
 const stale = it => !it.stored && Date.now() - (it.lastWorn ?? it.createdAt ?? Date.now()) > 30 * 864e5;
 const wornText = it => stale(it) ? "haven't worn in a while" : '';
-const KIND_ALIAS = { 't-shirt': /\btees?\b|\bt-?shirt/i, sweater: /sweater|sweatshirt|crewneck|knit/i, 'button-up shirt': /button|oxford|dress shirt/i, sweatpants: /sweat|jogger|track ?pant/i, 'cargo pants': /cargo/i, 'baseball cap': /\bcap\b|fitted|snapback/i, 'chain necklace': /chain|necklace|pendant/i, sneakers: /sneaker|dunk|jordan|yeezy|air force|trainer/i };
+const KIND_ALIAS = { 't-shirt': /^(?!.*long ?sleeve).*(\btees?\b|\bt-?shirt)/i, 'long sleeve tee': /long ?sleeve|\bl\/s\b/i, 'polo shirt': /\bpolo\b/i, 'tank top': /\btank\b/i, sweater: /sweater|sweatshirt|crewneck|knit/i, 'button-up shirt': /button|oxford|dress shirt/i, sweatpants: /sweat|jogger|track ?pant/i, 'cargo pants': /cargo/i, 'baseball cap': /\bcap\b|fitted|snapback/i, 'chain necklace': /chain|necklace|pendant/i, sneakers: /sneaker|dunk|jordan|yeezy|air force|trainer/i };
 const guessKind = it => Object.keys(KINDS).filter(k => KINDS[k] === it.cat).find(k => (KIND_ALIAS[k] ?? new RegExp(`\\b${k.split(/[\s-]/).pop()}`, 'i')).test(it.name));
 // Tags that contradict each other (AI guesses): a "denim jacket" filed under Tops, Air Force 1s called sleek. "It's right" silences it.
 // A color word in the name the saved color disagrees with ("Black vest" saved grey, "cream tee" saved olive). Each word lists the
@@ -202,7 +203,8 @@ const issueOf = it => {
   if (KINDS[it.kind] && KINDS[it.kind] !== it.cat) { const g = guessKind(it); // the name usually knows: "Grey stripe sweatpants" tagged hoodie → the type is wrong, not the category
     return { text: `Type says ${it.kind}, but it's filed under ${it.cat}`, ...(g ? { fix: `kind:${g}`, label: `Set type to ${g}` } : { fix: `cat:${KINDS[it.kind]}`, label: `Move to ${KINDS[it.kind]}` }) }; }
   const g = guessKind(it); // "Washed black tee" typed as hoodie: only flagged when it changes the layering (tee vs hoodie), not jacket vs overshirt
-  if (g && g !== it.kind && KINDS[it.kind] === it.cat && level({ ...it, kind: g }) !== level(it)) return { text: `Named like a ${g}, but the type says ${it.kind}`, fix: `kind:${g}`, label: `Set type to ${g}` };
+  // tops count when the name is clear and the type is a built-in one (not your own "golf polo"): "Long sleeve tee" typed as t-shirt dresses wrong for the weather, "Orange button up" as t-shirt layers wrong (v5.63)
+  if (g && g !== it.kind && KINDS[it.kind] === it.cat && (it.cat === 'Tops' && KIND_ALIAS[g] && !S.profile?.kinds?.[it.kind] || level({ ...it, kind: g }) !== level(it))) return { text: `Named like a ${g}, but the type says ${it.kind}`, fix: `kind:${g}`, label: `Set type to ${g}` };
   const k = knownFit(it), F = FITS[it.cat] ?? FITS.default; if (k != null && k !== (it.fit ?? 1)) return { text: `${it.cat === 'Shoes' ? 'These are' : 'This brand is'} usually ${F[k].toLowerCase()}, not ${F[it.fit ?? 1].toLowerCase()}`, fix: `fit:${k}`, label: `Set to ${F[k]}` };
   const plain = n => n.toLowerCase().replace(/\W/g, ''), generic = KINDS[it.name.toLowerCase()] || plain(it.name) === plain(it.kind ?? '') || /^(new item|item|piece)$/i.test(it.name); // "T-shirt" and "T-shirt" are just the AI's default name, not proof of a double
   const twin = !generic && S.items.find(o => o !== it && o.cat === it.cat && o.kind === it.kind && colorDist(o.color, it.color) < 22 && plain(o.name) === plain(it.name));
@@ -341,6 +343,8 @@ const todayPicks = (items, t) => today(items, { t: dressTemp(t), season: seasonN
 
 // Gaps are slow-ish to compute, so cache until something about the closet changes.
 const sig = () => S.items.map(i => [i.id, i.cat, i.color, i.fit, i.vibe, i.patterned, i.name, i.kind].join()).join('|');
+const closetSig = sig; // for code that has its own local `sig`
+const hashStr = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = (h * 33 ^ t.charCodeAt(i)) >>> 0; return h.toString(36); }; // djb2, for cache keys
 let gapCache = { sig: null, list: null };
 let gapWorker = null;
 // Rules and Never picked run in looks-worker.js (they froze the phone for 7s and 25s). Falls back to this thread.
@@ -355,6 +359,8 @@ const runJob = (job, data) => new Promise(res => {
     jobWait.set(msg.id, [res, msg]); looksWorker.postMessage(msg);
   } catch { setTimeout(here, 30); }
 });
+// Only colors that make sense for you: neutrals, your season's colors and colors you already wear (no random sage tee for a deep autumn)
+const wearableGaps = () => { const l = getGaps(), ok = new Set(buyColors(S.items, buyOpts()).map(c => c.name)); return l && l.filter(g => ok.has(colorName(g.ghost.color))); };
 function getGaps() {
   if (gapCache.sig === sig()) return gapCache.list;
   if (!gapCache.busy) { gapCache.busy = true; const want = sig();
@@ -573,6 +579,53 @@ const backfillFp = () => fpDone ??= (async () => { for (const it of S.items) {
 // the newer of two pieces with the same cut-out (the older one keeps your tag edits)
 const dupOf = it => !it.dupOk && it.cfp && S.items.find(o => o !== it && o.cfp && ((o.createdAt ?? 0) < (it.createdAt ?? 0) || ((o.createdAt ?? 0) === (it.createdAt ?? 0) && o.id < it.id)) && fpDist(o.cfp, it.cfp) <= CFP_SAME);
 
+// ---------- faster onboarding ----------
+// A pile in one photo: lay 4 to 12 pieces flat with a hand's width between them, one shot from above.
+// The background model finds them all; each one is cropped out of the photo and goes through the normal add (tags, cut-out) on its own.
+async function addPile(files) {
+  const out = [];
+  for (const [n, f] of files.entries()) try {
+    toast(`Finding the pieces in photo ${n + 1} of ${files.length}…`); onDownload = pct => toast(`Downloading AI ${Math.round(pct)}%`);
+    const photo = await shrink(f, 2400), pb = await createImageBitmap(photo), cut = await createImageBitmap(await segment(await toDataUrl(await shrink(photo, 1500))));
+    const k = Math.min(1, 500 / Math.max(cut.width, cut.height)), w = Math.round(cut.width * k), h = Math.round(cut.height * k);
+    const cv = Object.assign(document.createElement('canvas'), { width: w, height: h }), x = cv.getContext('2d', { willReadFrequently: true }); x.drawImage(cut, 0, 0, w, h);
+    const d = x.getImageData(0, 0, w, h).data, alpha = new Uint8Array(w * h); for (let p = 0; p < w * h; p++) alpha[p] = d[p * 4 + 3];
+    const boxes = pileBoxes(alpha, w, h), sx = pb.width / w, sy = pb.height / h;
+    if (boxes.length < 2) { out.push(f); continue; } // one piece (or none found): add the photo as it is
+    for (const [i, b] of boxes.entries()) {
+      const pad = 0.06 * Math.max(b.w, b.h), x0 = Math.max(0, (b.x - pad) * sx), y0 = Math.max(0, (b.y - pad) * sy), x1 = Math.min(pb.width, (b.x + b.w + pad) * sx), y1 = Math.min(pb.height, (b.y + b.h + pad) * sy);
+      const c = Object.assign(document.createElement('canvas'), { width: Math.round(x1 - x0), height: Math.round(y1 - y0) }); c.getContext('2d').drawImage(pb, x0, y0, x1 - x0, y1 - y0, 0, 0, c.width, c.height);
+      out.push(new File([await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92))], `${(f.name || 'pile').replace(/\.\w+$/, '')}-${i + 1}.jpg`, { type: 'image/jpeg' }));
+    }
+    toast(`Found ${boxes.length} pieces`);
+  } catch (e) { console.warn(e); toast(`Couldn't split ${f.name}. Added it as one piece`); out.push(f); }
+  if (out.length) addFiles(out);
+}
+let pileInput; // made on first use: picker is defined further down
+
+// Quick add: tap a type and a color, get the piece now with a drawn stand-in; swap in a real photo whenever (Replace photo).
+// A fingerprint ~128 bits from any real photo's: stand-ins never count as "already in your closet", and the backfill skips them.
+const STAND_FP = '01'.repeat(128);
+async function standIn(cat, color) {
+  const c = Object.assign(document.createElement('canvas'), { width: 360, height: 360 }), x = c.getContext('2d');
+  x.scale(15, 15); x.fillStyle = color; x.strokeStyle = 'rgba(0,0,0,.18)'; x.lineWidth = 0.12; const p = new Path2D(SIL[cat]); x.fill(p); x.stroke(p);
+  return new Promise(r => c.toBlob(r, 'image/png'));
+}
+async function quickAdd(type, cname) {
+  const [cat, kind, vibe = 'casual'] = BUY_TYPES[type], color = SWATCHES[cname], img = await standIn(cat, color);
+  const item = { id: uid(), img, color, cat, kind, vibe, fit: 1, patterned: false, pattern: 'solid', name: `${cname[0].toUpperCase() + cname.slice(1)} ${type}`, noPhoto: true, dupOk: true, cfp: STAND_FP, fp: STAND_FP, review: false, wears: 0, lastWorn: null, createdAt: Date.now() };
+  try { item.thumb = await thumbOf(img); } catch (e) { console.warn(e); }
+  await put('items', item); S.items.push(item); S.ideas = null; S.deck = null; return item;
+}
+function openQuickAdd() {
+  const q = S.qa ??= { type: 'tee' };
+  showSheet(`<div class="pad qadd"><div class="pickhead"><div><div class="eyebrow">Quick add · photos later</div><h2>What do you own?</h2></div>${closeBtn}</div>
+    <p class="sub">Pick a type, then tap each color you have. Every tap adds one piece with a stand-in picture, so outfits start working right away. Swap in real photos whenever.</p>
+    <div class="chips wrap">${Object.keys(BUY_TYPES).map(k => `<button class="chip ${q.type === k ? 'on' : ''}" data-qatype="${k}">${k}</button>`).join('')}</div>
+    <div class="qcolors">${Object.entries(SWATCHES).map(([n, h]) => `<button data-qacolor="${n}" aria-label="Add a ${n} ${q.type}"><i style="background:${h}"></i><span>${n}</span></button>`).join('')}</div>
+    <p class="mono qcount">${S.items.filter(i => i.noPhoto).length} quick-added so far</p><button class="btn wide" data-action="qadone">Done</button></div>`);
+}
+
 let running = false, skipped = 0, added = 0;
 let soon = null; const renderSoon = () => { soon ??= setTimeout(() => { soon = null; if (!sheet.open) render(); else upPill(); }, 2500); }; // batched redraws during uploads
 // Every picked photo is saved (shrunk) to the queue store first, so a crash, a call or a locked phone never loses the batch:
@@ -732,13 +785,19 @@ function outfitCard(o) {
       <button class="icon" data-nope="${o.key}" aria-label="Not for me">${svg('M7 14V4M7 14l4 6c1.2 0 2-1 1.7-2.2L12 14h5.5a2 2 0 0 0 2-2.3l-1-6A2 2 0 0 0 16.5 4H7M7 14H4V4h3')}</button><button class="icon ${isSaved ? 'on' : ''}" data-save="${o.key}" aria-label="Favorite">${heart}</button></div></article>`;
 }
 
+// The three ways in, fastest first. On the empty closet and in the Add sheet.
+const addWays = () => `<div class="ways">
+  <button class="way" data-action="addpile"><b>Pile, one photo</b><span>Lay 4 to 12 pieces flat on the bed or floor, a hand's width apart, and shoot once from above. Each piece gets split out.</span></button>
+  <button class="way" data-action="addfiles"><b>Camera roll</b><span>Pick as many photos as you want at once. Screenshots of the product pages or order history you bought from work too.</span></button>
+  <button class="way" data-action="quickadd"><b>Quick add, photos later</b><span>Tap the basics you own (black tee, blue jeans, white sneakers). Outfits work right away; swap in photos whenever.</span></button></div>`;
 function closetView() {
   if (!S.items.length && !S.pending.length) return head('0 pieces', 'Closet') + `
-    <div class="empty"><h2>Start with a few pieces</h2><p>Lay a piece flat on a plain surface that contrasts with it and snap from above. It gets cut out, tagged and color-matched automatically.<br><br>The first upload sets up the AI on this device (a one-time download, about a minute on Wi-Fi). After that nothing leaves your phone.</p>
-    <button class="btn" data-action="add">Add clothes</button><div class="seg backup"><button data-action="import">Restore a backup</button></div></div>`;
+    <div class="empty onboard"><h2>Get your closet in</h2><p>Three ways, mix them. Every photo gets cut out, tagged and color-matched on this phone.</p>
+    ${addWays()}
+    <p class="sub">The first photo sets up the AI on this device (a one-time download, about a minute on Wi-Fi). After that nothing leaves your phone.</p><div class="seg backup"><button data-action="import">Restore a backup</button></div></div>`;
   const c = S.coll && collById(S.coll), inColl = owned();
   const kindAt = i => { const n = Object.keys(KINDS).indexOf(i.kind); return n < 0 ? 99 : n; };
-  const words = S.q.toLowerCase().split(/\s+/).filter(Boolean), hit = i => words.every(w => `${i.name} ${i.brand ?? ''} ${(i.tags ?? []).join(' ')} ${i.from ?? ''} ${i.kind} ${colorName(i.color)} ${[].concat(i.vibe ?? []).join(' ')}`.toLowerCase().includes(w));
+  const words = S.q.toLowerCase().split(/\s+/).filter(Boolean), hit = i => words.every(w => `${i.noPhoto ? 'needs photo ' : ''}${i.name} ${i.brand ?? ''} ${(i.tags ?? []).join(' ')} ${i.from ?? ''} ${i.kind} ${colorName(i.color)} ${[].concat(i.vibe ?? []).join(' ')}`.toLowerCase().includes(w));
   const hueKey = p => { const h = hexToHsl(p.color); return isNeutral(p.color) ? h.l : 2 + h.h / 360; }; // neutrals dark→light first, then the color wheel
   const SORTS = { color: (a, b) => hueKey(a) - hueKey(b), type: (a, b) => kindAt(a) - kindAt(b) || hexToHsl(a.color).l - hexToHsl(b.color).l, new: (a, b) => b.createdAt - a.createdAt, old: (a, b) => a.createdAt - b.createdAt,
     stale: (a, b) => (a.lastWorn ?? 0) - (b.lastWorn ?? 0) || a.createdAt - b.createdAt, worn: (a, b) => (b.wears || 0) - (a.wears || 0), never: (a, b) => (a.wears || 0) - (b.wears || 0) || (a.lastWorn ?? 0) - (b.lastWorn ?? 0) };
@@ -747,13 +806,14 @@ function closetView() {
   const stored = S.items.filter(i => i.stored).length, shelf = (S.closetView ?? 'shelf') === 'shelf' && !S.sel;
   const dirty = S.items.filter(i => i.dirty).length, issues = S.items.filter(issueOf).length;
   const toReview = S.items.filter(i => i.review).length;
-  const best = !c && !toReview && !S.pending.length && S.items.length >= 3 && getGaps()?.find(g => !isNeutral(g.ghost.color));
+  const best = !c && !toReview && !S.pending.length && S.items.length >= 3 && wearableGaps()?.[0]; // base colors rank first now (you asked: neutrals before statement colors)
   return head(`${S.items.length} pieces`, 'Closet') + `
     ${[!S.profile?.lastBackup && S.items.length >= 20 && `<button class="nudge glass" data-action="export"><div><span class="mono">Never backed up</span><b>${S.items.length} pieces live only on this phone</b></div><span class="plus">Back up →</span></button>`,
     S.items.some(nameFix) && `<button class="nudge glass" data-action="fixnames"><div><span class="mono">Type doesn't match the name</span><b>Fix ${S.items.filter(nameFix).length} piece${S.items.filter(nameFix).length > 1 ? 's' : ''} in one tap</b></div><span class="plus">Fix all →</span></button>`,
     S.items.some(dupOf) && `<button class="nudge glass" data-action="doubles"><div><span class="mono">Same photo added twice</span><b>Merge ${S.items.filter(dupOf).length} double${S.items.filter(dupOf).length > 1 ? 's' : ''}</b></div><span class="plus">Review →</span></button>`,
     toReview >= 6 && `<button class="nudge glass" data-action="quickreview"><div><span class="mono">Fastest way through ${toReview} new pieces</span><b>Check just the types, 20 at a time</b></div><span class="plus">Go →</span></button>`,
     toReview && `<button class="nudge glass" data-action="review"><div><span class="mono"><span class="nc">AI</span> guessed the tags</span><b>Review ${toReview} new piece${toReview > 1 ? 's' : ''}</b></div><span class="plus">Start →</span></button>`,
+    S.items.some(i => i.noPhoto) && S.items.length >= 15 && `<button class="nudge glass" data-action="nophoto"><div><span class="mono">${S.items.filter(i => i.noPhoto).length} quick-added pieces</span><b>Swap in real photos when you can</b></div><span class="plus">See them →</span></button>`,
     S.items.filter(plainName).length >= 10 && `<button class="nudge glass" data-action="rename"><div><span class="mono">${S.items.filter(plainName).length} pieces named just by type</span><b>Rename them fast, 20 at a time</b></div><span class="plus">Go →</span></button>`,
     S.items.some(i => i.broken) && `<button class="nudge glass" data-action="import"><div><span class="mono">This phone lost ${S.items.filter(i => i.broken).length} photos</span><b>Restore them from a backup</b></div><span class="plus">Pick file →</span></button>`,
     S.items.some(i => !i.pattern && PRINTABLE.includes(i.cat)) && `<button class="nudge glass" data-action="patreview"><div><span class="mono">Quick check · makes print warnings accurate</span><b>Is it plain or printed? ${S.items.filter(i => !i.pattern && PRINTABLE.includes(i.cat)).length} pieces</b></div><span class="plus">Start →</span></button>`,
@@ -823,7 +883,8 @@ const capBtn = () => `<button class="tag ${S.coll ? 'hot' : 'o'} capbtn" data-ac
 const capBar = () => S.coll ? `<div class="capbar"><span>Only from <b>${esc(capName())}</b> · ${owned().length} pieces</span><button data-capsel="">Use all clothes</button></div>` : '';
 async function useCapsule(id) {
   S.coll = id || null; S.ideas = null; S.deck = null; S.cs = {};
-  S.profile = { k: 'me', ...S.profile, capsule: S.coll }; await put('profile', S.profile);
+  const use = { ...(S.profile?.capUse ?? {}) }; if (id) use[id] = (use[id] ?? 0) + 1; // how often you pick each one, for the list order
+  S.profile = { k: 'me', ...S.profile, capsule: S.coll, capUse: use }; await put('profile', S.profile);
 }
 // Suggested capsules from the closet: a work week (dressier pieces), a weekend (relaxed), a 5-day trip (packed by the app).
 function suggestCaps() {
@@ -846,7 +907,7 @@ async function shareCapsule(c) {
 }
 function openCapsules() {
   const cover = id => { const ps = id ? (id.startsWith('smart:') ? SMART[id.slice(6)][1](S.items) : collById(id)?.ids.map(byId).filter(Boolean) ?? []) : S.items; return `<span class="capcover">${ps.slice(0, 3).map(p => `<img src="${src(p)}" alt="">`).join('')}</span>`; };
-  const parts = mixParts(), stars = S.profile?.capStars ?? [], starFirst = l => [...l].sort((a, b) => stars.includes(b.id) - stars.includes(a.id));
+  const parts = mixParts(), stars = S.profile?.capStars ?? [], use = S.profile?.capUse ?? {}, starFirst = l => [...l].sort((a, b) => stars.includes(b.id) - stars.includes(a.id) || (use[b.id] ?? 0) - (use[a.id] ?? 0)); // starred first, then the ones you pick most
   const tools = (id, name) => id ? `<button class="capstar ${stars.includes(id) ? 'on' : ''}" data-capstar="${id}" aria-label="${stars.includes(id) ? 'Unstar' : 'Star'} ${esc(name)}">${stars.includes(id) ? '★' : '☆'}</button><button class="capmix ${parts.includes(id) ? 'on' : ''}" data-capmix="${id}" aria-label="${parts.includes(id) ? 'Take out of the mix' : 'Combine with what is on'}: ${esc(name)}">${parts.includes(id) ? '−' : '+'}</button>` : '';
   const row = (id, name, n, own) => `<div class="caprow ${(S.coll ?? '') === id || parts.includes(id) ? 'on' : ''}">${tools(id, name)}<button class="capsel" data-capsel="${id}" aria-pressed="${(S.coll ?? '') === id}"><i>${ic('check')}</i>${cover(id)}<span><b>${esc(name)}</b><small>${n} piece${n === 1 ? '' : 's'}</small></span></button>
     ${own ? `<button class="capmenu" data-capmenu aria-expanded="false" aria-label="More for ${esc(name)}">•••</button><span class="capacts"><button class="tag o" data-capedit="${id}">${ic('plus')} Pieces</button><button class="tag o" data-capren="${id}">Rename</button><button class="tag o" data-capdup="${id}">Duplicate</button><button class="tag o" data-capshare="${id}">${ic('share')} Share</button><button class="tag o del" data-capdel="${id}">Delete</button></span>` : ''}</div>`;
@@ -864,7 +925,7 @@ function openCapsules() {
 // The deck is saved per day + filters + weather band, so leaving and coming back shows the same looks. Shuffle makes a new one.
 const greet = () => { const h = new Date().getHours(); return h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
 const band = w => w ? (w.t < 12 ? 'cold' : w.t >= 24 ? 'hot' : 'mild') + (RAINY(w.code) ? '-rain' : '') : 'none';
-const deckSig = () => ['v2', VERSION, colorsOn() && S.profile.colorSeason, !!S.profile?.hoodieAlone, !!S.profile?.twoShirts, S.profile?.season ?? '', dayKey(), S.items.length, new Date().getHours() >= 16, S.profile?.tempBias ?? 0, S.profile?.dressBias ?? 0, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
+const deckSig = () => ['v2', VERSION, colorsOn() && S.profile.colorSeason, !!S.profile?.hoodieAlone, !!S.profile?.twoShirts, !!S.profile?.shirtStack, S.profile?.season ?? '', dayKey(), S.items.length, new Date().getHours() >= 16, S.profile?.tempBias ?? 0, S.profile?.dressBias ?? 0, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
 function getDeck(items) {
   if (S.deck?.sig === deckSig()) return S.deck;
   const old = S.deck, seen = old?.day && old.day !== dayKey() && !old.src && old.looks[old.at];
@@ -950,6 +1011,11 @@ const lessHint = () => { const liked = new Set([...S.saved, ...S.log].flatMap(r 
   return S.items.find(i => (n.get(i.id) ?? 0) >= 4 && !liked.has(i.id) && i.rate == null && !i.rateAsked); };
 // Rediscover (Today): on about one day in three, one piece you haven't worn in 30+ days (or ever), in season for today's weather,
 // picked at random for the day. "See looks" builds around it; × hides it until tomorrow.
+// A favorite you saved 2+ weeks ago and haven't worn in 3 weeks (or ever), every other day: wear what you already put together.
+const favBack = () => { const day = dayKey(); if (S.profile?.fbSkip === day || dayHash(day + 'fb') % 2) return null; const cut = dayKey(new Date(Date.now() - 21 * 864e5));
+  const lastWorn = k => S.log.filter(l => l.key === k).map(l => l.day.slice(0, 10)).sort().pop();
+  const list = S.saved.filter(r => Date.now() - (r.savedAt ?? 0) > 14 * 864e5 && !(lastWorn(r.key) > cut)).map(r => ({ r, ps: r.ids.map(byId).filter(Boolean) })).filter(x => x.ps.length === x.r.ids.length && complete(x.ps) && x.ps.every(p => !p.dirty && !p.stored));
+  return list.length ? { ...list[dayHash(day + 'fbp') % list.length], last: lastWorn(list[dayHash(day + 'fbp') % list.length].r.key) } : null; };
 const rediscover = (items, w) => { const day = dayKey(); if (S.profile?.rdSkip === day || dayHash(day + 'rd') % 3) return null;
   const pick = forWeather(items, dressTemp(w?.t), RAINY(S.profile?.wx?.code ?? 0), seasonNow()).filter(i => i.cat !== 'Accessories' && !(i.rate < 0) && (!i.wears || stale(i)));
   return pick.length ? pick[dayHash(day + 'pick') % pick.length] : null; };
@@ -981,9 +1047,10 @@ function todayView() {
   if (rn && rnDay !== dayKey()) { S.profile = { k: 'me', ...S.profile, renameDay: dayKey() }; put('profile', S.profile); }
   const rd = !tip && rediscover(items, w), days = rd && Math.round((Date.now() - (rd.lastWorn ?? rd.createdAt ?? Date.now())) / 864e5);
   const rdCard = rd ? `<div class="nudge glass rd"><button data-open="${rd.id}" aria-label="Open ${esc(rd.name)}"><img src="${src(rd)}" alt=""></button><div><span class="mono">${rd.wears ? `Not worn in ${days} days` : 'Never worn yet'}</span><b>${esc(rd.name)}</b></div><button class="tag" data-quick="made|${rd.id}">See looks</button><button class="icon" data-action="rdskip" aria-label="Not today">${xIcon}</button></div>` : '';
+  const fb = !tip && !rd && favBack(), fbCard = fb ? `<div class="nudge glass rd"><button class="wthumb" data-buildkey="${fb.r.key}" aria-label="Open this favorite">${flat(fb.ps)}</button><div><span class="mono">${fb.last ? `Saved, not worn since ${new Date(fb.last + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Saved, never worn'}</span><b>Wear a favorite</b></div><button class="tag" data-wear="${fb.r.key}">Wear today</button><button class="icon" data-action="fbskip" aria-label="Not today">${xIcon}</button></div>` : '';
   const ls = S.profile?.lastSeen, lsPs = ls?.day === prevDay(dayKey()) && !S.log.some(l => l.day.slice(0, 10) === ls.day) && ls.ids.map(byId).filter(Boolean);
   const woreCard = lsPs?.length && lsPs.length === ls.ids.length ? `<div class="nudge glass rd"><span class="wthumb">${flat(lsPs)}</span><div><span class="mono">Yesterday's pick</span><b>Did you wear it?</b></div><button class="tag" data-woreit="yes">Yes</button><button class="tag o" data-woreit="no">No</button></div>` : '';
-  const below = tip + woreCard + rdCard + bk + (rn ? `<button class="nudge glass" data-action="rename"><div><span class="mono">${plain} pieces named just by type</span><b>Name them so Today's picks read like your closet</b></div><span class="plus">Go →</span></button>` : '') + (lh ? `<div class="nudge glass"><div><span class="mono">You keep passing on looks with it</span><b>Suggest the ${esc(lh.name.toLowerCase())} less?</b></div><button class="tag" data-rate="${lh.id}|-1">Less</button><button class="tag o" data-rate="${lh.id}|0">Keep</button></div>` : '');
+  const below = tip + woreCard + rdCard + fbCard + bk + (rn ? `<button class="nudge glass" data-action="rename"><div><span class="mono">${plain} pieces named just by type</span><b>Name them so Today's picks read like your closet</b></div><span class="plus">Go →</span></button>` : '') + (lh ? `<div class="nudge glass"><div><span class="mono">You keep passing on looks with it</span><b>Suggest the ${esc(lh.name.toLowerCase())} less?</b></div><button class="tag" data-rate="${lh.id}|-1">Less</button><button class="tag o" data-rate="${lh.id}|0">Keep</button></div>` : '');
   return top    + `<div class="deck" aria-label="Today's looks, slide for more">${(used => looks.map((o, k) => deckCard(o, k, looks.length, 'slide', used)).join(''))(new Set())}${moreWays()}</div>
     <div class="dbtns"><button class="round" data-deck="prev" aria-label="Previous look">${svg('M15 5l-7 7 7 7')}</button><button class="round ${isFav(cur.key) ? 'on' : ''}" data-deck="fav" aria-label="Save look">${heart}</button><button class="btn go" data-deck="wear">Wear today ${ic('arrow')}</button><button class="round" data-deck="next" aria-label="Next look">${svg('M9 5l7 7-7 7')}</button></div>
     <p class="mono swipehint">Slide for more · tap a look to open it</p>${below}`;
@@ -1028,7 +1095,7 @@ function openFilters() {
 }
 
 // Builder: one card per slot (like Cladwell). Tap a card or Swap to pick from a list, best matches first.
-const ROWS = ['Layers', 'Tops', 'Bottoms', 'Shoes'], EXTRAS = ['Hat', 'Belt', 'Accessory', 'Extra'], OPTIONAL = ['Layers', 'Hat', 'Belt', 'Accessory', 'Extra'];
+const ROWS = ['Layers', 'Tops', 'Bottoms', 'Shoes'], EXTRAS = ['Hat', 'Belt', 'Accessory', 'Extra'];
 const isFav = k => S.saved.some(s => s.key === k);
 // Today's picks, one big card at a time: swipe for the next. Each card says why it fits the weather.
 const wxWhy = o => { const w = weatherNow(); if (!w) return '';
@@ -1066,7 +1133,12 @@ async function rareReport() {
   const sig = [VERSION, dayKey(), S.coll ?? '', closetVer, S.items.length, !!S.profile?.hoodieAlone, sn, t == null ? '' : Math.round(t / 4)].join('|');
   if (S.rare?.sig === sig) return S.rare;
   const t0 = performance.now(), ok = forWeather(items, t, rain, sn);
-  const r = await runJob('rare', { items, opts: { t, rain, season: sn, alone: !!S.profile?.hoodieAlone }, okIds: ok.map(p => p.id), check: ok.filter(p => !(p.rate < 0)).map(p => p.id) });
+  // the slow part (17s on the phone) is kept on disk for the day, so reopening the app doesn't redo it
+  // closetVer restarts at 0 every launch, so the disk copy is keyed by the closet's content instead
+  const disk = sig.replace(`|${closetVer}|`, `|${hashStr(closetSig() + S.items.map(i => `${i.rate ?? 0}${i.dirty ? 'd' : ''}${i.stored ? 's' : ''}`).join(''))}|`);
+  const kept = await store('profile', 'readonly', x => x.get('rare')).catch(() => null);
+  const r = kept?.sig === disk ? kept.r : await runJob('rare', { items, opts: { t, rain, season: sn, alone: !!S.profile?.hoodieAlone }, okIds: ok.map(p => p.id), check: ok.filter(p => !(p.rate < 0)).map(p => p.id) });
+  if (kept?.sig !== disk) putQuiet('profile', { k: 'rare', sig: disk, r: { hits: r.hits, med: r.med, made: r.made } }).catch(() => {});
   const med = c => r.med[c] ?? 0;
   const rows = S.items.filter(it => !r.hits[it.id]).map(it => {
     if (it.dirty) return { it, out: 'In the laundry' };
@@ -1085,7 +1157,7 @@ async function rareReport() {
   return S.rare = { sig, rows, n: rows.filter(r => !r.out).length };
 }
 async function openRareAll() {
-  const scan = !S.rare; if (scan) showSheet(`<div class="pad rarelist"><div class="pickhead"><div><div class="eyebrow">8 fresh sets of today's looks</div><h2>Never picked</h2></div>${closeBtn}</div><div class="scan rarescan"><i></i><span class="mono">Checking every piece</span></div></div>`);
+  const scan = !S.rare; if (scan) showSheet(`<div class="pad rarelist"><div class="pickhead"><div><div class="eyebrow">${S.coll ? `From ${esc(capName())} · ` : ''}8 fresh sets of today's looks</div><h2>Never suggested</h2></div>${closeBtn}</div><div class="scan rarescan"><i></i><span class="mono">Checking every piece</span></div></div>`);
   const { rows, n } = await rareReport(); if (scan && !sheet.querySelector('.rarescan')) return render(); // closed while it checked: the Me tile still updates
   const act = rows.filter(r => !r.out), out = rows.filter(r => r.out);
   render(); // the Me tile behind shows the new count
@@ -1299,10 +1371,12 @@ function carouselFor(slot, cur) {
 // (picking them last used to leave no cap that matched, and the cap vanished). Then each one gets its own turn to change.
 function shuffleBuild() {
   if (S.build.every(p => S.locks.has(slotOf(p)))) return toast('Everything is locked: unlock a piece to roll');
-  let next = S.build.filter(p => S.locks.has(slotOf(p)) || OPTIONAL.includes(slotOf(p)));
-  for (const s of ['Bottoms', 'Tops', 'Shoes', 'Layers', 'Hat', 'Belt', 'Accessory', 'Extra']) {
+  // Each slot is re-picked against the whole outfit so far (v5.63: it started from the locked pieces only, so pants and top were
+  // judged without shoes, scored nothing and stayed put: a roll only ever changed the shoes)
+  let next = S.build.slice(); const order = ['Bottoms', 'Tops', 'Shoes', 'Layers'].sort(() => Math.random() - 0.5);
+  for (const s of [...order, 'Hat', 'Belt', 'Accessory', 'Extra']) {
     if (S.locks.has(s) || !S.build.some(inS(s))) continue; // only refill slots you're wearing
-    const cur = S.build.find(inS(s)), rest = next.filter(p => !inS(s)(p));
+    const cur = next.find(inS(s)), rest = next.filter(p => !inS(s)(p));
     const good = swapsFor(s, rest).filter(r => r.score != null).slice(0, 5), fresh = good.filter(r => r.item.id !== cur.id);
     const opts = fresh.length ? fresh : good; // something different whenever anything else fits
     next = [...rest, opts.length ? opts[Math.floor(Math.random() * opts.length)].item : cur];
@@ -1327,7 +1401,7 @@ async function shareLook(ps) {
     x.shadowColor = 'rgba(0,0,0,.22)'; x.shadowBlur = 18; x.shadowOffsetY = 10; x.drawImage(b, bx + (bw - b.width * k) / 2, byy + (bh - b.height * k) / 2, b.width * k, b.height * k); }
   x.shadowColor = 'transparent'; const [title] = vibeOf({ items: ps, mode: bestMode(ps)?.mode });
   x.fillStyle = '#141414'; x.font = '500 64px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText(title[0].toUpperCase() + title.slice(1), pad, top + ch + 140);
-  x.fillStyle = '#66665f'; x.font = '600 26px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText('FITTED', W - pad - 120, top + ch + 140);
+  x.fillStyle = '#66665f'; x.font = '600 26px "Helvetica Neue", Helvetica, Arial, sans-serif'; x.fillText('ALREADY', W - pad - 136, top + ch + 140);
   const f = new File([await new Promise(r => c.toBlob(r, 'image/png'))], 'look.png', { type: 'image/png' });
   if (navigator.canShare?.({ files: [f] })) { try { await navigator.share({ files: [f], text: ps.map(p => p.brand && !p.name.includes(p.brand) ? `${p.brand} ${p.name}` : p.name).join(' + ') }); } catch {} } else download(f); // the piece names ride along (Messages shows both)
 }
@@ -1393,6 +1467,7 @@ function weekView() {
         ${past ? '' : `<button class="btn ghost sm" data-plan="${k}">Change</button><button class="btn ghost sm" data-unplan="${k}" aria-label="Clear ${DOW[dowOf(k)]} ${+k.slice(8)}">✕</button>`}` : ''}</div></div>`;
   };
   return `<div class="weekbar"><button class="icon" data-week="-1" aria-label="Previous week">${svg('M15 5l-7 7 7 7')}</button><span>${fmt(days[0])} to ${fmt(days[6])}</span><button class="icon" data-week="1" aria-label="Next week">${svg('M9 5l7 7-7 7')}</button></div>
+    <button class="btn wide go" data-autoplan="${days.join(',')}">Plan my week</button>
     <div class="row claudeplan"><button class="btn ghost sm" data-planask="${days.join(',')}">Ask Claude to plan this week</button><button class="btn ghost sm" data-action="planpaste">Paste plan from Claude</button></div>
     <div class="days">${days.map(row).join('')}</div>`;
 }
@@ -1458,7 +1533,7 @@ function calView() {
   const cols = {}; for (const l of mlog) for (const id of l.ids) { const p = byId(id); if (p && p.cat !== 'Accessories') cols[colorName(p.color)] = (cols[colorName(p.color)] ?? 0) + 1; }
   const topCols = Object.entries(cols).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n);
   const idle = S.items.filter(stale).length;
-  const recap = mlog.length ? `<div class="recap"><div><span class="mono">Colors you wore</span><b>${topCols.join(' · ') || 'none yet'}</b></div>${idle ? `<div><span class="mono">Haven't worn in a while</span><b>${idle}</b><small>pieces</small></div>` : ''}</div>` : '';
+  const recap = mlog.length ? `<div class="recap"><button data-action="wrapped"><span class="mono">Colors you wore ›</span><b>${topCols.join(' · ') || 'none yet'}</b></button>${idle ? `<button data-action="wearall" data-wearlist="idle"><span class="mono">Haven't worn in a while ›</span><b>${idle}</b><small>pieces</small></button>` : ''}</div>` : '';
   return recap + `<div class="weekbar"><button class="icon" data-cal="-1" aria-label="Previous month">${svg('M15 5l-7 7 7 7')}</button><span>${first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })} · ${logged} logged</span><button class="icon" data-cal="1" aria-label="Next month">${svg('M9 5l7 7-7 7')}</button></div>
     <div class="cal">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<b>${d}</b>`).join('')}${'<i></i>'.repeat(lead)}${[...Array(days)].map((_, i) => cell(i + 1)).join('')}</div>
     <p class="sub">${S.log.length ? 'Tap a day to see what you wore, add a fit pic, or log a day you missed.' : 'Nothing logged yet. Hit Wear today on Today and your first day shows up here.'}</p>
@@ -1515,8 +1590,8 @@ const onList = id => S.wish.some(w => w.id === id);
 
 function listView() {
   S.listTab ??= S.wish.length ? 'mine' : 'ideas';
-  return head(`${S.wish.filter(w => !w.got).length} wanted`, 'Wishlist') + subnav('listTab', [['mine', 'My list'], ['ideas', 'Suggested']])
-    + (S.listTab === 'mine' ? myList() : suggestions());
+  return head(`${S.wish.filter(w => !w.got).length} wanted`, 'Wishlist') + subnav('listTab', [['mine', 'My list'], ['buy', 'Which one?'], ['ideas', 'Suggested']])
+    + (S.listTab === 'mine' ? myList() : S.listTab === 'buy' ? whichOne() : suggestions());
 }
 
 // The wishlist form, empty to add or filled to edit. Type and color are optional: a name or link alone is enough.
@@ -1548,7 +1623,7 @@ function myList() {
 
 function suggestions() {
   if (S.items.length < 3) return `<div class="empty"><h2>Add a few pieces first</h2><p>Once your closet has some tops, bottoms and shoes, this shows the piece that would unlock the most new outfits.</p><button class="btn" data-action="add">Add clothes</button></div>`;
-  const list = getGaps();
+  const list = wearableGaps();
   if (!list) return `<div class="scan"><i></i><span class="mono">Reading your closet</span></div>`;
   const onePerCat = l => { const seen = new Set(); return l.filter(g => !seen.has(g.ghost.cat) && !seen.has(g.ghost.color) && seen.add(g.ghost.cat).add(g.ghost.color)); }; // one per category, no repeated colors
   const card = g => `<article class="gap glass">
@@ -1557,15 +1632,50 @@ function suggestions() {
     <div class="minis">${g.examples.map(o => flat(o.items)).join('')}</div>
     <button class="btn full ${onList(g.ghost.id) ? 'done' : 'ghost'} sm" data-wishgap="${g.ghost.id}">${onList(g.ghost.id) ? 'On your list' : 'Add to list'}</button></article>`;
   const pops = onePerCat(list.filter(g => !isNeutral(g.ghost.color))), basics = onePerCat(list.filter(g => isNeutral(g.ghost.color)));
-  return `<p class="sub">Wearable colors in the cuts you already wear, tested against everything you own. The number is how many new outfits it adds.</p>
+  return `<p class="sub">Colors that suit you, in the cuts you already wear, tested against everything you own. The number is how many new outfits it adds. Deciding between two? Use <button class="linkbtn" data-listtab="buy">Which one?</button></p>
     ${basics.length ? `<h3><span>Foundation</span></h3><div class="gaps">${basics.map(card).join('')}</div>` : ''}
     ${pops.length ? `<h3><span>Statement</span></h3><div class="gaps">${pops.map(card).join('')}</div>` : ''}`;
 }
 
+// ---------- Which one should I buy? ----------
+// "Black or grey dress pants?" Each color is tested against every top you own (with your most worn shoes), straight, no dice rolls.
+// The winner goes with the most of your pieces, and loses points for being a twin of something you already have.
+const BUY_TYPES = { 'dress pants': ['Bottoms', 'trousers', 'formal'], jeans: ['Bottoms', 'jeans'], 'cargo pants': ['Bottoms', 'cargo pants'], chinos: ['Bottoms', 'chinos'], sweatpants: ['Bottoms', 'sweatpants'], shorts: ['Bottoms', 'shorts'],
+  tee: ['Tops', 't-shirt'], 'long sleeve tee': ['Tops', 'long sleeve tee'], 'button-up': ['Tops', 'button-up shirt'], polo: ['Tops', 'polo shirt'], hoodie: ['Layers', 'hoodie'], sweater: ['Layers', 'sweater'], flannel: ['Layers', 'flannel overshirt'],
+  jacket: ['Layers', 'jacket'], coat: ['Layers', 'coat'], sneakers: ['Shoes', 'sneakers'], boots: ['Shoes', 'boots'], loafers: ['Shoes', 'loafers', 'formal'], cap: ['Accessories', 'baseball cap'] };
+const buyPiece = (type, cname) => { const [cat, kind, vibe = 'casual'] = BUY_TYPES[type]; return { id: `buy:${type}:${cname}`, cat, kind, vibe, fit: 1, color: SWATCHES[cname], name: `${cname[0].toUpperCase() + cname.slice(1)} ${type}` }; };
+function buyOpts() { const s = colorsOn() ? mySeason() : null, worn = {}; for (const l of S.log) for (const id of l.ids) worn[id] = (worn[id] ?? 0) + 1; return { good: s?.good ?? [], avoid: s?.avoid ?? [], worn }; }
+async function runBuy(all) {
+  const b = S.buy, names = all ? buyColors(S.items, buyOpts()).map(c => c.name) : b.colors;
+  b.busy = true; b.res = null; b.all = all; render();
+  const r = await runJob('buy', { items: S.items, cands: names.map(n => buyPiece(b.type, n)), opts: buyOpts() });
+  b.busy = false; b.res = r.list.map(x => ({ ...x, twins: x.twins.map(byId).filter(Boolean), examples: x.examples.map(o => ({ ...o, items: o.ids.map((id, i) => id ? byId(id) : x.ghost).filter(Boolean) })) })); render();
+}
+function whichOne() {
+  if (S.items.length < 3) return `<div class="empty"><h2>Add a few pieces first</h2><p>This tests a piece you're thinking of buying against everything you own.</p><button class="btn" data-action="add">Add clothes</button></div>`;
+  const b = S.buy ??= { type: 'dress pants', colors: [], res: null }, opts = buyOpts(), sensible = buyColors(S.items, opts).map(c => c.name);
+  const shown = b.more ? Object.keys(SWATCHES) : [...new Set([...sensible, ...b.colors])];
+  const res = b.res, win = res?.[0], second = res?.[1];
+  const bar = r => `<span class="bbar" title="how well it goes with what you own"><i style="width:${r.of ? Math.round(100 * r.q / r.of) : 0}%"></i></span>`; // strength, not just the count: a look that barely passes fills less
+  const verdict = !win ? '' : !win.q ? `<p class="sub">None of these go well with what you own. Try a neutral.</p>`
+    : `<div class="bwin glass"><span class="mono">${b.all ? `Best ${esc(b.type)} for your closet` : 'Get this one'}</span><h2>${esc(win.ghost.name)}</h2>
+      <p>${esc(win.why)}.${second ? ` Runner-up: ${esc(second.ghost.name.toLowerCase())}, ${second.twins.length > win.twins.length ? `but it would be your ${second.twins.length + 1}${['', '', 'nd', 'rd'][second.twins.length + 1] ?? 'th'} ${esc(second.cname)} ${esc(second.role)}` : second.value < win.value * 0.9 ? `with weaker looks across your ${esc(win.partnerCat.toLowerCase())}` : 'close behind'}.` : ''}</p>
+      ${win.examples.length ? `<div class="minis">${win.examples.map(o => flat(o.items)).join('')}</div>` : ''}</div>`;
+  return `<p class="sub">Torn between colors? Pick the type and the colors. Each one is tested against every ${b.type && BUY_TYPES[b.type][0] === 'Tops' || BUY_TYPES[b.type][0] === 'Layers' ? 'pair of pants' : 'top'} you own.</p>
+    <span class="mono">Type</span><div class="chips wrap">${Object.keys(BUY_TYPES).map(k => `<button class="chip ${b.type === k ? 'on' : ''}" data-buytype="${k}">${k}</button>`).join('')}</div>
+    <span class="mono">Colors you're deciding between${colorsOn() ? ' · your colors and neutrals' : ''}</span>
+    <div class="chips wrap">${shown.map(n => `<button class="chip ${b.colors.includes(n) ? 'on' : ''}" data-buycolor="${n}"><i class="cdot" style="background:${SWATCHES[n]}"></i>${n}</button>`).join('')}${b.more ? '' : `<button class="chip o" data-action="buymore">more colors</button>`}</div>
+    <div class="row2 buyacts"><button class="btn sm go" data-action="buygo" ${b.colors.length < 1 || b.busy ? 'disabled' : ''}>${b.colors.length > 1 ? `Compare ${b.colors.length}` : 'Test it'}</button><button class="btn sm ghost" data-action="buyall" ${b.busy ? 'disabled' : ''}>Best color for ${esc(b.type)}</button></div>
+    ${b.busy ? `<div class="scan"><i></i><span class="mono">Testing against your closet</span></div>` : ''}
+    ${verdict}
+    ${res?.length > 1 ? `<div class="brows">${res.map((r, i) => `<div class="brow"><i class="cdot" style="background:${r.ghost.color}"></i><div><b>${i + 1}. ${esc(r.ghost.name)}</b>${bar(r)}<span class="mono">${esc(r.why)}</span></div><button class="tag ${onList(r.ghost.id) ? '' : 'o'}" data-buywish="${i}">${onList(r.ghost.id) ? 'Listed' : '+ List'}</button></div>`).join('')}</div>` : ''}
+    ${res?.length === 1 ? `<button class="btn ghost sm" data-buywish="0">${onList(win.ghost.id) ? 'On your list' : 'Add to wishlist'}</button>` : ''}`;
+}
+
 function inspoView() {
   const top = head(`${S.inspo.length} look${S.inspo.length === 1 ? '' : 's'}`, 'Inspo') + subnav('inspoTab', [['board', 'Moodboard'], ['combos', 'Combos'], ['rules', 'Rules'], ['wheel', 'Color wheel']]);
-  if (S.inspoTab === 'combos') return top + combosView();
-  if (S.inspoTab === 'rules') return top + rulesView();
+  if (S.inspoTab === 'combos') return top + capBar() + combosView(); // the chosen capsule shows on every screen it changes
+  if (S.inspoTab === 'rules') return top + capBar() + rulesView();
   if (S.inspoTab === 'wheel') return top + `
     <div class="chips">${Object.entries(HARMONIES).map(([k, v]) => `<button class="chip ${S.wheel.harmony === k ? 'on' : ''}" data-harmony="${k}">${v.label}</button>`).join('')}</div>
     <div class="wheel" id="wheel"><svg id="lines"></svg><div id="handles"></div></div>
@@ -1613,7 +1723,32 @@ function styleReport() {
     ${sixMonths ? `<h3><span>Could sell</span><span>${sell.length} unworn 6+ months</span></h3>` : ''}
     ${!sixMonths ? '' : sell.length ? `<div class="strip">${sell.slice(0, 20).map(i => `<button data-open="${i.id}"><img src="${src(i)}" alt="${esc(i.name)}">${i.price ? `<em>${money(i.price)}</em>` : ''}</button>`).join('')}</div><button class="btn ghost sm" data-action="selllist">Copy a listing for all ${sell.length}</button>` : '<p class="sub">Nothing sitting unworn for 6 months. Nice.</p>'}`;
 }
+// What you wear and what you don't, from the days you logged (Me). Clothes only; stored pieces and anything added in the last 2 weeks don't count as unworn.
+function wearStats() {
+  const cnt = {}, last = {}; for (const l of S.log) for (const id of l.ids) { cnt[id] = (cnt[id] ?? 0) + 1; const d = l.day.slice(0, 10); if (!(last[id] >= d)) last[id] = d; }
+  const cl = S.items.filter(i => i.cat !== 'Accessories' && !i.stored), ago = n => dayKey(new Date(Date.now() - n * 864e5)), settled = i => Date.now() - (i.createdAt ?? 0) > 14 * 864e5;
+  const worn30 = cl.filter(i => last[i.id] >= ago(30)), most = cl.filter(i => cnt[i.id]).sort((a, b) => cnt[b.id] - cnt[a.id]).slice(0, 12);
+  const never = cl.filter(i => !cnt[i.id] && settled(i)), idle = cl.filter(i => cnt[i.id] && last[i.id] < ago(60)).sort((a, b) => last[a.id].localeCompare(last[b.id]));
+  return { cnt, last, cl, worn30, most, never, idle, pct: cl.length ? Math.round(100 * worn30.length / cl.length) : 0 };
+}
+function wearSection() {
+  if (!S.log.length) return `<h3><span>What you wear</span></h3><p class="sub">Log what you wear (Wear today on Today) and this shows your most worn pieces, what you never wear, and how much of your closet you actually use.</p>`;
+  const w = wearStats(), strip = (list, label) => `<div class="strip">${list.slice(0, 20).map(i => `<button data-open="${i.id}" aria-label="${esc(i.name)}"><img src="${src(i)}" alt=""><small>${label(i)}</small></button>`).join('')}</div>`;
+  return `<h3><span>What you wear</span><span>clothes only</span></h3>
+    <div class="tiles"><div><span class="mono">Worn in 30 days</span><b>${w.pct}%</b><small class="sub">${w.worn30.length} of ${w.cl.length} pieces</small></div><button data-action="wearall" data-wearlist="never"><span class="mono">Never worn ›</span><b>${w.never.length}</b></button>
+      <button data-action="wearall" data-wearlist="idle"><span class="mono">Not in 60+ days ›</span><b>${w.idle.length}</b></button><button data-action="wrapped"><span class="mono">Month in review ›</span><b>${new Date().toLocaleDateString(undefined, { month: 'short' }).toLowerCase()}</b></button></div>
+    ${w.most.length ? `<span class="mono">Most worn</span>${strip(w.most, i => `${w.cnt[i.id]}×`)}` : ''}
+    ${w.never.length ? `<span class="mono">Never worn · build a look around one</span>${strip(w.never, () => 'never')}` : ''}`;
+}
+function openWear(kind) {
+  const w = wearStats(), list = kind === 'never' ? w.never : w.idle, fmt = d => new Date(d + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">What you don't wear</div><h2>${kind === 'never' ? `Never worn · ${list.length}` : `Not in 60+ days · ${list.length}`}</h2></div>${closeBtn}</div>
+    <p class="sub">${kind === 'never' ? 'Pieces you own but never logged. Tap one, then Build with it, or sell what you know you won\'t wear.' : 'Pieces you used to wear. Oldest first.'}</p>
+    <div class="grid">${list.map(i => `<button class="item" data-open="${i.id}"><div class="ph"><img src="${src(i)}" alt=""></div><b>${esc(i.name)}</b><span>${kind === 'never' ? i.cat : `last ${fmt(w.last[i.id])}`}</span></button>`).join('') || '<p class="sub">Nothing here. You wear it all.</p>'}</div></div>`);
+}
+
 function meView() {
+  if (!S.rare && !meView.warm) { meView.warm = true; (window.requestIdleCallback ?? setTimeout)(() => rareReport().then(() => { meView.warm = false; if (S.view === 'me' && !sheet.open) render(); }).catch(() => { meView.warm = false; })); } // the tile fills in on its own
   S.meTab ??= 'you'; // Me: your closet's numbers, or the settings (look, backup, sizes, names)
   const st = streaks(S.log), items = S.items, p = S.profile ?? {}, m = p.measure ?? {};
   const priced = items.filter(i => i.price > 0), value = priced.reduce((t, i) => t + i.price, 0);
@@ -1627,9 +1762,10 @@ function meView() {
     <div class="tiles"><button data-go="closet"><span class="mono">Pieces ›</span><b>${items.length}</b></button><button data-favs><span class="mono">Favorites ›</span><b>${S.saved.length}</b></button>
       <button data-go="outfits" data-tabto="cal"><span class="mono">Days logged ›</span><b>${S.log.length}</b></button><button data-go="progress"><span class="mono">Streak &amp; badges ›</span><b>${st.cur}</b></button>
       <button data-go="list" data-listtab="mine"><span class="mono">Wishlist ›</span><b>${S.wish.filter(w => !w.got).length}</b></button><button data-go="inspo"><span class="mono">Inspo ›</span><b>${S.inspo.length}</b></button>
-      <button data-action="rareall" class="wide"><span class="mono">Never picked by Today ›</span><b>${S.rare ? S.rare.n : 'see'}</b></button></div>
+      <button data-action="rareall" class="wide"><span class="mono">Never suggested by Today ›</span><b>${S.rare ? S.rare.n : 'see'}</b></button></div>
     ${(() => { const since = dayKey(new Date(Date.now() - 30 * 864e5)), opened = (p.opens ?? []).filter(d => d >= since).length, fromToday = S.log.filter(l => l.src === 'today' && l.day >= since).length;
       return opened >= 3 ? `<p class="sub hitrate">Last 30 days: you wore a look from Today on <b>${fromToday}</b> of the ${opened} days you opened the app. Higher means the picks fit you better.</p>` : ''; })()}
+    ${wearSection()}
     ${unlocked('bestdressed') ? bestDressed() : ''}
     ${styleReport()}
     <h3><span>Closet value</span><span>${priced.length} of ${items.length} priced</span></h3>
@@ -1662,6 +1798,7 @@ function meView() {
     <label class="cell seasonpick"><span>Time of year</span><select data-season aria-label="Season">${[['auto', 'By the calendar'], ['cold', 'Cold season now'], ['warm', 'Warm season now'], ['off', 'Weather only']].map(([v, l]) => `<option value="${v}" ${(p.season ?? 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <p class="sub">Calendar: no shorts Nov to Mar, no heavy coats May to Sep, unless the day says otherwise.</p>
     <label class="chk"><input type="checkbox" data-pref="twoShirts" ${p.twoShirts ? 'checked' : ''}> Sometimes a button-up open over a tee</label>
+    <label class="chk"><input type="checkbox" data-pref="shirtStack" ${p.shirtStack ? 'checked' : ''}> Rarely a shirt over a shirt (button-up under a flannel)</label>
     <label class="chk"><input type="checkbox" data-pref="hoodieAlone" ${p.hoodieAlone ? 'checked' : ''}> Hoodies and sweaters without a tee under</label>
     </details>
     <details class="sgroup" data-sg="brands" ${S.sopen?.brands || false ? 'open' : ''}><summary><span>Brands and names</span><span class="mono">${S.items.filter(i => i.brand).length} of ${S.items.length} named</span></summary>
@@ -1681,6 +1818,7 @@ function meView() {
     <details class="more remind"><summary><span>How backup and sync work</span><span class="mono">${p.lastSync ? `synced ${ago(p.lastSync.at)}` : 'phone + computer'}</span></summary>
       <ol class="steps"><li>iPhone doesn't let web apps save files on their own: tap the reminder, then <b>Save › Save to Files › iCloud Drive</b>, any folder (Files remembers the last one). Your computer and Claude find it there.</li>
       <li>Phone and computer: save a backup on one, then <b>Restore or sync</b> on the other. The newer edit wins and deletes carry over.</li>
+      <li>One icon per phone: two Home Screen icons keep two separate closets that never see each other. Sync the old one into this one, then delete the old icon.</li>
       ${p.lastSync ? `<li>Last restore or sync ${ago(p.lastSync.at)} from ${esc(p.lastSync.file)}.</li>` : ''}</ol>
       ${p.lastBackup ? `<button class="btn ghost sm" data-action="exportnew">Save changes only · ${S.items.filter(i => (i.updatedAt ?? i.createdAt ?? 0) > p.lastBackup).length} pieces</button>` : ''}</details>
     <details class="more remind"><summary><span>Daily outfit reminder</span><span class="mono">2 minutes in Shortcuts</span></summary>
@@ -1692,12 +1830,13 @@ function meView() {
     <p class="sub">Copies your closet and your style rules as text. Paste it into a Claude chat on any device and ask what to wear.</p>
     <button class="btn ghost sm" data-action="copyclaude">Copy closet for Claude</button>
     </details>
+    <button class="btn ghost wide" data-action="shrinkpics">Shrink photos${S.storage ? ` · using ${S.storage}` : ''}</button>
     <p class="mono version">Version ${VERSION}${S.storage ? ` · using ${S.storage}` : ''}${Object.keys(perf).length ? ` · checks ${Object.entries(perf).map(([k, v]) => `${k} ${(v / 1000).toFixed(1)}s`).join(', ')}` : ''}</p>
     ${p.news?.length ? `<details class="more news"><summary><span>What's new</span><span class="mono">${p.news.length} update${p.news.length > 1 ? 's' : ''}</span></summary>${p.news.map(n => `<p class="sub"><b>${esc(n.v.split('·').pop().trim())}</b> · ${esc(n.notes)}</p>`).join('')}</details>` : ''}
     `}`;
 }
 
-// The level badge: the Fitted diamond, filling in as you climb (an outline at Fresh, solid with a crown line at Legend).
+// The level badge: the Already diamond, filling in as you climb (an outline at Fresh, solid with a crown line at Legend).
 const levelIcon = i => `<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 36 20 20 36 4 20Z" fill="${i >= 4 ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2.5"/>${i >= 1 && i < 4 ? `<path d="M20 ${30 - i * 5} 30 20 20 30 10 20Z" fill="currentColor" opacity="${0.35 + i * 0.2}"/>` : ''}${i >= 5 ? `<path d="M20 11 29 20 20 29 11 20Z" fill="var(--bg)"/>` : ''}${i >= 6 ? `<path d="M20 15 25 20 20 25 15 20Z" fill="currentColor"/>` : ''}${i >= 7 ? '<path d="M12 7l4 3 4-5 4 5 4-3" fill="none" stroke="currentColor" stroke-width="2"/>' : ''}</svg>`;
 function progressView() {
   const st = streaks(S.log), bs = badges(progressCtx()), today = dayKey();
@@ -1756,7 +1895,7 @@ function upPill() { let el = document.getElementById('uppill');
   if (!S.pending.length) { el?.remove(); return; }
   if (!el) { el = Object.assign(document.createElement('button'), { id: 'uppill', className: 'uppill' }); el.dataset.go = 'closet'; document.body.append(el); }
   el.textContent = `Adding ${Math.max(1, S.upTotal - S.pending.length + 1)} of ${S.upTotal}`; el.hidden = S.view === 'closet'; }
-// "Script error." with no file is Safari hiding another site's or an extension's error: nothing in Fitted broke.
+// "Script error." with no file is Safari hiding another site's or an extension's error: nothing in Already broke.
 addEventListener('error', e => { if (!e.filename && /^script error\.?$/i.test(e.message ?? '')) return; toast(`Error: ${String(e.message).slice(0, 120)}`); }); addEventListener('unhandledrejection', e => toast(`Error: ${String(e.reason?.message ?? e.reason).slice(0, 120)}`)); // tap did nothing? say why
 function render() {
   const app = document.getElementById('app'), scrollers = () => document.querySelectorAll('.strip, .colls, .chips, .deck, .occ, .shelf, .tbar.ctrl, .looks');
@@ -1834,7 +1973,7 @@ function openRename(ids = null, page = 0) {
     <p class="sub">Type over any name, or tap an idea. Brand first, type last works best ("Carhartt work jacket", "Lakers 24 jersey").</p>
     ${list.map(it => `<div class="rnrow"><button type="button" data-open="${it.id}"><img src="${src(it)}" alt=""></button><div><span class="rnin"><input name="rn_${it.id}" value="${esc(it.name)}" maxlength="60" autocomplete="off" enterkeyhint="next" aria-label="Name"><button type="button" class="rnx" data-rnclear="${it.id}" aria-label="Clear">×</button></span>
       ${nameIdeas(it).length ? `<span class="rnideas">${nameIdeas(it).map(x => `<button type="button" class="tag o" data-rnidea="${it.id}|${esc(x)}">${esc(x)}</button>`).join('')}</span>` : ''}</div></div>`).join('')}
-    <div class="row"><button type="button" class="btn" data-rnsave="1">Save${pool0.length > (page + 1) * 20 ? ' · next 20' : ''}</button></div></form>`);
+    <div class="row">${list.some(it => plainName(it) && nameIdeas(it).length) ? '<button type="button" class="btn ghost" data-rnall="1">Use the first idea for each</button>' : ''}<button type="button" class="btn" data-rnsave="1">Save${pool0.length > (page + 1) * 20 ? ' · next 20' : ''}</button></div></form>`);
 }
 // Quick review: 20 new pieces at a time, just photo + type (the tag that matters most). The AI's guesses sit at the top of each list.
 function openQuick() {
@@ -1899,6 +2038,7 @@ function openSheet(id) {
       <div class="cpick" id="cpick">${Object.entries(SWATCHES).map(([n, h]) => `<button type="button" class="${colorName(it.color) === n ? 'on' : ''}" data-setcolor="${it.id}|${h}" aria-label="${n}"><i style="background:${h}"></i></button>`).join('')}<label aria-label="Pick any color"><i></i><input type="color" name="color" value="${it.color}"></label><button type="button" class="tag o drop" data-colordrop="${it.id}">Pick from photo</button></div>
       <div id="accbox">${accHtml(it)}</div>
       <label class="cell"><span>Pattern</span><select name="pattern">${[['solid', 'Solid (plain)'], ['logo', 'Small logo'], ['graphic', 'Big graphic'], ['allover', 'All-over pattern']].map(([v, l]) => `<option value="${v}" ${patternOf(it) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="cell" ${patternOf(it) === 'allover' ? '' : 'hidden'} id="printrow"><span>Which pattern</span><select name="print"><option value="">From the name</option>${PRINTS.map(v => `<option ${it.print === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       <label class="cell"><span>In the laundry</span><input type="checkbox" class="switch" name="dirty" ${it.dirty ? 'checked' : ''}></label>
       <label class="cell"><span>Stored away (off season)</span><input type="checkbox" class="switch" name="stored" ${it.stored ? 'checked' : ''}></label>
       <label class="cell"><span>Bought</span><input type="date" name="bought" value="${it.bought ?? ''}"></label>
@@ -1920,6 +2060,7 @@ function openSheet(id) {
     if (f.kind.value === '__other') { sheet.querySelector('#kindother').hidden = false; if (e.target.name === 'kind') { f.kindOther.focus(); return; } }
     const kind = f.kind.value === '__other' ? f.kindOther.value.trim().toLowerCase() || it.kind : f.kind.value;
     Object.assign(it, { name: f.name.value, cat: f.cat.value, kind, fit: +f.fit.value, color: f.color.value, pattern: f.pattern.value, patterned: f.pattern.value === 'graphic' || f.pattern.value === 'allover', price: price > 0 ? price : null });
+    if (f.pattern.value === 'allover' && f.print.value) it.print = f.print.value; else delete it.print; sheet.querySelector('#printrow').hidden = f.pattern.value !== 'allover';
     if (f.dirty.checked) it.dirty = true; else delete it.dirty;
     if (f.stored.checked) it.stored = true; else delete it.stored;
     if (f.material.value) it.material = f.material.value; else delete it.material;
@@ -2077,6 +2218,21 @@ async function touchAct(a) {
 
 // ---------- backup: one JSON file, photos inlined as data URLs ----------
 const toDataUrl = b => new Promise((res, rej) => { const f = new FileReader(); f.onload = () => res(f.result); f.onerror = () => rej(f.error); f.readAsDataURL(b); });
+// Settings › Shrink photos: originals over 350 KB go to 1100 px and cut-outs over 1000 px come down to 1000, keeping only what got smaller.
+// Pieces still look sharp on a phone; Remove background and Re-cut still work. Run it by hand now and then.
+async function recode(blob, max, type, q) { const bmp = await createImageBitmap(blob), k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) }), x = c.getContext('2d');
+  if (type === 'image/jpeg') { x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); } x.drawImage(bmp, 0, 0, c.width, c.height); bmp.close?.();
+  return { blob: await new Promise(r => c.toBlob(r, type, q)), big: k < 1 }; }
+async function shrinkPics(btn) {
+  let saved = 0, n = 0; const all = S.items.slice();
+  for (const [i, it] of all.entries()) { if (i % 10 === 0) btn.textContent = `Shrinking ${i} of ${all.length}…`;
+    try { const o = await loadPic('orig', it.id); if (o && o.size > 350e3) { const r = await recode(o, 1100, 'image/jpeg', 0.82); if (r.blob.size < o.size) { await putQuiet('orig', { id: it.id, photo: r.blob }); saved += o.size - r.blob.size; n++; } }
+      const f = await imgOf(it); if (f) { const r = await recode(f, 1000, 'image/webp', 0.88); if (r.big && r.blob.size < f.size) { it.img = r.blob; await putQuiet('full', { id: it.id, img: r.blob }); onDisk.add(r.blob); resetSrc(it); saved += f.size - r.blob.size; n++; } } }
+    catch (e) { console.warn(e); } }
+  navigator.storage?.estimate?.().then(e => { S.storage = `${Math.round(e.usage / 1e6)} MB${e.quota ? ` of ${Math.round(e.quota / 1e9 * 10) / 10} GB` : ''}`; render(); }).catch(() => {});
+  toast(n ? `Saved ${Math.round(saved / 1e6)} MB across ${n} photos` : 'Your photos are already small');
+}
 async function exportBackup() {
   const full = S.profile?.fullBackup; // originals (for Re-cut) only when asked: they ~triple the file
   const items = await Promise.all(S.items.filter(i => !S.backupSince || (i.updatedAt ?? i.createdAt ?? 0) > S.backupSince).map(async it => { const { photo, thumb, img, ...i } = it, o = full && await origOf(it); const angles = []; for (const k of it.more ?? []) { const b = await loadPic('orig', k); if (b) angles.push(await toDataUrl(b)); }
@@ -2085,7 +2241,7 @@ async function exportBackup() {
   const wish = await Promise.all(S.wish.map(async w => w.img instanceof Blob ? { ...w, img: await toDataUrl(w.img) } : w));
   const log = await Promise.all(S.log.map(async l => hasPic(l) ? { ...l, selfie: await toDataUrl(l.selfie) } : (({ selfie, ...r }) => r)(l)));
   const blob = new Blob([JSON.stringify({ app: 'closet', v: 3, items, outfits: S.saved, log, wish, colls: S.colls, inspo, profile: S.profile, history: S.history, plan: S.plan, gone: S.gone })], { type: 'application/json' });
-  S.backupFile = new File([blob], `closet-backup-${dayKey()}${S.backupSince ? '-changes' : ''}.json`, { type: 'application/json' });
+  S.backupFile = new File([blob], `already-backup-${dayKey()}${S.backupSince ? '-changes' : ''}.json`, { type: 'application/json' });
   // iPhone: the share sheet's "Save to Files" puts it straight in iCloud Drive (where Claude's closet connector looks). It needs a fresh tap, so ask.
   if (navigator.canShare?.({ files: [S.backupFile] })) return showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${items.length} pieces ready</div><h2>Save backup</h2></div>${closeBtn}</div>
     <p class="sub">Tap Save, then pick <b>Save to Files › iCloud Drive</b>. It's safe there if this phone loses the app, and Claude can read it.</p>
@@ -2158,7 +2314,11 @@ async function importBackup(file) {
       for (const [k, r] of Object.entries(b.plan.days)) if (/^\d{4}-\d\d-\d\d$/.test(k) && str(r?.key) && !days[k]) days[k] = { key: r.key, ids: ids(r.ids) };
       for (const [k, r] of Object.entries(b.plan.weekly ?? {})) if (/^[0-6]$/.test(k) && look(r) && !weekly[k]) weekly[k] = look(r);
       await put('profile', { k: 'plan', days, weekly }); }
-    if (b.profile?.k === 'me' && typeof b.profile === 'object' && (!S.profile || fresh || stamp(b.profile) > stamp(S.profile))) { await putQuiet('profile', { ...b.profile, k: 'me', done: true, lastBackup: S.profile?.lastBackup ?? b.profile.lastBackup }); other++; } // settings, taste, custom types
+    // settings, taste, custom types: merged setting by setting. The newer side wins where both have a value, but a blank never wipes
+    // a value (v5.63: a new install with no color season was newer, and took Deep Autumn away from the old one)
+    if (b.profile?.k === 'me' && typeof b.profile === 'object') { const set = o => Object.fromEntries(Object.entries(o ?? {}).filter(([, v]) => v != null)), newer = !S.profile || fresh || stamp(b.profile) > stamp(S.profile);
+      const merged = { ...(newer ? { ...set(S.profile), ...set(b.profile) } : { ...set(b.profile), ...set(S.profile) }), k: 'me', done: true, lastBackup: S.profile?.lastBackup ?? b.profile.lastBackup };
+      if (JSON.stringify(merged) !== JSON.stringify({ ...S.profile, k: 'me', done: true, lastBackup: merged.lastBackup })) { await putQuiet('profile', merged); other++; } }
     // Deletes made on the other device (only if made after the last edit here)
     for (const [key, t] of Object.entries(b.gone && typeof b.gone === 'object' ? b.gone : {})) { const n = key.indexOf('|'), name = key.slice(0, n), k = key.slice(n + 1); if (!SYNCED.has(name) || !(+t > 0)) continue;
       const here = local[name](k); if (here && +t > stamp(here)) { await del(name, k); name === 'items' ? removed++ : other++; } S.gone[key] = Math.max(S.gone[key] ?? 0, +t); }
@@ -2184,7 +2344,7 @@ const fillAngles = it => { for (const k of it.more ?? []) loadPic('orig', k).the
 const replaceInput = picker('image/*', false, async ([f]) => {
   const it = byId(replacing); if (!it) return;
   toast('Cutting out the new photo…');
-  try { const { img, color, accents, photo, frame } = await cutout(f, undefined, it); Object.assign(it, { img, color, accents, photo, frame, fp: await fpOf(photo), turns: 0 }); /* new photo, new orientation */ resetSrc(it); await put('items', it); S.ideas = null; openSheet(it.id); toast('Photo replaced'); }
+  try { const { img, color, accents, photo, frame } = await cutout(f, undefined, it); Object.assign(it, { img, color, accents, photo, frame, fp: await fpOf(photo), cfp: await fpOf(img), turns: 0 }); delete it.noPhoto; delete it.dupOk; /* new photo, new orientation; a quick-added piece is a real one now */ resetSrc(it); await put('items', it); S.ideas = null; openSheet(it.id); toast('Photo replaced'); }
   catch (e) { console.warn(e); toast(`Couldn't read ${f.name}. Try a JPG`); }
 });
 const fileInput = document.getElementById('file');
@@ -2312,7 +2472,7 @@ document.addEventListener('scroll', e => {
 document.addEventListener('change', async e => {
   if (e.target.matches('[data-sort]')) { S.sort = e.target.value; render(); return; }
   if (e.target.matches('[data-popany]')) { const h = e.target.value; applyPop(h); S.profile = { k: 'me', ...S.profile, pop: h }; await put('profile', S.profile); render(); return; }
-  if (e.target.matches('[data-pref]')) { S.profile = { k: 'me', ...S.profile, [e.target.dataset.pref]: e.target.checked }; await put('profile', S.profile); S.deck = null; S.ideas = null; toast(e.target.dataset.pref === 'twoShirts' ? (e.target.checked ? 'Today will sometimes put a button-up over a tee' : 'No more open button-ups on Today') : e.target.checked ? 'Hoodies and sweaters can be worn alone now' : 'A tee goes under hoodies again'); return; }
+  if (e.target.matches('[data-pref]')) { S.profile = { k: 'me', ...S.profile, [e.target.dataset.pref]: e.target.checked }; await put('profile', S.profile); syncTaste(); S.deck = null; S.ideas = null; S.rulePool = null; toast(e.target.dataset.pref === 'shirtStack' ? (e.target.checked ? 'A shirt over a shirt can show up, rarely' : 'Never a shirt over a shirt') : e.target.dataset.pref === 'twoShirts' ? (e.target.checked ? 'Today will sometimes put a button-up over a tee' : 'No more open button-ups on Today') : e.target.checked ? 'Hoodies and sweaters can be worn alone now' : 'A tee goes under hoodies again'); return; }
   if (e.target.matches('[data-bkevery]')) { S.profile = { k: 'me', ...S.profile, backupEvery: +e.target.value }; await put('profile', S.profile); toast(+e.target.value ? `Backup reminder every ${+e.target.value === 1 ? 'day' : `${e.target.value} days`}` : 'Reminder only after big changes'); return; }
   if (e.target.matches('[data-colorseason]')) { S.profile = { k: 'me', ...S.profile, colorSeason: e.target.value || null, colorsOff: false }; await put('profile', S.profile); syncTaste(); S.deck = null; S.ideas = null; S.best = null; render(); toast(e.target.value ? `${COLOR_SEASONS[e.target.value].label}: your colors are on` : 'Color season cleared'); return; }
   if (e.target.matches('[data-colorson]')) { S.profile = { k: 'me', ...S.profile, colorsOff: !e.target.checked }; await put('profile', S.profile); syncTaste(); S.deck = null; S.ideas = null; S.best = null; render(); toast(e.target.checked ? 'Your colors are on' : 'Your colors are off'); return; }
@@ -2354,6 +2514,10 @@ document.addEventListener('focusout', e => { if (e.target.matches?.('input, text
 window.visualViewport?.addEventListener('resize', () => { if (visualViewport.height > innerHeight * 0.85) setTimeout(settle, 80); });
 addEventListener('focus', () => setTimeout(settle, 120)); document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(settle, 120); });
 // Tap a piece's name to rename it ("Lakers jersey"). Return or tapping away saves.
+// Arrow keys: ← → move through Today's looks, → rolls in Build. For the Mac and for screen recordings (swipes don't record)
+document.addEventListener('keydown', e => { if (sheet.open || e.metaKey || e.ctrlKey || e.altKey || e.target.matches?.('input, textarea, select, [contenteditable]')) return;
+  if (S.view === 'today' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); deckAtNow(); deckGo((S.deck?.at ?? 0) + (e.key === 'ArrowRight' ? 1 : -1)); }
+  else if (S.view === 'build' && e.key === 'ArrowRight' && S.build?.length) { e.preventDefault(); shuffleBuild(); } });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches?.('[data-rename]')) { e.preventDefault(); e.target.blur(); }
   if (e.key === 'Enter' && e.target.matches?.('#renameform input')) { e.preventDefault(); const all = [...sheet.querySelectorAll('#renameform input')], i = all.indexOf(e.target); (all[i + 1] ?? e.target).focus(); if (!all[i + 1]) e.target.blur(); } });
 document.addEventListener('focusout', async e => { const el = e.target; if (!el.matches?.('[data-rename]')) return; const it = byId(el.dataset.rename); if (!it) return;
@@ -2367,6 +2531,12 @@ document.addEventListener('click', async e => {
     go(); } // no fade-in: on iPhone it left the top of the new screen blank until you scrolled
   else if (ds.sub) { const [k, v] = ds.sub.split(':'); S[k] = v; render(); }
   else if (ds.listtab) { S.listTab = ds.listtab; render(); }
+  else if (ds.buytype) { S.buy = { ...S.buy, type: ds.buytype, res: null }; render(); }
+  else if (ds.buycolor) { const b = S.buy, c = ds.buycolor; b.colors = b.colors.includes(c) ? b.colors.filter(x => x !== c) : [...b.colors, c].slice(-4); b.res = null; render(); }
+  else if (ds.action === 'buymore') { S.buy.more = true; render(); }
+  else if (ds.action === 'buygo' || ds.action === 'buyall') runBuy(ds.action === 'buyall');
+  else if (ds.buywish) { const r = S.buy?.res?.[+ds.buywish]; if (!r || onList(r.ghost.id)) return; const g = r.ghost;
+    const w = { id: g.id, name: g.name, cat: g.cat, color: g.color, fit: 1, kind: g.kind, got: false, at: Date.now(), note: r.why }; await put('wish', w); S.wish.push(w); toast('Added to your wishlist'); render(); }
   else if (ds.wishgap) {
     if (onList(ds.wishgap)) return;
     const g = getGaps()?.find(x => x.ghost.id === ds.wishgap)?.ghost; if (!g) return;
@@ -2379,16 +2549,26 @@ document.addEventListener('click', async e => {
   // the self-test's own wish leaves no delete record to sync
   else if (ds.wishdel) { await del('wish', ds.wishdel, !/^selftest /i.test(S.wish.find(x => x.id === ds.wishdel)?.name ?? '')); S.wish = S.wish.filter(x => x.id !== ds.wishdel); render(); }
   else if (ds.action === 'add' && t.closest('nav')) showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">Closet</div><h2>Add</h2></div>${closeBtn}</div>
-    <p class="sub">Shoot each piece flat from above on a plain floor that contrasts with it: light clothes on dark, dark on light. Pick as many photos as you like.</p>
-    <div class="quick"><button class="btn" data-action="addfiles">${ic('camera')} Clothes · photos</button><button class="btn ghost" data-action="addinspo">Inspo pic</button><button class="btn ghost" data-calday="${dayKey()}">Log today's fit</button><button class="btn ghost" data-go="list" data-listtab="mine">Something I want (wishlist)</button></div></div>`);
+    <p class="sub">Shoot flat from above on a plain floor that contrasts with the clothes: light on dark, dark on light.</p>${addWays()}
+    <div class="quick"><button class="btn ghost" data-action="addinspo">Inspo pic</button><button class="btn ghost" data-calday="${dayKey()}">Log today's fit</button><button class="btn ghost" data-go="list" data-listtab="mine">Something I want (wishlist)</button></div></div>`);
+  else if (ds.action === 'addpile') { if (sheet.open) { sheet.onclose = null; sheet.close(); } (pileInput ??= picker('image/*', true, addPile)).click(); }
+  else if (ds.action === 'quickadd') openQuickAdd();
+  else if (ds.qatype) { S.qa.type = ds.qatype; openQuickAdd(); }
+  else if (ds.qacolor) { const it = await quickAdd(S.qa.type, ds.qacolor); toast(`Added ${it.name}`, { label: 'Undo', fn: async () => { await del('items', it.id); S.items = S.items.filter(i => i !== it); render(); } });
+    const n = sheet.querySelector('.qcount'); if (n) n.textContent = `${S.items.filter(i => i.noPhoto).length} quick-added so far`; }
+  else if (ds.action === 'qadone') { sheet.close(); S.view = 'closet'; render(); }
+  else if (ds.action === 'nophoto') { S.q = 'needs photo'; render(); }
   else if (ds.action === 'add' || ds.action === 'addfiles') { if (sheet.open) { sheet.onclose = null; sheet.close(); } fileInput.click(); }
   else if (ds.action === 'reloadnew') { t.textContent = 'Updating…'; try { const r = await navigator.serviceWorker?.getRegistration(); await r?.update(); // fetch the new worker, wait for it to take over, then load the new page
       if (r?.installing || r?.waiting) await new Promise(res => { navigator.serviceWorker.addEventListener('controllerchange', res, { once: true }); setTimeout(res, 5000); }); } catch (e) { console.warn(e); } location.reload(); }
   else if (ds.action === 'copyerr') { try { await navigator.clipboard.writeText(document.querySelector('.crash').textContent); toast('Copied. Paste it to Claude'); } catch { toast('Copy blocked. Take a screenshot instead'); } }
   else if (ds.action === 'rareall') openRareAll();
   else if (ds.action === 'wrapped') openWrapped();
+  else if (ds.action === 'shrinkpics') { t.disabled = true; await shrinkPics(t); t.disabled = false; }
+  else if (ds.action === 'wearall') openWear(ds.wearlist);
   else if (ds.woreit) { const ls = S.profile.lastSeen; S.profile = { ...S.profile, lastSeen: null }; await put('profile', S.profile);
     if (ds.woreit === 'yes') { await logDay(ls.day, { key: ls.key, items: ls.ids.map(byId).filter(Boolean), src: 'today' }, true); toast('Logged for yesterday'); } render(); }
+  else if (ds.action === 'fbskip') { S.profile = { k: 'me', ...S.profile, fbSkip: dayKey() }; await put('profile', S.profile); render(); }
   else if (ds.action === 'rdskip') { S.profile = { k: 'me', ...S.profile, rdSkip: dayKey() }; await put('profile', S.profile); render(); }
   else if (ds.action === 'askwx') askWeather();
   else if (ds.action === 'seasonswap' || ds.action === 'seasonlater') { const sw = seasonSwap(); if (!sw) return; const asked = S.profile?.seasonAsked, was = [...(sw.back ?? []), ...(sw.out ?? [])].map(it => [it, it.stored, it.storedSeason]);
@@ -2438,6 +2618,7 @@ ${ps.map(i => `${i.id} · ${i.name} · ${(i.kind || i.cat).toLowerCase()} · ${c
   else if (ds.action === 'rename') openRename();
   else if (ds.rnclear) { const i = sheet.querySelector(`[name="rn_${ds.rnclear}"]`); if (i) { i.value = ''; i.focus(); } }
   else if (ds.rnidea) { const [id, v] = ds.rnidea.split(/\|(.*)/s); const i = sheet.querySelector(`[name="rn_${id}"]`); if (i) i.value = v; }
+  else if (ds.rnall) { let n = 0; for (const i of sheet.querySelectorAll('#renameform input[name^="rn_"]')) { const it = byId(i.name.slice(3)), x = it && plainName({ ...it, name: i.value }) && nameIdeas(it)[0]; if (x) { i.value = x; n++; } } toast(n ? `Filled ${n}. Check them, then Save` : 'Nothing left to fill'); }
   else if (ds.rnsave) { let n = 0; for (const i of sheet.querySelectorAll('#renameform input[name^="rn_"]')) { const it = byId(i.name.slice(3)), v = i.value.replace(/\s+/g, ' ').trim().slice(0, 60);
       if (!it || !v || v === it.name) continue; it.name = v; if (it.brandGuess?.brand && v.toLowerCase().includes(it.brandGuess.brand.toLowerCase())) { it.brand = it.brandGuess.brand; delete it.brandGuess; } await put('items', it); n++; }
     const r = S.renaming ?? {}, more = (r.ids ? r.ids.length : S.items.length) > (r.page + 1) * 20; S.deck = null; S.ideas = null; render(); toast(n ? `Renamed ${n}` : 'No changes');
@@ -2683,6 +2864,13 @@ ${list.map(i => `${i.id} · now called "${i.name}" · ${i.kind || i.cat} · ${co
     const [k, key] = ds.planpick.split('|'), r = openPlanPicker.list.find(x => x.key === key);
     await setPlan(k, { key, ids: r.ids }, document.getElementById('planrepeat')?.checked); sheet.close(); render(); toast('Planned');
   }
+  // Plan my week: every open day gets Today's best look for that day's forecast, with no top, layer or pants repeated in the week
+  else if (ds.autoplan) { const days = ds.autoplan.split(',').filter(k => k >= dayKey() && !plannedFor(k)), used = new Set(Object.values(S.plan.days).flatMap(r => r.ids)); let n = 0;
+    for (const k of days) { const f = S.profile?.wx?.daily?.[k], w = weatherNow();
+      const looks = today(pool(), { t: f ? f.t - (S.profile?.tempBias ?? 0) : dressTemp(w?.t ?? null), rain: RAINY(f?.code ?? 0), season: seasonNow(), occasion: S.occ, n: 12, skip: [...used] });
+      const o = looks.find(l => !l.items.some(p => used.has(p.id) && p.cat !== 'Shoes' && p.cat !== 'Accessories')) ?? looks[0]; if (!o) continue;
+      await setPlan(k, { key: o.key, ids: o.items.map(p => p.id) }, false); for (const p of o.items) used.add(p.id); n++; }
+    render(); toast(n ? `Planned ${n} day${n > 1 ? 's' : ''}. Tap Change on any you want to swap` : 'Every day this week is already planned'); }
   else if (ds.planbuild) { sheet.close(); startBuild(); }
   else if (ds.action === 'planthis') openDayPicker();
   else if (ds.planday) { await setPlan(ds.planday, lookRec(S.build), document.getElementById('planrepeat')?.checked); sheet.close(); render(); toast(`Planned · ${i18nDay(ds.planday, dayKey())}`); }
@@ -2821,6 +3009,12 @@ async function fixKinds() {
   for (const it of back) { delete it.dirty; await put('items', it); }
   if (back.length) { S.ideas = null; S.deck = null; toast(`${back.length} piece${back.length > 1 ? 's' : ''} back from the laundry`); render(); } })().catch(e => console.warn(e));
 backfillAccents().then(backfillOrient).then(checkPhotos).then(fixKinds).then(fixVibes).then(backfillFp);
+// Demo closet (?db=demo): 24 drawn stand-ins in their own database, so you can show the app without your real closet. Your closet is untouched.
+const DEMO = [['tee', 'white'], ['tee', 'black'], ['tee', 'grey'], ['tee', 'olive'], ['tee', 'rust'], ['long sleeve tee', 'cream'], ['button-up', 'light blue'], ['polo', 'navy'], ['flannel', 'burgundy'], ['hoodie', 'grey'],
+  ['jacket', 'camel'], ['jacket', 'black'], ['sweater', 'forest'], ['jeans', 'denim'], ['jeans', 'black'], ['dress pants', 'grey'], ['cargo pants', 'olive'], ['chinos', 'beige'],
+  ['sneakers', 'white'], ['sneakers', 'black'], ['boots', 'brown'], ['loafers', 'black'], ['cap', 'navy'], ['cap', 'black']];
+if (DBQ === 'demo') { document.body.insertAdjacentHTML('afterbegin', '<div class="demobar">Demo closet · yours is untouched</div>');
+  if (!S.items.length) (async () => { for (const [t, c] of DEMO) await quickAdd(t, c); for (const i of S.items) { delete i.noPhoto; await putQuiet('items', i); } render(); })(); }
 window.__appReady = true; // the safety net above stays quiet
 navigator.serviceWorker?.register('sw.js').catch(e => console.warn(e)); // opens with no signal once installed (sw.js)
 // "New version" banner: version.txt is the live version; if it differs from this page, offer a reload. Checked on open and on every return to the app.

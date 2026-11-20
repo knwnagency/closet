@@ -440,8 +440,8 @@
   .capsel b { display: block; font-family: var(--display); font-weight: 400; font-size: 22px; text-transform: uppercase; line-height: 1; } .capsel small { color: var(--muted); font-size: 13px; }
   .capacts { display: flex; } .capacts .icon { width: 40px; } .capacts .icon svg { width: 18px; height: 18px; } .capacts .armed svg { stroke: var(--bad); }
   .caps > .mono { margin-top: 14px; }
-  .recap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 0 0 14px; } .recap > div { background: var(--ink); color: var(--bg); padding: 10px; min-width: 0; }
-  .recap .mono { color: rgb(255 255 255 / .6); font-size: 10px; } 
+  .recap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 0 0 14px; } .recap > div, .recap > button { background: var(--ink); color: var(--bg); padding: 10px; min-width: 0; min-height: 44px; text-align: left; }
+  .recap .mono { color: rgb(255 255 255 / .7); font-size: 11px; } 
   .recap b { display: block; font-family: var(--display); font-weight: 400; font-size: 18px; line-height: 1; margin-top: 4px; text-transform: uppercase; overflow-wrap: anywhere; } .recap small { font-size: 11px; }
   .cday .selfie { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; } .dayview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; } .dayview:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
   .selfie.big { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; } .wxcopy { margin: -6px 0 12px; font-size: 13px; color: var(--muted); }
@@ -525,7 +525,7 @@
   /* piece page, calendar, me */
   .pname { font-size: 24px; font-weight: 600; } .review { box-shadow: inset 0 0 0 1px rgb(20 20 20 / .3); }
   details.more { border-top: 1px solid var(--hair); } details.more > summary { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .06em; }
-  .recap > div { background: var(--s1); color: var(--ink); box-shadow: inset 0 0 0 1px var(--hair); } .recap .mono { color: var(--muted); font-size: 11px; } .recap b { font-family: var(--display); font-weight: 600; font-size: 15px; }
+  .recap > div, .recap > button { background: var(--s1); color: var(--ink); box-shadow: inset 0 0 0 1px var(--hair); } .recap .mono { color: var(--muted); font-size: 11px; } .recap b { font-family: var(--display); font-weight: 600; font-size: 15px; }
   .tiles > * { background: var(--s1); } .tiles b { font-family: var(--display); font-weight: 600; font-size: 30px; letter-spacing: 0; }
   .cday.today { box-shadow: inset 0 0 0 1.5px var(--ink); } .day.today { box-shadow: inset 0 0 0 1.5px var(--ink); }
   .feed.favs .outfit { background: transparent; padding: 0; box-shadow: none; } .ftitle { font-family: var(--display); font-weight: 500; font-size: 15px; text-transform: none; } .ftitle::first-letter { text-transform: uppercase; }
@@ -740,3 +740,24 @@
   .build .qp { min-width: 0; min-height: 44px; padding: 6px 10px; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--hair); text-align: left; display: grid; gap: 1px; } .build .qp.on { box-shadow: inset 0 0 0 1.5px var(--ink); }
   .build .qp small { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); } .build .qp span { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .build .quick .sw { flex: none; width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+  /* Wishlist › Which one? */
+  .chip .cdot { width: 12px; height: 12px; margin: 0 6px 1px 0; align-self: center; }
+  .buyacts { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 18px; }
+  .bwin { padding: 16px; margin: 0 0 18px; } .bwin h2 { margin: 6px 0 6px; } .bwin p { margin: 0 0 10px; font-size: 14px; line-height: 1.45; }
+  .brows { display: grid; } .brow { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--hair); }
+  .brow > div { flex: 1; min-width: 0; display: grid; gap: 4px; } .brow b { font-size: 14px; font-weight: 500; } .brow .mono { font-size: 11px; color: var(--muted); }
+  .bbar { display: block; height: 4px; background: var(--tile); } .bbar i { display: block; height: 100%; background: var(--ink); }
+  .linkbtn { display: inline; min-height: 0; padding: 0; font: inherit; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+  /* onboarding: three ways in */
+  .ways { display: grid; gap: 8px; margin: 14px 0 18px; text-align: left; }
+  .way { display: grid; gap: 4px; padding: 14px 16px; min-height: 64px; box-shadow: inset 0 0 0 1px var(--hair); background: var(--s1); text-align: left; }
+  .way b { font-size: 15px; font-weight: 600; } .way span { font-size: 13px; line-height: 1.4; color: var(--muted); }
+  .way:first-child { background: var(--ink); color: var(--bg); } .way:first-child span { color: rgb(250 248 245 / .75); }
+  .qcolors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 6px 0 14px; }
+  .qcolors button { display: grid; justify-items: center; gap: 4px; min-height: 64px; padding: 8px 2px; box-shadow: inset 0 0 0 1px var(--hair); font-size: 11px; }
+  .qcolors i { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); }
+  .qcolors button:active { background: var(--tile); }
+  .strip button small { position: absolute; left: 4px; bottom: 3px; font-size: 11px; font-weight: 600; color: var(--muted); background: rgb(250 248 245 / .85); padding: 0 3px; }
+  /* Today: ‹ ♡ Wear today › ride above the tab bar, so they're reachable without scrolling past the card (v5.63) */
+  .dbtns { position: sticky; bottom: calc(60px + env(safe-area-inset-bottom)); z-index: 4; background: var(--bg); padding: 8px 0; margin-top: 4px; box-shadow: 0 -10px 12px -10px rgb(26 25 23 / .12); }
+  .demobar { position: sticky; top: 0; z-index: 30; padding: 6px 16px calc(6px); padding-top: calc(6px + env(safe-area-inset-top)); background: var(--ink); color: var(--bg); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; text-align: center; }

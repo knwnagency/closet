@@ -13,7 +13,7 @@ function walk(dir, depth, out) {
   let ents; try { ents = readdirSync(dir, { withFileTypes: true }); } catch { return out; }
   for (const e of ents) {
     if (e.isDirectory() && depth > 0 && !e.name.startsWith('.')) walk(join(dir, e.name), depth - 1, out);
-    else if (/^closet-backup.*\.json$/.test(e.name) && !TEST.test(e.name)) out.push(join(dir, e.name));
+    else if (/^(closet|already)-backup.*\.json$/.test(e.name) && !TEST.test(e.name)) out.push(join(dir, e.name));
   }
   return out;
 }

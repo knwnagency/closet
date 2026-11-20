@@ -145,3 +145,20 @@ export function smoothEdges(d, w, h, passes = 2) {
     }
   }
 }
+
+// One photo of a pile laid out flat (a bed of tees, a row of shoes) → a box per piece, in the mask's pixels, reading order.
+// Blobs under `min` of the frame are specks. Blobs closer than `gap` × the long side merge: a pair of shoes is one piece.
+// ponytail: pieces that touch come out as one box; the add sheet asks for a hand's width between them.
+export function pileBoxes(alpha, w, h, { cut = 128, min = 0.012, gap = 0.025 } = {}) {
+  const m = new Uint8Array(w * h); for (let p = 0; p < w * h; p++) m[p] = alpha[p] >= cut;
+  const { lab, areas } = blobs(m, w, h), box = areas.map(() => [w, h, -1, -1]);
+  for (let p = 0; p < w * h; p++) { const l = lab[p]; if (!l) continue; const x = p % w, y = (p - x) / w, b = box[l];
+    if (x < b[0]) b[0] = x; if (y < b[1]) b[1] = y; if (x > b[2]) b[2] = x; if (y > b[3]) b[3] = y; }
+  let out = box.filter((b, i) => i && areas[i] >= min * w * h).map(([x0, y0, x1, y1]) => ({ x0, y0, x1, y1 }));
+  const g = gap * Math.max(w, h), near = (a, b) => a.x0 - g <= b.x1 && b.x0 - g <= a.x1 && a.y0 - g <= b.y1 && b.y0 - g <= a.y1;
+  for (let merged = true; merged;) { merged = false;
+    for (let i = 0; i < out.length && !merged; i++) for (let j = i + 1; j < out.length; j++) if (near(out[i], out[j])) {
+      const a = out[i], b = out[j]; out[i] = { x0: Math.min(a.x0, b.x0), y0: Math.min(a.y0, b.y0), x1: Math.max(a.x1, b.x1), y1: Math.max(a.y1, b.y1) }; out.splice(j, 1); merged = true; break; } }
+  const row = Math.max(1, h / 6); // top row first, left to right, like you'd read the pile
+  return out.sort((a, b) => Math.floor(a.y0 / row) - Math.floor(b.y0 / row) || a.x0 - b.x0).map(b => ({ x: b.x0, y: b.y0, w: b.x1 - b.x0 + 1, h: b.y1 - b.y0 + 1 }));
+}

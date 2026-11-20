@@ -1,7 +1,7 @@
 // Slow outfit checks off the main thread, so taps never freeze (on the phone: Rules took 7s, Never picked 25s).
 // Gets the closet without photos plus your taste; sends back piece ids. The page also imports `jobs` to run them itself
 // when a browser can't start a module worker.
-import { setTaste, today, madeWith, lookPool, lookRules } from './match.js';
+import { setTaste, today, madeWith, lookPool, lookRules, compareBuys } from './match.js';
 
 export const jobs = {
   // Inspo › Rules: the wide pool of looks, each with the rules it follows
@@ -16,6 +16,8 @@ export const jobs = {
     const made = Object.fromEntries(d.check.filter(id => !hits[id]).map(id => { const m = madeWith(ok, byId.get(id), 4, { tries: 800 }); return [id, [m.length, m[0]?.score ?? null]]; }));
     return { hits, med, made };
   },
+  // Wishlist › Which one: each candidate tested against every piece it has to go with (about 30ms a color on a Mac)
+  buy: d => ({ list: compareBuys(d.items, d.cands, d.opts).map(r => ({ ...r, twins: r.twins.map(p => p.id), examples: r.examples.map(o => ({ score: o.score, ids: o.items.map(p => p.ghost ? null : p.id) })) })) }),
 };
 
 if (typeof WorkerGlobalScope !== 'undefined') onmessage = ({ data }) => { setTaste(data.taste); postMessage({ id: data.id, ...jobs[data.job](data) }); };
