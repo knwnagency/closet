@@ -773,3 +773,6 @@
   .madeall { text-align: center; margin: 12px 0 0; font-size: 11px; color: var(--muted); } #made .btn.wide { margin-top: 12px; }
 
   .bown { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 4px 0 14px; } .bown .linkbtn { min-height: 44px; }
+  /* v5.70: Today asks what kind of day it is; weather-changed chip; tomorrow link */
+  .dayask { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; } .dayask .mono { margin-right: 4px; }
+  .wxnew { margin: 0 0 12px; } .wxs .linkbtn { padding: 12px 0; margin: -12px 0; }

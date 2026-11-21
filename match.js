@@ -380,9 +380,9 @@ export function fixTip(ps) {
 // ponytail: module-level state set by the app (setTaste) so every scorer sees it without threading opts through. Fine for one user.
 let TASTE = { pair: new Map(), nope: new Set(), good: [], avoid: [], hair: null, cpair: new Map(), never: new Set(), colorNo: new Set(), dressBias: 0, busyBias: 0 };
 // liked/worn/nope: lists of piece-id arrays. good/avoid: color names. hair: black|brown|blonde|red|grey. likedColors: color-name lists of looks you saved or wore.
-export function setTaste({ liked = [], worn = [], nope = [], good = [], avoid = [], hair = null, likedColors = [], never = [], colorNo = [], dressBias = 0, busyBias = 0, shirtStack = false } = {}) {
+export function setTaste({ liked = [], worn = [], nope = [], good = [], avoid = [], hair = null, likedColors = [], never = [], colorNo = [], dressBias = 0, busyBias = 0, shirtStack = false, skipped = [] } = {}) {
   const pair = new Map(), bump = (ids, w) => { for (const [a, b] of pairs([...ids].sort())) pair.set(a + '|' + b, (pair.get(a + '|' + b) ?? 0) + w); };
-  liked.forEach(ids => bump(ids, 1)); worn.forEach(ids => bump(ids, 0.5)); nope.forEach(ids => bump(ids, -1));
+  liked.forEach(ids => bump(ids, 1)); worn.forEach(ids => bump(ids, 0.5)); nope.forEach(ids => bump(ids, -1)); skipped.forEach(ids => bump(ids, -0.25)); // swiped past: a nudge, not a no
   const cpair = new Map(); // color pairs you keep choosing (black + olive), not just piece pairs
   for (const ns of likedColors) for (const [a, b] of pairs([...new Set(ns)].sort())) cpair.set(a + '|' + b, (cpair.get(a + '|' + b) ?? 0) + 1);
   TASTE = { pair, nope: new Set(nope.map(ids => [...ids].sort().join())), good, avoid, hair, cpair, never: new Set(never.map(p => [...p].sort().join('|'))), colorNo: new Set(colorNo.map(p => [...p].sort().join('|'))), dressBias, busyBias, shirtStack };
@@ -645,13 +645,14 @@ export const occasionFit = (ps, occ) => { const o = OCCASIONS[occ]; if (!o) retu
   return -Math.abs(avg - o.dress) * 1.5 + (o.vibe ? vibe(ps, o.vibe) * 0.3 : 0); };
 const likeness = (ps, like) => { if (!like?.length) return 0; const cn = p => colorName(p.color), lc = new Set(like.filter(p => p.cat !== 'Accessories').map(cn)), lk = new Set(like.map(p => p.kind));
   return Math.min(1.2, ps.filter(p => p.cat !== 'Accessories' && lc.has(cn(p))).length * 0.25 + ps.filter(p => lk.has(p.kind)).length * 0.15); };
-export function today(items, { t = null, rain = false, season = null, twoShirts = false, patternDay = null, occasion = null, n = 5, rand = Math.random, skip = [], like = null, alone = false } = {}) {
+export function today(items, { t = null, rain = false, season = null, twoShirts = false, patternDay = null, occasion = null, n = 5, rand = Math.random, skip = [], like = null, alone = false, wind = false, fresh = null } = {}) {
+  // wind: a windy day leans toward a layer and a shell. fresh: ids you haven't worn in weeks, nudged up so the whole closet gets used
   // skip: what you wore yesterday. Tops and layers rest a day; pants and shoes can repeat.
   if (OCCASIONS[occasion]?.dress >= 1.5) items = items.map(p => p.rate < 0 ? { ...p, rate: 0 } : p); // dressing up: pieces saved for special occasions come back
   const pool = forWeather(items, t, rain, season).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
-  const list = collect(pool, { rand, maxUse: 3, alone, layerOdds: cold ? 1 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
+  const list = collect(pool, { rand, maxUse: 3, alone, layerOdds: cold ? 1 : wind && !(t >= 20) ? 0.85 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
   // a new top every card; pants, shoes, a layer, the same cap or chain at most twice each.
-  let twoPrints = (patternDay ?? rand() < 0.35) ? 0 : 1; const res = varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + (rain ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
+  let twoPrints = (patternDay ?? rand() < 0.35) ? 0 : 1; const res = varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + (rain || wind ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) + (fresh ? Math.min(0.6, o.items.filter(p => fresh.has(p.id)).length * 0.3) : 0) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
   // Two shirts: now and then a button-up goes open over the tee (tee + denim shirt + jacket). Never on hot days, each shirt once.
   if (twoShirts && !(t >= 22)) { const used = new Set(); // only if you turned it on: at most one card per deck gets a button-up open over the tee
     for (const o of res) { if (used.size || rand() > 0.3 || o.items.some(openShirt) || o.items.filter(p => p.cat === 'Layers').length > 1 || !o.items.some(p => p.cat === 'Tops')) continue;
@@ -699,7 +700,7 @@ const GAP_FIT = { Tops: ['Fitted', '', 'Oversized'], Layers: ['Fitted', '', 'Ove
 const GAP_COLORS = ['#151515', '#f4f4f4', '#8c8c8c', '#1c2541', '#d8c3a0', '#b08a5a', '#4a3426', '#5b5f3a', '#4a5d78', '#6d2232', '#9a4a2a', '#2f4a36', '#889f6e'];
 const GAP_MODES = ['classic', 'combos', 'street', 'formula', 'complementary', 'analogous']; // combos: buys that complete your style-note color combos
 
-const seeded = () => { let seed = 1; return () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32; };
+export const seeded = (seed = 1) => () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32;
 
 // How many outfits would this (not-yet-owned) piece make with the closet? rank: an outfit that works in 3 styles counts 3×.
 export function tryPiece(items, piece, { tries = 150, rand = seeded() } = {}) {

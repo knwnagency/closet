@@ -250,6 +250,10 @@ console.log('style notes ok');
   // weather: hot drops hoodies, cold drops shorts
   assert.ok(!m.forWeather(closet, 30).includes(hood)); assert.ok(m.forWeather([...closet, it('sh', 'Bottoms', '#151515', { kind: 'shorts' })], 5).every(p => p.kind !== 'shorts'));
   assert.ok(m.today(closet, { n: 5 }).length >= 2, 'today makes picks');
+  { const keys = r => m.today(closet, { n: 5, rand: m.seeded(r) }).map(o => o.key).join(';'); // v5.70: same seed, same picks (Today holds still till Shuffle)
+    assert.equal(keys(42), keys(42), 'seeded picks repeat'); const ids = closet.filter(p => p.cat === 'Bottoms').map(p => p.id);
+    const fresh = new Set(ids.slice(-1)), hits = f => m.today(closet, { n: 5, rand: m.seeded(7), fresh: f }).filter(o => o.items.some(p => fresh.has(p.id))).length;
+    assert.ok(hits(fresh) >= hits(null), 'pieces you haven\'t worn in weeks get a nudge'); }
   // background by color: grey mat with a white tee in the middle → mat gone, tee kept
   const w = 40, h = 40, d = new Uint8ClampedArray(w * h * 4);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4, inTee = x > 10 && x < 30 && y > 10 && y < 30, v = inTee ? 240 : 150 + (x % 3); d.set([v, v, v, 255], i); }
