@@ -39,10 +39,10 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } from './progress.js';
-import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade , openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS } from './match.js';
+import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade, isDenim, openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.20 · v5.67'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.20 · v5.68'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -1947,9 +1947,9 @@ const looksWith = it => {
 };
 let openItem = null;
 const vibes = it => [].concat(it.vibe ?? []);
-const showColor = it => { sheet.querySelector('#cname').textContent = colorName(it.color) + (isNeutral(it.color) ? ' · neutral' : '');
+const showColor = it => { sheet.querySelector('#cname').textContent = tone(it) + (isNeutral(it.color) ? ' · neutral' : '');
   sheet.querySelector('#cdot').style.background = it.color;
-  sheet.querySelectorAll('[data-setcolor]').forEach(b => b.classList.toggle('on', b.getAttribute('aria-label') === colorName(it.color))); };
+  sheet.querySelectorAll('[data-setcolor]').forEach(b => b.classList.toggle('on', b.getAttribute('aria-label') === tone(it))); };
 // Vibe: one tap picks the main vibe (replaces it). "Also works as" adds extras, so changing it never takes two taps.
 const vibeHtml = it => { const [main, ...also] = vibes(it), cap = v => v[0].toUpperCase() + v.slice(1);
   return `<span class="mono">Vibe</span><div class="vibes">${Object.keys(VIBES).map(v => `<button type="button" class="pill ${v === main ? 'on' : ''}" data-vibemain="${it.id}|${v}">${cap(v)}</button>`).join('')}</div>
@@ -2044,8 +2044,8 @@ function openSheet(id) {
     </div>
     <div class="incoll" id="vibebox">${vibeHtml(it)}</div>
     <div class="group">
-      <div class="cell"><span>Main color</span><span class="cname" id="cname">${colorName(it.color)}${isNeutral(it.color) ? ' · neutral' : ''}</span><i class="cdot" id="cdot" style="background:${it.color}"></i></div>
-      <div class="cpick" id="cpick">${Object.entries(SWATCHES).map(([n, h]) => `<button type="button" class="${colorName(it.color) === n ? 'on' : ''}" data-setcolor="${it.id}|${h}" aria-label="${n}"><i style="background:${h}"></i></button>`).join('')}<label aria-label="Pick any color"><i></i><input type="color" name="color" value="${it.color}"></label><button type="button" class="tag o drop" data-colordrop="${it.id}">Pick from photo</button></div>
+      <div class="cell"><span>Main color</span><span class="cname" id="cname">${tone(it)}${isNeutral(it.color) ? ' · neutral' : ''}</span><i class="cdot" id="cdot" style="background:${it.color}"></i></div>
+      <div class="cpick" id="cpick">${Object.entries(isDenim(it) ? { ...WASHES, ...SWATCHES } : SWATCHES).map(([n, h]) => `<button type="button" class="${tone(it) === n ? 'on' : ''}" data-setcolor="${it.id}|${h}" aria-label="${n}"><i style="background:${h}"></i></button>`).join('')}<label aria-label="Pick any color"><i></i><input type="color" name="color" value="${it.color}"></label><button type="button" class="tag o drop" data-colordrop="${it.id}">Pick from photo</button></div>
       <div id="accbox">${accHtml(it)}</div>
       <label class="cell"><span>Pattern</span><select name="pattern">${[['solid', 'Solid (plain)'], ['logo', 'Small logo'], ['graphic', 'Big graphic'], ['allover', 'All-over pattern']].map(([v, l]) => `<option value="${v}" ${patternOf(it) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="cell" ${patternOf(it) === 'allover' ? '' : 'hidden'} id="printrow"><span>Which pattern</span><select name="print"><option value="">From the name</option>${PRINTS.map(v => `<option ${it.print === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>

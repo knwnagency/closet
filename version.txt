@@ -1,2 +1,2 @@
-2026.11.20 · v5.67
-Which one? shows what you already own of that piece first, with a quick way to add one you just bought. Jeans come in washes (dark, mid, light). Pick a fit: a fitted white tee is new when yours are boxy. Each color says how many new outfits it makes, or that you already have it
+2026.11.20 · v5.68
+Jeans and other denim: the color picker on a piece now has dark wash, mid wash and light wash, and the piece shows its wash name
