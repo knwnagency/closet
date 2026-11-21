@@ -1,2 +1,2 @@
-2026.11.21 · v5.70
-Today holds still: your looks stay the same all day until you tap Shuffle (if the weather really changes, a chip offers new ones). Looks you swipe past count a little against them. Pieces you have not worn in 3+ weeks get a nudge, and the card says so. Windy days lean toward a zip-up or shell. After 5pm you see tomorrow's forecast with Plan it. Once a day it asks: work day or day off?
+2026.11.21 · v5.71
+Mark the fits that work: tap Got compliments on a favorite, on a day in the calendar, or on Today after you log your fit. Hits count double in your taste, come back first in Wear a favorite, and Favorites can sort hits first.

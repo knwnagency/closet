@@ -776,3 +776,4 @@
   /* v5.70: Today asks what kind of day it is; weather-changed chip; tomorrow link */
   .dayask { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; } .dayask .mono { margin-right: 4px; }
   .wxnew { margin: 0 0 12px; } .wxs .linkbtn { padding: 12px 0; margin: -12px 0; }
+.hitbtn svg { width: 16px; height: 16px; margin-right: 4px; vertical-align: -3px; } .hitbtn.on svg, .wxnew[data-hit] svg { fill: currentColor; } .wxnew svg { width: 14px; height: 14px; vertical-align: -2px; }

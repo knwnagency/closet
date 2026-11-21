@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade, isDenim, openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS, seeded } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.21 · v5.70'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.21 · v5.71'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -107,8 +107,9 @@ S.cs = {}; S.past = []; S.q = ''; S.sort = 'type'; S.calOff = 0; S.locks = new S
 const learnedDress = () => { const looks = [...S.saved, ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(p => p && p.cat !== 'Accessories')).filter(ps => ps.length);
   if (looks.length < 5) return 0; const avg = looks.reduce((t, ps) => t + ps.reduce((u, p) => u + dress(p), 0) / ps.length, 0) / looks.length; return Math.max(-0.6, Math.min(0.6, (avg - 1) * 0.5)); };
 const mySeason = () => COLOR_SEASONS[S.profile?.colorSeason] ?? null, colorsOn = () => !!mySeason() && !S.profile?.colorsOff; // Me › Settings › Your colors
-const tasteArgs = () => ({ shirtStack: !!S.profile?.shirtStack, liked: S.saved.map(s => s.ids), worn: S.log.map(l => l.ids), nope: S.nope, good: [...(colorsOn() ? mySeason().good : []), ...(S.profile?.colors?.good ?? [])], avoid: [...(colorsOn() ? mySeason().avoid : []), ...(S.profile?.colors?.avoid ?? [])],
-  skipped: S.profile?.skips ?? [], hair: S.profile?.hair ?? null, never: S.profile?.never ?? [], colorNo: S.profile?.colorNo ?? [], dressBias: (S.profile?.dressBias ?? 0) + learnedDress(), busyBias: S.profile?.busyBias ?? 0, likedColors: [...S.saved, ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean).map(p => colorName(p.color))) });
+// v5.71: a hit (you love it, or it got compliments) counts as liked twice, so Today leans on what works on you.
+const tasteArgs = () => ({ shirtStack: !!S.profile?.shirtStack, liked: [...S.saved, ...S.saved.filter(s => s.hit)].map(s => s.ids), worn: S.log.map(l => l.ids), nope: S.nope, good: [...(colorsOn() ? mySeason().good : []), ...(S.profile?.colors?.good ?? [])], avoid: [...(colorsOn() ? mySeason().avoid : []), ...(S.profile?.colors?.avoid ?? [])],
+  skipped: S.profile?.skips ?? [], hair: S.profile?.hair ?? null, never: S.profile?.never ?? [], colorNo: S.profile?.colorNo ?? [], dressBias: (S.profile?.dressBias ?? 0) + learnedDress(), busyBias: S.profile?.busyBias ?? 0, likedColors: [...S.saved, ...S.saved.filter(s => s.hit), ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean).map(p => colorName(p.color))) });
 const syncTaste = () => setTaste(tasteArgs());
 syncTaste();
 S.mode = MODES[S.profile?.mode] ? S.profile.mode : 'today'; // the style you picked last time; Today (a mix of every style) by default
@@ -253,7 +254,7 @@ const toast = (msg, act) => { const t = document.getElementById('toast'); t.text
   t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), act ? 5000 : 2400); };
 const svg = d => `<svg viewBox="0 0 24 24"><path d="${d}"/></svg>`;
 // one line-icon set (no emoji): lock, swap, rotate, close, filter, shuffle, sun, check, arrow
-const IC = { lock: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z', unlock: 'M7 11V8a5 5 0 0 1 9.6-2M5 11h14v10H5z', swap: 'M4 8h13l-3-3M20 16H7l3 3', rotate: 'M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5',
+const IC = { star: 'M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z', lock: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z', unlock: 'M7 11V8a5 5 0 0 1 9.6-2M5 11h14v10H5z', swap: 'M4 8h13l-3-3M20 16H7l3 3', rotate: 'M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5',
   x: 'M6 6l12 12M18 6 6 18', filter: 'M4 6h16M7 12h10M10 18h4', shuffle: 'M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3', check: 'M5 12l5 5 9-10', arrow: 'M5 12h14M13 6l6 6-6 6', plus: 'M12 5v14M5 12h14',
   camera: 'M4 8h4l2-3h4l2 3h4v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', copy: 'M8 8h12v12H8zM4 16V4h12', trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13', down: 'M6 9l6 6 6-6', hanger: 'M12 7a2 2 0 1 1 2-2c0 1-2 1.5-2 3m0 0L3 15a1.3 1.3 0 0 0 .8 2.4h16.4A1.3 1.3 0 0 0 21 15z', share: 'M12 15V3M8 7l4-4 4 4M5 12v8h14v-8' };
 const ic = k => svg(IC[k]);
@@ -781,7 +782,7 @@ function bestView() {
 }
 function favCard(o) { const title = lookName(o.items), worn = wornOn(dayKey(), o.key);
   return `<article class="outfit fav" style="--tint:${tintOf(o.items)}"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open ${esc(title)} in the builder">${flat(o.items)}</button>
-    <h3 class="display ftitle">${esc(title)}</h3><span class="mono wcount">${(b => b?.score != null ? `${matchPct(b.score)} match` : "doesn't pass your rules")(bestMode(o.items))}${(n => n ? ` · worn ${n}×` : '')(S.log.filter(l => l.key === o.key).length)}</span><div class="facts"><button class="btn sm ghost ${worn ? 'done' : ''}" data-wear="${o.key}">${worn ? 'Worn today ✓' : 'Wear today'}</button><button class="icon on" data-save="${o.key}" aria-label="Remove from favorites">${heart}</button><button class="icon cmpbtn ${S.cmp?.includes(o.key) ? 'on' : ''}" data-cmp="${o.key}" aria-label="Compare this look" aria-pressed="${!!S.cmp?.includes(o.key)}">⇆</button></div></article>`; }
+    <h3 class="display ftitle">${esc(title)}</h3><span class="mono wcount">${(b => b?.score != null ? `${matchPct(b.score)} match` : "doesn't pass your rules")(bestMode(o.items))}${(n => n ? ` · worn ${n}×` : '')(S.log.filter(l => l.key === o.key).length)}</span><div class="facts"><button class="btn sm ghost ${worn ? 'done' : ''}" data-wear="${o.key}">${worn ? 'Worn today ✓' : 'Wear today'}</button><button class="icon on" data-save="${o.key}" aria-label="Remove from favorites">${heart}</button><button class="btn sm ghost hitbtn ${isHit(o.key) ? 'on' : ''}" data-hit="${o.key}" aria-pressed="${isHit(o.key)}">${ic('star')} ${isHit(o.key) ? 'A hit' : 'Got compliments'}</button><button class="icon cmpbtn ${S.cmp?.includes(o.key) ? 'on' : ''}" data-cmp="${o.key}" aria-label="Compare this look" aria-pressed="${!!S.cmp?.includes(o.key)}">⇆</button></div></article>`; }
 function outfitCard(o) {
   const isSaved = S.saved.some(s => s.key === o.key);
   return `<article class="outfit"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in builder">${flat(o.items)}</button>
@@ -854,11 +855,11 @@ function outfitsView() {
   if (S.tab === 'saved') {
     const inC = o => !c || o.items.every(p => c.ids.includes(p.id)); // in a collection: only favorites made entirely from it
     const fq = (S.favQ ?? '').toLowerCase(), wornN = k => S.log.filter(l => l.key === k).length, lastW = k => Math.max(0, ...S.log.filter(l => l.key === k).map(l => l.at ?? 0));
-    const rated = new Map(), rate = o => rated.get(o.key) ?? rated.set(o.key, (bestMode(o.items)?.score ?? -5) + Math.min(2, wornN(o.key) * 0.4)).get(o.key);
-    const FS = { top: (a, b) => rate(b) - rate(a), new: (a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0), worn: (a, b) => wornN(b.key) - wornN(a.key), stale: (a, b) => lastW(a.key) - lastW(b.key) };
+    const rated = new Map(), rate = o => rated.get(o.key) ?? rated.set(o.key, (bestMode(o.items)?.score ?? -5) + Math.min(2, wornN(o.key) * 0.4) + (isHit(o.key) ? 1 : 0)).get(o.key);
+    const FS = { hits: (a, b) => isHit(b.key) - isHit(a.key) || rate(b) - rate(a), top: (a, b) => rate(b) - rate(a), new: (a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0), worn: (a, b) => wornN(b.key) - wornN(a.key), stale: (a, b) => lastW(a.key) - lastW(b.key) };
     const list = S.saved.map(s => ({ key: s.key, savedAt: s.savedAt, mode: s.mode, items: s.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items) && inC(o)) // a piece was deleted or re-tagged
       .filter(o => !fq || o.items.some(p => `${p.name} ${p.kind} ${colorName(p.color)} ${p.brand ?? ''}`.toLowerCase().includes(fq)) || (vibeOf(o)[0] ?? '').toLowerCase().includes(fq)).sort(FS[S.favSort ?? 'new']);
-    return top + (S.saved.length ? `<div class="ctools favtools"><input type="search" data-favq placeholder="search" value="${esc(S.favQ ?? '')}" aria-label="Search favorites"><select data-favsort aria-label="Sort favorites">${[['new', 'sort: newest'], ['top', 'sort: highest rated'], ['worn', 'sort: most worn'], ['stale', "sort: haven't worn lately"]].map(([k, l]) => `<option value="${k}" ${(S.favSort ?? 'new') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div><div class="row favacts"><button class="tag o" data-action="lookbook">Lookbook (PDF)</button>${S.cmp?.length === 1 ? '<span class="mono">Pick one more look to compare</span>' : '<span class="mono">Tap ⇆ on two looks to compare</span>'}</div>` : '')
+    return top + (S.saved.length ? `<div class="ctools favtools"><input type="search" data-favq placeholder="search" value="${esc(S.favQ ?? '')}" aria-label="Search favorites"><select data-favsort aria-label="Sort favorites">${[['new', 'sort: newest'], ['hits', 'sort: hits first'], ['top', 'sort: highest rated'], ['worn', 'sort: most worn'], ['stale', "sort: haven't worn lately"]].map(([k, l]) => `<option value="${k}" ${(S.favSort ?? 'new') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div><div class="row favacts"><button class="tag o" data-action="lookbook">Lookbook (PDF)</button>${S.cmp?.length === 1 ? '<span class="mono">Pick one more look to compare</span>' : '<span class="mono">Tap ⇆ on two looks to compare</span>'}</div>` : '')
       + (list.length ? `<p class="sub">Tap a look to change it in the builder.</p><div class="feed favs">${list.map(o => favCard(o)).join('')}</div>`
       : `<div class="empty"><h2>No favorites ${c ? `in ${esc(c.name)} ` : ''}yet</h2><p>Swipe right on a look in Today, or tap Save in the builder. Your keepers land here.</p><button class="btn" data-go="today">Go to Today</button></div>`);
   }
@@ -1024,7 +1025,8 @@ const lessHint = () => { const liked = new Set([...S.saved, ...S.log].flatMap(r 
 const favBack = () => { const day = dayKey(); if (S.profile?.fbSkip === day || dayHash(day + 'fb') % 2) return null; const cut = dayKey(new Date(Date.now() - 21 * 864e5));
   const lastWorn = k => S.log.filter(l => l.key === k).map(l => l.day.slice(0, 10)).sort().pop();
   const list = S.saved.filter(r => Date.now() - (r.savedAt ?? 0) > 14 * 864e5 && !(lastWorn(r.key) > cut)).map(r => ({ r, ps: r.ids.map(byId).filter(Boolean) })).filter(x => x.ps.length === x.r.ids.length && complete(x.ps) && x.ps.every(p => !p.dirty && !p.stored));
-  return list.length ? { ...list[dayHash(day + 'fbp') % list.length], last: lastWorn(list[dayHash(day + 'fbp') % list.length].r.key) } : null; };
+  const pick = list.filter(x => x.r.hit).length ? list.filter(x => x.r.hit) : list; // hits come back first
+  return pick.length ? { ...pick[dayHash(day + 'fbp') % pick.length], last: lastWorn(pick[dayHash(day + 'fbp') % pick.length].r.key) } : null; };
 const rediscover = (items, w) => { const day = dayKey(); if (S.profile?.rdSkip === day || dayHash(day + 'rd') % 3) return null;
   const pick = forWeather(items, dressTemp(w?.t), wetToday(), seasonNow()).filter(i => i.cat !== 'Accessories' && !(i.rate < 0) && (!i.wears || stale(i)));
   return pick.length ? pick[dayHash(day + 'pick') % pick.length] : null; };
@@ -1035,6 +1037,8 @@ const tomorrowLine = w => { if (new Date().getHours() < 17) return ''; const f =
 // v5.70: once a day, one tap: work day leans dressier, day off leans casual. Same as the Work / Errands filter, just asked up front
 const dayAsk = () => S.occ || S.src || S.profile?.dayOcc?.day === dayKey() || S.items.length < 10 ? '' :
   `<div class="dayask"><span class="mono">What's today?</span><button class="pill" data-dayocc="work">Work day</button><button class="pill" data-dayocc="errands">Day off</button><button class="pill" data-dayocc="">Skip</button></div>`;
+// After you log today's fit: one tap if it got compliments (or you just love it). Gone once marked.
+const hitAsk = () => { const l = S.log.find(x => x.day === dayKey()); return l && !isHit(l.key) && complete(l.ids.map(byId).filter(Boolean)) ? `<button class="tag o wxnew" data-hit="${l.key}">${ic('star')} Getting compliments on today's fit? Mark it a hit</button>` : ''; };
 function todayView() {
   const items = pool(), w = weatherNow(), c = S.coll && collById(S.coll);
   if (!MODES[S.mode] && S.mode !== 'today') S.mode = 'today';
@@ -1048,7 +1052,7 @@ function todayView() {
   const nf = (S.mode !== 'today' ? 1 : 0) + (S.occ ? 1 : 0) + (S.src ? 1 : 0);
   const top = `<header class="thead"><div><div class="eyebrow">${greet()} · ${date}</div><h1>Today</h1></div><div class="right">${streakChip()}<button class="favbtn" data-favs aria-label="Favorites, ${S.saved.length} saved">${heart}<b>${S.saved.length}</b></button></div></header>
     ${w ? `<div class="wxcard"><span class="wxi">${svg(RAINY(w.code) ? 'M7 15a4 4 0 1 1 .8-7.9A5 5 0 0 1 17.5 9 3.5 3.5 0 0 1 17 16H7zM9 19l-1 2M13 19l-1 2M17 19l-1 2' : w.code >= 2 ? 'M7 18a4 4 0 1 1 .8-7.9A5 5 0 0 1 17.5 11 3.5 3.5 0 0 1 17 18z' : (h => h >= 18 || h < 6)(new Date().getHours()) ? 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z' : 'M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z')}</span>
-      <span class="wxt"><b>${tempText(w.air ?? w.t)}</b><small>feels ${tempText(w.t)}${w.hi != null && w.lo != null ? ` · ${tempText(w.hi)} / ${tempText(w.lo)}` : ''}</small></span><span class="wxl">${esc(wxLine(w))}${(sn => sn && items.length > forWeather(items, null, false, sn).length ? `<small class="wxs">${sn === 'cold' ? "Fall/winter: no shorts unless it's hot" : "Summer: no heavy coats unless it's cold"}</small>` : '')(seasonNow())}${tomorrowLine(w)}</span></div>` : ''}${w && S.deck?.day === dayKey() && S.deck.band && S.deck.band !== band(w) && !S.src ? `<button class="tag o wxnew" data-action="shuffle">Weather changed · ${ic('shuffle')} new looks</button>` : ''}${dayAsk()}
+      <span class="wxt"><b>${tempText(w.air ?? w.t)}</b><small>feels ${tempText(w.t)}${w.hi != null && w.lo != null ? ` · ${tempText(w.hi)} / ${tempText(w.lo)}` : ''}</small></span><span class="wxl">${esc(wxLine(w))}${(sn => sn && items.length > forWeather(items, null, false, sn).length ? `<small class="wxs">${sn === 'cold' ? "Fall/winter: no shorts unless it's hot" : "Summer: no heavy coats unless it's cold"}</small>` : '')(seasonNow())}${tomorrowLine(w)}</span></div>` : ''}${w && S.deck?.day === dayKey() && S.deck.band && S.deck.band !== band(w) && !S.src ? `<button class="tag o wxnew" data-action="shuffle">Weather changed · ${ic('shuffle')} new looks</button>` : ''}${hitAsk()}${dayAsk()}
     <div class="tbar">${capBtn()}${w ? `<span class="tag" hidden title="${esc(wxLine(w))}">${tempText(w.t)} ${esc(WX[w.code] ?? '')}</span>${w.lo != null && w.lo < w.t - 6 && w.hi == null ? `<span class="tag o"><span class="nc">${tempText(w.lo)}</span> later</span>` : ''}` : `<button class="tag o" data-action="weather">+ Weather</button>`}
       <span class="sp"></span><button class="tag o" data-action="filters" aria-label="Filter">${ic('filter')}${nf ? ` ${nf}` : ''}</button><button class="tag o" data-action="shuffle" aria-label="Shuffle">${ic('shuffle')}</button></div>`;
   if (!complete(items)) return top + `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs at least a top, bottoms and shoes.` : 'Add at least one top, one bottom and one pair of shoes. Then this is where your looks land every morning.'}</p>
@@ -1064,7 +1068,7 @@ function todayView() {
   if (rn && rnDay !== dayKey()) { S.profile = { k: 'me', ...S.profile, renameDay: dayKey() }; put('profile', S.profile); }
   const rd = !tip && rediscover(items, w), days = rd && Math.round((Date.now() - (rd.lastWorn ?? rd.createdAt ?? Date.now())) / 864e5);
   const rdCard = rd ? `<div class="nudge glass rd"><button data-open="${rd.id}" aria-label="Open ${esc(rd.name)}"><img src="${src(rd)}" alt=""></button><div><span class="mono">${rd.wears ? `Not worn in ${days} days` : 'Never worn yet'}</span><b>${esc(rd.name)}</b></div><button class="tag" data-quick="made|${rd.id}">See looks</button><button class="icon" data-action="rdskip" aria-label="Not today">${xIcon}</button></div>` : '';
-  const fb = !tip && !rd && favBack(), fbCard = fb ? `<div class="nudge glass rd"><button class="wthumb" data-buildkey="${fb.r.key}" aria-label="Open this favorite">${flat(fb.ps)}</button><div><span class="mono">${fb.last ? `Saved, not worn since ${new Date(fb.last + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Saved, never worn'}</span><b>Wear a favorite</b></div><button class="tag" data-wear="${fb.r.key}">Wear today</button><button class="icon" data-action="fbskip" aria-label="Not today">${xIcon}</button></div>` : '';
+  const fb = !tip && !rd && favBack(), fbCard = fb ? `<div class="nudge glass rd"><button class="wthumb" data-buildkey="${fb.r.key}" aria-label="Open this favorite">${flat(fb.ps)}</button><div><span class="mono">${fb.last ? `Saved, not worn since ${new Date(fb.last + 'T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Saved, never worn'}</span><b>${fb.r.hit ? 'Wear a hit again' : 'Wear a favorite'}</b></div><button class="tag" data-wear="${fb.r.key}">Wear today</button><button class="icon" data-action="fbskip" aria-label="Not today">${xIcon}</button></div>` : '';
   const ls = S.profile?.lastSeen, lsPs = ls?.day === prevDay(dayKey()) && !S.log.some(l => l.day.slice(0, 10) === ls.day) && ls.ids.map(byId).filter(Boolean);
   const woreCard = lsPs?.length && lsPs.length === ls.ids.length ? `<div class="nudge glass rd"><span class="wthumb">${flat(lsPs)}</span><div><span class="mono">Yesterday's pick</span><b>Did you wear it?</b></div><button class="tag" data-woreit="yes">Yes</button><button class="tag o" data-woreit="no">No</button></div>` : '';
   const below = tip + woreCard + rdCard + fbCard + bk + (rn ? `<button class="nudge glass" data-action="rename"><div><span class="mono">${plain} pieces named just by type</span><b>Name them so Today's picks read like your closet</b></div><span class="plus">Go →</span></button>` : '') + (lh ? `<div class="nudge glass"><div><span class="mono">You keep passing on looks with it</span><b>Suggest the ${esc(lh.name.toLowerCase())} less?</b></div><button class="tag" data-rate="${lh.id}|-1">Less</button><button class="tag o" data-rate="${lh.id}|0">Keep</button></div>` : '');
@@ -1113,7 +1117,11 @@ function openFilters() {
 
 // Builder: one card per slot (like Cladwell). Tap a card or Swap to pick from a list, best matches first.
 const ROWS = ['Layers', 'Tops', 'Bottoms', 'Shoes'], EXTRAS = ['Hat', 'Belt', 'Accessory', 'Extra'];
-const isFav = k => S.saved.some(s => s.key === k);
+const isFav = k => S.saved.some(s => s.key === k), isHit = k => !!S.saved.find(s => s.key === k)?.hit;
+// A hit lives on the favorite record (synced with it). Marking an unsaved look a hit saves it too.
+async function toggleHit(k) { let r = S.saved.find(s => s.key === k);
+  if (r) r.hit = !r.hit; else { const o = outfitByKey(k); if (!o || !complete(o.items)) return; r = { key: k, ids: o.items.map(x => x.id), mode: o.mode ?? bestMode(o.items)?.mode ?? 'custom', savedAt: Date.now(), hit: true }; S.saved.unshift(r); }
+  await put('outfits', r); syncTaste(); toast(r.hit ? 'Marked a hit. Today will lean on it' : 'No longer a hit'); }
 // Today's picks, one big card at a time: swipe for the next. Each card says why it fits the weather.
 const wxWhy = o => { const w = weatherNow(); if (!w) return '';
   const rain = wetToday(w), why = w.t < 12 ? (o.items.some(p => p.cat === 'Layers') ? 'layered up' : 'warmest pieces') : w.t >= 24 ? 'light, nothing heavy' : 'mild, anything goes';
@@ -1561,12 +1569,13 @@ function calView() {
 // A day: what you wore (change or remove it), or pick a look to log. Future days go to the planner.
 function openDay(k) {
   if (k > dayKey()) return openPlanPicker(k);
+  openDay.k = k;
   const l = S.log.find(x => x.day === k), items = l?.ids.map(byId).filter(Boolean) ?? [];
   const seen = new Set(), list = [...S.saved, ...wornLooks()].filter(r => !seen.has(r.key) && seen.add(r.key) && r.key !== l?.key && complete(r.ids.map(byId).filter(Boolean)));
   const date = new Date(k + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
   showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${date}${l?.t != null ? ` · ${tempText(l.t)}` : ''}</div><h2>${l ? 'You wore' : 'Log a look'}</h2></div>${closeBtn}</div>
     ${l && complete(items) ? `<div class="dayview">${hasPic(l) ? `<img class="selfie big" src="${selfieSrc(l)}" alt="Photo of the outfit">` : ''}<button class="slotbtn" data-buildkey="${l.key}" aria-label="Open in builder">${flat(items)}</button></div>
-      <div class="row"><button class="btn ghost sm" data-selfie="${k}">${ic('camera')} ${hasPic(l) ? 'New photo' : 'Add a fit pic'}</button><button class="btn ghost sm" data-unlog="${k}">Remove</button></div><p class="pickh">Or change it to</p>` : ''}
+      <div class="row"><button class="btn ghost sm" data-selfie="${k}">${ic('camera')} ${hasPic(l) ? 'New photo' : 'Add a fit pic'}</button><button class="btn ghost sm hitbtn ${isHit(l.key) ? 'on' : ''}" data-hit="${l.key}" aria-pressed="${isHit(l.key)}">${ic('star')} ${isHit(l.key) ? 'A hit' : 'Got compliments'}</button><button class="btn ghost sm" data-unlog="${k}">Remove</button></div><p class="pickh">Or change it to</p>` : ''}
     ${S.log.filter(x => x.day.startsWith(k + '#')).map(x => `<p class="pickh">Also wore</p><div class="dayview"><button class="slotbtn" data-buildkey="${x.key}">${flat(x.ids.map(byId).filter(Boolean))}</button></div><div class="row"><button class="btn ghost sm" data-unlog="${x.day}">Remove</button></div>`).join('')}
     ${list.length ? `<div class="picklooks">${list.map(r => `<button data-logpick="${k}|${r.key}" aria-label="Log this look">${flat(r.ids.map(byId).filter(Boolean))}</button>`).join('')}</div>` : '<p class="sub">Favorite or build a few looks first, then log them here.</p>'}</div>`);
   openDay.list = list;
@@ -2961,6 +2970,7 @@ ${list.map(i => `${i.id} · now called "${i.name}" · ${i.kind || i.cat} · ${co
     if (S.build) S.build = S.build.filter(p => p.id !== ds.del);
     S.ideas = null; sheet.close(); render();
   }
+  else if (ds.hit) { await toggleHit(ds.hit); render(); if (sheet.open) openDay(openDay.k); } // only the day sheet has a hit button
   else if (ds.save) {
     const i = S.saved.findIndex(s => s.key === ds.save);
     if (i >= 0) { await del('outfits', ds.save); S.saved.splice(i, 1); }
