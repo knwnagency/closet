@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade, isDenim, openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.20 · v5.68'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.21 · v5.69'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -315,9 +315,9 @@ let wxBusy = false;
 async function refreshWeather() {
   const w = S.profile.wx; if (wxBusy) return; wxBusy = true;
   try {
-    const r = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${w.lat}&longitude=${w.lon}&current=apparent_temperature,weather_code&daily=apparent_temperature_max,apparent_temperature_min,weather_code&forecast_days=14&timezone=auto`)).json();
-    const daily = Object.fromEntries(r.daily.time.map((d, i) => [d, { t: r.daily.apparent_temperature_max[i], code: r.daily.weather_code[i] }])); // planned days dress for their own forecast
-    Object.assign(w, { t: r.current.apparent_temperature, code: r.current.weather_code, lo: r.daily.apparent_temperature_min?.[0] ?? null, hi: r.daily.apparent_temperature_max[0], daily, at: Date.now() }); await put('profile', S.profile);
+    const r = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${w.lat}&longitude=${w.lon}&current=temperature_2m,apparent_temperature,weather_code&daily=apparent_temperature_max,apparent_temperature_min,weather_code,precipitation_probability_max&forecast_days=14&timezone=auto`)).json();
+    const daily = Object.fromEntries(r.daily.time.map((d, i) => [d, { t: r.daily.apparent_temperature_max[i], code: r.daily.weather_code[i], pop: r.daily.precipitation_probability_max?.[i] ?? null }])); // planned days dress for their own forecast
+    Object.assign(w, { t: r.current.apparent_temperature, air: r.current.temperature_2m, code: r.current.weather_code, lo: r.daily.apparent_temperature_min?.[0] ?? null, hi: r.daily.apparent_temperature_max[0], daily, at: Date.now() }); await put('profile', S.profile);
     if (S.mode === 'today') S.ideas = null; if (S.view === 'today' || S.view === 'outfits') bgRender();
   } catch (e) { console.warn(e); } finally { wxBusy = false; }
 }
@@ -328,8 +328,11 @@ function askWeather() {
   }, () => toast('Location blocked. Allow it in Settings to use weather'), { maximumAge: 36e5, timeout: 15000 });
 }
 // one line per kind of weather, shown under Today's stickers
-const wxLine = w => RAINY(w.code) ? 'Rain day: boots or dark sneakers, a shell on top, no suede.' : w.code >= 71 && w.code <= 77 ? 'Snow: boots, a real coat, layers you can peel.' : w.t >= 28 ? 'Hot: short sleeves, light colors, nothing heavy.' : w.t < 5 ? 'Cold: a coat over a knit, closed shoes.' : w.t < 12 ? 'Crisp: one good layer does it.' : w.lo != null && w.lo < w.t - 6 ? 'Mild now, cooler later: bring a layer.' : 'Mild: anything goes.';
+const wxLine = w => RAINY(w.code) ? 'Raining now: boots or dark sneakers, a shell on top, no suede.' : wetToday(w) ? `Rain later today${rainOdds(w)}: boots or dark sneakers, bring a shell, no suede.` : w.code >= 71 && w.code <= 77 ? 'Snow: boots, a real coat, layers you can peel.' : w.t >= 28 ? 'Hot: short sleeves, light colors, nothing heavy.' : w.t < 5 ? 'Cold: a coat over a knit, closed shoes.' : w.t < 12 ? 'Crisp: one good layer does it.' : w.lo != null && w.lo < w.t - 6 ? 'Mild now, cooler later: bring a layer.' : 'Mild: anything goes.';
 const RAINY = c => (c >= 51 && c <= 67) || (c >= 80 && c <= 99);
+// v5.69: rain counts for the whole day, not just this hour: dry at 8am with showers at 3pm still gets boots, a shell, no suede
+const wetToday = (w = S.profile?.wx) => { const d = w?.daily?.[dayKey()]; return !!w && (RAINY(w.code ?? 0) || RAINY(d?.code ?? 0) || (d?.pop ?? 0) >= 50); };
+const rainOdds = w => (p => p ? ` (${p}%)` : '')(w?.daily?.[dayKey()]?.pop);
 // The temperature to dress for: from 4pm on, tonight's low counts too ("30°F later"); "too cold / too warm" feedback shifts it (S.profile.tempBias).
 const dressTemp = t => { if (t == null) return t; const w = weatherNow(), eve = new Date().getHours() >= 16 && w?.lo != null; return (eve ? Math.min(t, w.lo) : t) - (S.profile?.tempBias ?? 0); };
 // Twice a year: store what the season keeps out (shorts in winter, puffers in summer), then offer them back when it flips.
@@ -339,7 +342,7 @@ const seasonSwap = () => { const sn = seasonNow(); if (!sn) return null; const k
 // Northern-hemisphere months unless your weather spot is south of the equator. April and October: weather only.
 const seasonNow = () => { const o = S.profile?.season; if (o === 'off') return null; if (o === 'cold' || o === 'warm') return o; const m = (new Date().getMonth() + ((S.profile?.wx?.lat ?? 1) < 0 ? 6 : 0)) % 12; return m >= 10 || m <= 2 ? 'cold' : m >= 4 && m <= 8 ? 'warm' : null; };
 const dayHash = d => [...d].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7); // pattern on pattern: a set day in three, so Shuffle doesn't re-roll it
-const todayPicks = (items, t) => today(items, { t: dressTemp(t), season: seasonNow(), twoShirts: !!S.profile?.twoShirts, patternDay: dayHash(dayKey()) % 3 === 0, alone: !!S.profile?.hoodieAlone, like: S.like?.map(byId).filter(Boolean), rain: RAINY(S.profile?.wx?.code ?? 0), occasion: S.occ, n: 12, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
+const todayPicks = (items, t) => today(items, { t: dressTemp(t), season: seasonNow(), twoShirts: !!S.profile?.twoShirts, patternDay: dayHash(dayKey()) % 3 === 0, alone: !!S.profile?.hoodieAlone, like: S.like?.map(byId).filter(Boolean), rain: wetToday(), occasion: S.occ, n: 12, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
 
 // Gaps are slow-ish to compute, so cache until something about the closet changes.
 const sig = () => S.items.map(i => [i.id, i.cat, i.color, i.fit, i.vibe, i.patterned, i.name, i.kind].join()).join('|');
@@ -758,7 +761,7 @@ async function printLookbook() {
 }
 // Favorites › Best: your top 20 by match score, from the capsule you're in (or everything). Cached until your pieces change.
 function bestView() {
-  const w = weatherNow(), t = dressTemp(w?.t), items = forWeather(pool(), t, RAINY(S.profile?.wx?.code ?? 0), seasonNow()), c = S.coll && collById(S.coll); // same weather and season as Today: no shorts in November
+  const w = weatherNow(), t = dressTemp(w?.t), items = forWeather(pool(), t, wetToday(), seasonNow()), c = S.coll && collById(S.coll); // same weather and season as Today: no shorts in November
   if (!complete(items)) return `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs` : 'Add'} at least a top, bottoms and shoes.</p></div>`;
   const sig = [VERSION, S.coll ?? '', closetVer, items.length, !!S.profile?.hoodieAlone, seasonNow(), t == null ? '' : Math.round(t / 4)].join('|');
   if (S.best?.sig !== sig) S.best = { sig, looks: timed('Best', () => topLooks(items, 20)) }; // its own list: outfitByKey finds these, other screens keep theirs
@@ -916,7 +919,7 @@ function openCapsules() {
 // ---------- Today: one card at a time, stable for the day ----------
 // The deck is saved per day + filters + weather band, so leaving and coming back shows the same looks. Shuffle makes a new one.
 const greet = () => { const h = new Date().getHours(); return h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
-const band = w => w ? (w.t < 12 ? 'cold' : w.t >= 24 ? 'hot' : 'mild') + (RAINY(w.code) ? '-rain' : '') : 'none';
+const band = w => w ? (w.t < 12 ? 'cold' : w.t >= 24 ? 'hot' : 'mild') + (wetToday(w) ? '-rain' : '') : 'none';
 const deckSig = () => ['v2', VERSION, colorsOn() && S.profile.colorSeason, !!S.profile?.hoodieAlone, !!S.profile?.twoShirts, !!S.profile?.shirtStack, S.profile?.season ?? '', dayKey(), S.items.length, new Date().getHours() >= 16, S.profile?.tempBias ?? 0, S.profile?.dressBias ?? 0, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', band(weatherNow())].join('|');
 function getDeck(items) {
   if (S.deck?.sig === deckSig()) return S.deck;
@@ -995,7 +998,7 @@ function deckCard(o, i, n, cls, used) {
     <div class="dtop"><span class="mono">${pad2(i + 1)} / ${pad2(n)}</span>${worn ? '<span class="tag hot">Worn today</span>' : isFav(o.key) ? '<span class="tag">Saved</span>' : ''}</div>
     <h2 class="display dtitle">${esc(title)}</h2>${(why => why ? `<p class="dwhy">${esc(why)}</p>` : '')(whyLine(o, title, cmb))}
     <button class="flatwrap" data-buildkey="${o.key}" aria-label="Open this look in the builder">${flat(o.items)}</button>
-    <div class="tags dtags">${tags}${w && RAINY(w.code) && o.items.some(rainy) ? '<span class="tag">rain-ready</span>' : ''}<button class="tag o lookmore" data-lookmenu="${o.key}" aria-label="More for this look">•••</button></div></article>`;
+    <div class="tags dtags">${tags}${w && wetToday(w) && o.items.some(rainy) ? '<span class="tag">rain-ready</span>' : ''}<button class="tag o lookmore" data-lookmenu="${o.key}" aria-label="More for this look">•••</button></div></article>`;
 }
 // A piece in 4+ looks you passed on ("Not for me") and in none you saved or wore: offer to suggest it less. Asked once per piece.
 const lessHint = () => { const liked = new Set([...S.saved, ...S.log].flatMap(r => r.ids)), n = new Map();
@@ -1009,7 +1012,7 @@ const favBack = () => { const day = dayKey(); if (S.profile?.fbSkip === day || d
   const list = S.saved.filter(r => Date.now() - (r.savedAt ?? 0) > 14 * 864e5 && !(lastWorn(r.key) > cut)).map(r => ({ r, ps: r.ids.map(byId).filter(Boolean) })).filter(x => x.ps.length === x.r.ids.length && complete(x.ps) && x.ps.every(p => !p.dirty && !p.stored));
   return list.length ? { ...list[dayHash(day + 'fbp') % list.length], last: lastWorn(list[dayHash(day + 'fbp') % list.length].r.key) } : null; };
 const rediscover = (items, w) => { const day = dayKey(); if (S.profile?.rdSkip === day || dayHash(day + 'rd') % 3) return null;
-  const pick = forWeather(items, dressTemp(w?.t), RAINY(S.profile?.wx?.code ?? 0), seasonNow()).filter(i => i.cat !== 'Accessories' && !(i.rate < 0) && (!i.wears || stale(i)));
+  const pick = forWeather(items, dressTemp(w?.t), wetToday(), seasonNow()).filter(i => i.cat !== 'Accessories' && !(i.rate < 0) && (!i.wears || stale(i)));
   return pick.length ? pick[dayHash(day + 'pick') % pick.length] : null; };
 function todayView() {
   const items = pool(), w = weatherNow(), c = S.coll && collById(S.coll);
@@ -1023,7 +1026,7 @@ function todayView() {
   const nf = (S.mode !== 'today' ? 1 : 0) + (S.occ ? 1 : 0) + (S.src ? 1 : 0);
   const top = `<header class="thead"><div><div class="eyebrow">${greet()} · ${date}</div><h1>Today</h1></div><div class="right">${streakChip()}<button class="favbtn" data-favs aria-label="Favorites, ${S.saved.length} saved">${heart}<b>${S.saved.length}</b></button></div></header>
     ${w ? `<div class="wxcard"><span class="wxi">${svg(RAINY(w.code) ? 'M7 15a4 4 0 1 1 .8-7.9A5 5 0 0 1 17.5 9 3.5 3.5 0 0 1 17 16H7zM9 19l-1 2M13 19l-1 2M17 19l-1 2' : w.code >= 2 ? 'M7 18a4 4 0 1 1 .8-7.9A5 5 0 0 1 17.5 11 3.5 3.5 0 0 1 17 18z' : (h => h >= 18 || h < 6)(new Date().getHours()) ? 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z' : 'M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z')}</span>
-      <span class="wxt"><b>${tempText(w.t)}</b>${w.hi != null && w.lo != null ? `<small>${tempText(w.hi)} / ${tempText(w.lo)}</small>` : ''}</span><span class="wxl">${esc(wxLine(w))}${(sn => sn && items.length > forWeather(items, null, false, sn).length ? `<small class="wxs">${sn === 'cold' ? "Fall/winter: no shorts unless it's hot" : "Summer: no heavy coats unless it's cold"}</small>` : '')(seasonNow())}</span></div>` : ''}
+      <span class="wxt"><b>${tempText(w.air ?? w.t)}</b><small>feels ${tempText(w.t)}${w.hi != null && w.lo != null ? ` · ${tempText(w.hi)} / ${tempText(w.lo)}` : ''}</small></span><span class="wxl">${esc(wxLine(w))}${(sn => sn && items.length > forWeather(items, null, false, sn).length ? `<small class="wxs">${sn === 'cold' ? "Fall/winter: no shorts unless it's hot" : "Summer: no heavy coats unless it's cold"}</small>` : '')(seasonNow())}</span></div>` : ''}
     <div class="tbar">${capBtn()}${w ? `<span class="tag" hidden title="${esc(wxLine(w))}">${tempText(w.t)} ${esc(WX[w.code] ?? '')}</span>${w.lo != null && w.lo < w.t - 6 && w.hi == null ? `<span class="tag o"><span class="nc">${tempText(w.lo)}</span> later</span>` : ''}` : `<button class="tag o" data-action="weather">+ Weather</button>`}
       <span class="sp"></span><button class="tag o" data-action="filters" aria-label="Filter">${ic('filter')}${nf ? ` ${nf}` : ''}</button><button class="tag o" data-action="shuffle" aria-label="Shuffle">${ic('shuffle')}</button></div>`;
   if (!complete(items)) return top + `<div class="empty"><h2>Need a few more pieces</h2><p>${c ? `${esc(c.name)} needs at least a top, bottoms and shoes.` : 'Add at least one top, one bottom and one pair of shoes. Then this is where your looks land every morning.'}</p>
@@ -1091,9 +1094,9 @@ const ROWS = ['Layers', 'Tops', 'Bottoms', 'Shoes'], EXTRAS = ['Hat', 'Belt', 'A
 const isFav = k => S.saved.some(s => s.key === k);
 // Today's picks, one big card at a time: swipe for the next. Each card says why it fits the weather.
 const wxWhy = o => { const w = weatherNow(); if (!w) return '';
-  const rain = RAINY(w.code), why = w.t < 12 ? (o.items.some(p => p.cat === 'Layers') ? 'layered up' : 'warmest pieces') : w.t >= 24 ? 'light, nothing heavy' : 'mild, anything goes';
+  const rain = wetToday(w), why = w.t < 12 ? (o.items.some(p => p.cat === 'Layers') ? 'layered up' : 'warmest pieces') : w.t >= 24 ? 'light, nothing heavy' : 'mild, anything goes';
   const later = w.lo != null && w.lo < w.t - 6 && w.t >= 12 ? ', bring a layer for later' : '';
-  return `${tempText(w.t)}${rain ? ' and rain' : ''} · ${why}${rain ? ', no suede' : ''}${later}`; };
+  return `${tempText(w.t)}${rain ? (RAINY(w.code) ? ' and rain' : ', rain later') : ''} · ${why}${rain ? ', no suede' : ''}${later}`; };
 const actionsHtml = o => { const k = keyOf(o), worn = wornOn(dayKey(), k), off = complete(o) ? '' : 'disabled';
   return `<div class="actions" id="bactions"><button class="btn ghost sm ${isFav(k) ? 'on' : ''}" data-save="${k}" ${off}>${heart} ${isFav(k) ? 'Saved' : 'Save'}</button><button class="btn ghost sm" data-action="planthis" ${off}>Plan</button><button class="btn sm ${worn ? 'done' : 'go'}" data-wear="${k}" ${off}>${worn ? 'Worn today ✓' : 'Wear today'}</button></div>`; };
 // Find brands (Me): reads each piece's photo once for a logo or team, then lists what it found for you to confirm.
@@ -1121,7 +1124,7 @@ function openBrands() {
 // Skipped pieces (Me): 8 fresh sets of today's looks, with Today's own weather, season and settings. Every piece that lands in none,
 // and the one main reason, with a fix. Pieces sitting out on purpose (laundry, stored, season, capsule) are listed apart. Cached for the day.
 async function rareReport() {
-  const w = weatherNow(), t = dressTemp(w?.t), rain = RAINY(S.profile?.wx?.code ?? 0), items = pool(), sn = seasonNow();
+  const w = weatherNow(), t = dressTemp(w?.t), rain = wetToday(), items = pool(), sn = seasonNow();
   const sig = [VERSION, dayKey(), S.coll ?? '', closetVer, S.items.length, !!S.profile?.hoodieAlone, sn, t == null ? '' : Math.round(t / 4)].join('|');
   if (S.rare?.sig === sig) return S.rare;
   const t0 = performance.now(), ok = forWeather(items, t, rain, sn);
@@ -1162,7 +1165,7 @@ async function openRareAll() {
 // "How often does it show up?": four fresh Today sets with today's weather, how many looks it lands in vs the rest of its kind, and why.
 async function openRare(it) {
   toast('Checking…'); await new Promise(r => setTimeout(r, 30));
-  const w = weatherNow(), t = dressTemp(w?.t), rain = RAINY(S.profile?.wx?.code ?? 0), items = pool(), why = [];
+  const w = weatherNow(), t = dressTemp(w?.t), rain = wetToday(), items = pool(), why = [];
   let hits = 0, peers = 0, total = 0; const peer = items.filter(i => i.cat === it.cat && i !== it);
   if (items.includes(it)) for (let r = 0; r < 4; r++) { const deck = today(items, { t, rain, season: seasonNow(), alone: !!S.profile?.hoodieAlone, n: 12 }); total += deck.length; hits += deck.filter(o => o.items.includes(it)).length; peers += deck.reduce((s, o) => s + o.items.filter(p => peer.includes(p)).length, 0); }
   const avg = peer.length ? peers / peer.length : 0;

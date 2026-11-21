@@ -1,2 +1,2 @@
-2026.11.20 · v5.68
-Jeans and other denim: the color picker on a piece now has dark wash, mid wash and light wash, and the piece shows its wash name
+2026.11.21 · v5.69
+Rain counts for the whole day: if showers are coming later, Today says so (with the odds) and leans toward boots and a shell, no suede. The big number is now the real temperature, like your weather app, with feels like underneath (that is what it dresses you for)
