@@ -777,3 +777,8 @@
   .dayask { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; } .dayask .mono { margin-right: 4px; }
   .wxnew { margin: 0 0 12px; } .wxs .linkbtn { padding: 12px 0; margin: -12px 0; }
 .hitbtn svg { width: 16px; height: 16px; margin-right: 4px; vertical-align: -3px; } .hitbtn.on svg, .wxnew[data-hit] svg { fill: currentColor; } .wxnew svg { width: 14px; height: 14px; vertical-align: -2px; }
+.fitcar { display: grid; grid-auto-flow: column; grid-auto-columns: 86%; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-bottom: 10px; } .fitcar::-webkit-scrollbar { display: none; }
+.fitcar.sm { grid-auto-columns: 100%; gap: 6px; margin-bottom: 0; } .fitcar > figure { position: relative; margin: 0; min-width: 0; scroll-snap-align: start; }
+.fitcar .selfie { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--r); }
+.fitcar .fcn { position: absolute; top: 8px; left: 8px; padding: 3px 8px; border-radius: 999px; background: rgb(255 255 255 / .88); color: #1a1917; font-size: 11px; pointer-events: none; }
+.fitlist { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13px; } .fitlist li { display: flex; align-items: center; gap: 6px; min-width: 0; } .fitlist i { flex: none; width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }

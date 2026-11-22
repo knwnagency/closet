@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade, isDenim, openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS, seeded } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.21 · v5.71'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.22 · v5.72'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -749,8 +749,13 @@ async function lookbookPages(looks) {
     for (const [k, o] of group.entries()) {
       const ox = pad + (k % 2) * (cw + gap), oy = head + Math.floor(k / 2) * (ch + capH + gap), by = bySlot(o.items), L = flatLayout(Object.keys(by));
       x.fillStyle = '#f0efec'; x.beginPath(); x.roundRect ? x.roundRect(ox, oy, cw, ch, 24) : x.rect(ox, oy, cw, ch); x.fill();
+      // v5.72: a look with a fit pic: the photo fills the tile and the laid-out outfit sits in a card in the corner
+      const pic = picFor(o.key), s2 = pic ? 0.42 : 1, gx = pic ? ox + cw - cw * s2 - 18 : ox, gy = pic ? oy + ch - ch * s2 - 18 : oy, gw = cw * s2, gh = ch * s2;
+      if (pic) { try { const im = await createImageBitmap(pic.selfie), k3 = Math.max(cw / im.width, ch / im.height); x.save(); x.beginPath(); x.roundRect ? x.roundRect(ox, oy, cw, ch, 24) : x.rect(ox, oy, cw, ch); x.clip();
+        x.drawImage(im, ox + (cw - im.width * k3) / 2, oy + (ch - im.height * k3) / 2, im.width * k3, im.height * k3); x.restore(); im.close?.();
+        x.fillStyle = '#f0efec'; x.beginPath(); x.roundRect ? x.roundRect(gx, gy, gw, gh, 16) : x.rect(gx, gy, gw, gh); x.fill(); } catch (e) { console.warn(e); } }
       for (const [sl, p] of Object.entries(by)) { try {
-        const [bx, bY, bw, bh] = L[sl], box = { x: ox + bx / 100 * cw, y: oy + bY / 100 * ch, w: bw / 100 * cw, h: bh / 100 * ch }, bmp = await createImageBitmap(await imgOf(p));
+        const [bx, bY, bw, bh] = L[sl], box = { x: gx + bx / 100 * gw, y: gy + bY / 100 * gh, w: bw / 100 * gw, h: bh / 100 * gh }, bmp = await createImageBitmap(await imgOf(p));
         const k2 = Math.min(box.w / bmp.width, box.h / bmp.height), dw = bmp.width * k2, dh = bmp.height * k2, al = ALIGN[sl];
         x.drawImage(bmp, box.x + (box.w - dw) / 2, al === '50% 100%' ? box.y + box.h - dh : al === '50% 0' ? box.y : box.y + (box.h - dh) / 2, dw, dh); bmp.close?.();
       } catch (e) { console.warn(e); } }
@@ -780,9 +785,9 @@ function bestView() {
       <h3 class="display ftitle">${esc(lookName(o.items))}</h3><button class="mono wcount whybtn" data-whykey="${o.key}" aria-label="Why it scores ${matchPct(o.score)}">${matchPct(o.score)} match · ${esc(MODES[o.mode]?.label ?? '')} · why</button>
       <div class="facts"><button class="btn sm ghost" data-wear="${o.key}">Wear today</button><button class="icon ${saved ? 'on' : ''}" data-save="${o.key}" aria-label="${saved ? 'Saved' : 'Save to favorites'}">${heart}</button></div></article>`; }).join('')}</div>`;
 }
-function favCard(o) { const title = lookName(o.items), worn = wornOn(dayKey(), o.key);
-  return `<article class="outfit fav" style="--tint:${tintOf(o.items)}"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open ${esc(title)} in the builder">${flat(o.items)}</button>
-    <h3 class="display ftitle">${esc(title)}</h3><span class="mono wcount">${(b => b?.score != null ? `${matchPct(b.score)} match` : "doesn't pass your rules")(bestMode(o.items))}${(n => n ? ` · worn ${n}×` : '')(S.log.filter(l => l.key === o.key).length)}</span><div class="facts"><button class="btn sm ghost ${worn ? 'done' : ''}" data-wear="${o.key}">${worn ? 'Worn today ✓' : 'Wear today'}</button><button class="icon on" data-save="${o.key}" aria-label="Remove from favorites">${heart}</button><button class="btn sm ghost hitbtn ${isHit(o.key) ? 'on' : ''}" data-hit="${o.key}" aria-pressed="${isHit(o.key)}">${ic('star')} ${isHit(o.key) ? 'A hit' : 'Got compliments'}</button><button class="icon cmpbtn ${S.cmp?.includes(o.key) ? 'on' : ''}" data-cmp="${o.key}" aria-label="Compare this look" aria-pressed="${!!S.cmp?.includes(o.key)}">⇆</button></div></article>`; }
+function favCard(o) { const title = lookName(o.items), worn = wornOn(dayKey(), o.key), pic = picFor(o.key);
+  return `<article class="outfit fav" style="--tint:${tintOf(o.items)}">${pic ? fitCar(pic, o.items, true) : `<button class="flatbtn" data-buildkey="${o.key}" aria-label="Open ${esc(title)} in the builder">${flat(o.items)}</button>`}
+    <h3 class="display ftitle">${esc(title)}</h3><span class="mono wcount">${(b => b?.score != null ? `${matchPct(b.score)} match` : "doesn't pass your rules")(bestMode(o.items))}${(n => n ? ` · worn ${n}×` : '')(S.log.filter(l => l.key === o.key).length)}</span><div class="facts"><button class="btn sm ghost ${worn ? 'done' : ''}" data-wear="${o.key}">${worn ? 'Worn today ✓' : 'Wear today'}</button><button class="icon on" data-save="${o.key}" aria-label="Remove from favorites">${heart}</button><button class="btn sm ghost hitbtn ${isHit(o.key) ? 'on' : ''}" data-hit="${o.key}" aria-pressed="${isHit(o.key)}" aria-label="Got compliments">${ic('star')} ${isHit(o.key) ? 'A hit' : 'Compliments'}</button><button class="icon cmpbtn ${S.cmp?.includes(o.key) ? 'on' : ''}" data-cmp="${o.key}" aria-label="Compare this look" aria-pressed="${!!S.cmp?.includes(o.key)}">⇆</button></div></article>`; }
 function outfitCard(o) {
   const isSaved = S.saved.some(s => s.key === o.key);
   return `<article class="outfit"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in builder">${flat(o.items)}</button>
@@ -1345,13 +1350,15 @@ function colorsSection(p) {
     <button class="btn ghost sm" data-capsel="smart:mine">${S.coll === 'smart:mine' ? 'Using' : 'Use'} My colors collection · ${n} pieces</button>`
     : '<p class="sub">Not sure? Warm or cool undertone, light or deep coloring, clear or soft contrast: pick the closest, you can switch any time.</p>'}`;
 }
-// Hat and shoes for this outfit: the best-scoring neutral one and the best-scoring color pop, one tap to wear. Cached per outfit.
+// Top, layer, hat and shoes for this outfit: a neutral button and a color pop button, best match first. Cached per outfit.
+// v5.72: tap again to rotate. While you wear one of a kind, its button offers the next one of that kind (up to 8, best first, then back around).
 function quickPicks(o) {
   const key = [o.map(p => p.id).sort().join(), S.coll ?? '', closetVer].join('|'); if (S.quick?.key === key) return S.quick.html;
-  const html = ['Hat', 'Shoes'].map(sl => { const r = swapsFor(sl, o).filter(x => x.score != null && x.score > -9), cur = o.find(inS(sl));
-    const n = r.find(x => isNeutral(x.item.color)), p = r.find(x => !isNeutral(x.item.color)); if (!n && !p) return '';
-    const b = (lab, x) => x ? `<button class="qp ${cur?.id === x.item.id ? 'on' : ''}" data-wearpick="${sl}:${x.item.id}" aria-label="Wear ${esc(x.item.name)}, best ${lab} ${SLOT_LABEL[sl].toLowerCase()}, ${matchPct(x.score)} match"><small><i class="sw" style="background:${x.item.color}"></i>${lab} · ${matchPct(x.score)}</small><span>${esc(x.item.name)}</span></button>` : '<span></span>';
-    return `<div class="quick"><span class="mono">${sl === 'Hat' ? 'hat' : 'shoes'}</span>${b('neutral', n)}${b('pop', p)}</div>`; }).join('');
+  const html = ['Tops', ...(o.some(inS('Layers')) ? ['Layers'] : []), 'Hat', 'Shoes'].map(sl => { const r = swapsFor(sl, o).filter(x => x.score != null && x.score > -9), cur = o.find(inS(sl));
+    const ns = r.filter(x => isNeutral(x.item.color)).slice(0, 8), ps = r.filter(x => !isNeutral(x.item.color)).slice(0, 8); if (!ns.length && !ps.length) return '';
+    const b = (lab, list) => { if (!list.length) return '<span></span>'; const i = list.findIndex(x => x.item.id === cur?.id), x = list[(i + 1) % list.length], n = (i + 1) % list.length + 1, on = i >= 0, more = list.length > 1;
+      return `<button class="qp ${on ? 'on' : ''}" data-wearpick="${sl}:${x.item.id}" aria-label="Wear ${esc(x.item.name)}, ${on && more ? 'next' : 'best'} ${lab} ${SLOT_LABEL[sl].toLowerCase()}, ${matchPct(x.score)} match"><small><i class="sw" style="background:${x.item.color}"></i>${on && more ? 'next ' : ''}${lab}${more ? ` ${n}/${list.length}` : ''} · ${matchPct(x.score)}</small><span>${esc(x.item.name)}</span></button>`; };
+    return `<div class="quick"><span class="mono">${SLOT_LABEL[sl].toLowerCase()}</span>${b('neutral', ns)}${b('pop', ps)}</div>`; }).join('');
   S.quick = { key, html }; return html;
 }
 function buildView() {
@@ -1539,6 +1546,11 @@ async function logDay(day, o, quiet = false, how = null) {
 // A fit pic for a logged day: shrunk to 900px JPEG, kept with that day's log entry.
 const selfieUrls = new Map(), selfieSrc = l => selfieUrls.get(l.day) ?? selfieUrls.set(l.day, URL.createObjectURL(l.selfie)).get(l.day);
 const hasPic = l => l?.selfie instanceof Blob;
+// v5.72: a look's newest fit pic, if you took one.
+const picFor = k => S.log.filter(l => l.key === k && hasPic(l)).sort((a, b) => b.day.localeCompare(a.day))[0];
+// Fit pic, then the outfit laid out with its pieces: swipe between them. sm = inside a favorites card (no piece list).
+const fitCar = (l, items, sm = false) => `<div class="fitcar ${sm ? 'sm' : ''}"><figure><img class="selfie" src="${selfieSrc(l)}" alt="Fit pic"><span class="fcn">1/2 · swipe</span></figure>
+  <figure><button class="flatbtn" data-buildkey="${l.key}" aria-label="Open in builder">${flat(items)}</button>${sm ? '' : `<ul class="fitlist">${items.map(p => `<li><i style="background:${p.color}"></i>${esc(p.name)}</li>`).join('')}</ul>`}<span class="fcn">2/2</span></figure></div>`;
 let selfieInput; const selfieIn = () => selfieInput ??= picker('image/*', false, async ([f]) => { const day = selfieInput.day, l = S.log.find(x => x.day === day); if (!l) return;
   l.selfie = await shrink(f, 900); URL.revokeObjectURL(selfieUrls.get(day)); selfieUrls.delete(day); await put('log', l); openDay(day); toast('Fit pic saved'); }); // made on first use
 async function unlogDay(day) {
@@ -1574,7 +1586,7 @@ function openDay(k) {
   const seen = new Set(), list = [...S.saved, ...wornLooks()].filter(r => !seen.has(r.key) && seen.add(r.key) && r.key !== l?.key && complete(r.ids.map(byId).filter(Boolean)));
   const date = new Date(k + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
   showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${date}${l?.t != null ? ` · ${tempText(l.t)}` : ''}</div><h2>${l ? 'You wore' : 'Log a look'}</h2></div>${closeBtn}</div>
-    ${l && complete(items) ? `<div class="dayview">${hasPic(l) ? `<img class="selfie big" src="${selfieSrc(l)}" alt="Photo of the outfit">` : ''}<button class="slotbtn" data-buildkey="${l.key}" aria-label="Open in builder">${flat(items)}</button></div>
+    ${l && complete(items) ? `${hasPic(l) ? fitCar(l, items) : `<div class="dayview"><button class="slotbtn" data-buildkey="${l.key}" aria-label="Open in builder">${flat(items)}</button></div>`}
       <div class="row"><button class="btn ghost sm" data-selfie="${k}">${ic('camera')} ${hasPic(l) ? 'New photo' : 'Add a fit pic'}</button><button class="btn ghost sm hitbtn ${isHit(l.key) ? 'on' : ''}" data-hit="${l.key}" aria-pressed="${isHit(l.key)}">${ic('star')} ${isHit(l.key) ? 'A hit' : 'Got compliments'}</button><button class="btn ghost sm" data-unlog="${k}">Remove</button></div><p class="pickh">Or change it to</p>` : ''}
     ${S.log.filter(x => x.day.startsWith(k + '#')).map(x => `<p class="pickh">Also wore</p><div class="dayview"><button class="slotbtn" data-buildkey="${x.key}">${flat(x.ids.map(byId).filter(Boolean))}</button></div><div class="row"><button class="btn ghost sm" data-unlog="${x.day}">Remove</button></div>`).join('')}
     ${list.length ? `<div class="picklooks">${list.map(r => `<button data-logpick="${k}|${r.key}" aria-label="Log this look">${flat(r.ids.map(byId).filter(Boolean))}</button>`).join('')}</div>` : '<p class="sub">Favorite or build a few looks first, then log them here.</p>'}</div>`);
