@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade, isDenim, openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS, seeded, kindTokens, shapeOf, blockedBy } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.22 · v5.73'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.23 · v5.74'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -764,14 +764,14 @@ function openCompare() {
 }
 // Lookbook: your saved looks drawn as image pages (6 looks each). Home Screen apps on iPhone can't print, so the share sheet does it:
 // Save Image, Save to Files, or Print (pinch out on the print preview for a PDF).
-async function lookbookPages(looks) {
+async function lookbookPages(looks, title = 'lookbook') {
   const cw = 540, ch = 675, gap = 40, pad = 60, capH = 80, W = pad * 2 + cw * 2 + gap, pages = [];
   for (let i = 0; i < looks.length; i += 6) {
     const group = looks.slice(i, i + 6), rows = Math.ceil(group.length / 2), head = i ? pad : 180;
     const c = Object.assign(document.createElement('canvas'), { width: W, height: head + rows * (ch + capH + gap) - gap + pad }), x = c.getContext('2d');
     const fit = (t, w) => { while (x.measureText(t).width > w && t.length > 2) t = t.slice(0, -2) + '…'; return t; };
     x.fillStyle = '#faf8f5'; x.fillRect(0, 0, c.width, c.height);
-    if (!i) { x.fillStyle = '#1a1917'; x.font = '600 60px Helvetica, Arial, sans-serif'; x.fillText('lookbook', pad, 105); x.fillStyle = '#6e6a63'; x.font = '24px Helvetica, Arial, sans-serif'; x.fillText(`${looks.length} looks · ${new Date().toLocaleDateString()}`, pad, 145); }
+    if (!i) { x.fillStyle = '#1a1917'; x.font = '600 60px Helvetica, Arial, sans-serif'; x.fillText(fit(title, W - pad * 2), pad, 105); x.fillStyle = '#6e6a63'; x.font = '24px Helvetica, Arial, sans-serif'; x.fillText(`${looks.length} look${looks.length === 1 ? '' : 's'} · ${new Date().toLocaleDateString()}`, pad, 145); }
     for (const [k, o] of group.entries()) {
       const ox = pad + (k % 2) * (cw + gap), oy = head + Math.floor(k / 2) * (ch + capH + gap), by = bySlot(o.items), L = flatLayout(Object.keys(by));
       x.fillStyle = '#f0efec'; x.beginPath(); x.roundRect ? x.roundRect(ox, oy, cw, ch, 24) : x.rect(ox, oy, cw, ch); x.fill();
@@ -793,9 +793,9 @@ async function lookbookPages(looks) {
   return pages;
 }
 async function printLookbook() {
-  const looks = S.saved.map(r => ({ ...r, items: r.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items)); if (!looks.length) return toast('Save a few looks first');
-  toast('Making your lookbook…'); S.lookFiles = await lookbookPages(looks);
-  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${looks.length} looks · ${S.lookFiles.length} page${S.lookFiles.length > 1 ? 's' : ''}</div><h2>Lookbook</h2></div>${closeBtn}</div>
+  const looks = favList(); if (!looks.length) return toast(S.coll || S.favQ ? 'No favorites match this view' : 'Save a few looks first');
+  toast('Making your lookbook…'); S.lookFiles = await lookbookPages(looks, S.coll ? `lookbook · ${(collById(S.coll)?.name ?? '').toLowerCase()}` : 'lookbook');
+  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">${looks.length} look${looks.length === 1 ? '' : 's'} · ${S.lookFiles.length} page${S.lookFiles.length > 1 ? 's' : ''}</div><h2>Lookbook</h2></div>${closeBtn}</div>
     <img class="lbprev" src="${URL.createObjectURL(S.lookFiles[0])}" alt="First page of your lookbook">
     <p class="sub">${S.lookFiles.length > 1 ? `Page 1 of ${S.lookFiles.length}. ` : ''}Tap Save, then Save Image or Save to Files. For a PDF, pick Print and pinch out on the preview.</p>
     <button class="btn wide" data-action="sharelookbook">Save</button></div>`);
@@ -870,6 +870,19 @@ function closetView() {
     ${groups.map(([k, l]) => `<h3 class="sec" id="sec-${k}">${k}<small>${l.length}</small></h3><div class="${shelf ? 'shelf' : 'grid'}">${l.map(itemCard).join('')}</div>`).join('')}`;
 }
 
+// The favorites on screen: the open collection, search and sort all apply. Lookbook uses it too.
+function favList() {
+  const c = S.coll && collById(S.coll);
+    // in a collection: only favorites made entirely from it
+    const inC = o => !c || o.items.every(p => c.ids.includes(p.id));
+    const fq = (S.favQ ?? '').toLowerCase(), wornN = k => S.log.filter(l => l.key === k).length, lastW = k => Math.max(0, ...S.log.filter(l => l.key === k).map(l => l.at ?? 0));
+    const rated = new Map(), rate = o => rated.get(o.key) ?? rated.set(o.key, (bestMode(o.items)?.score ?? -5) + Math.min(2, wornN(o.key) * 0.4) + (isHit(o.key) ? 1 : 0)).get(o.key);
+    const FS = { hits: (a, b) => isHit(b.key) - isHit(a.key) || rate(b) - rate(a), top: (a, b) => rate(b) - rate(a), new: (a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0), worn: (a, b) => wornN(b.key) - wornN(a.key), stale: (a, b) => lastW(a.key) - lastW(b.key) };
+    // complete() drops looks whose piece was deleted or re-tagged
+    return S.saved.map(s => ({ key: s.key, savedAt: s.savedAt, mode: s.mode, items: s.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items) && inC(o))
+      .filter(o => !fq || o.items.some(p => `${p.name} ${p.kind} ${colorName(p.color)} ${p.brand ?? ''}`.toLowerCase().includes(fq)) || (vibeOf(o)[0] ?? '').toLowerCase().includes(fq)).sort(FS[S.favSort ?? 'new']);
+}
+
 function outfitsView() {
   const items = pool(), c = S.coll && collById(S.coll);
   if (S.tab === 'ideas' || S.tab === 'history') { S.tab = 'saved'; S.view = 'today'; return todayView(); } // old "ideas" links (collection outfits, color wheel, inspo) open Today
@@ -884,12 +897,7 @@ function outfitsView() {
       : `<div class="empty"><h2>No history yet</h2><p>Every look you put together in the builder lands here.</p><button class="btn" data-action="build">Open builder</button></div>`);
   }
   if (S.tab === 'saved') {
-    const inC = o => !c || o.items.every(p => c.ids.includes(p.id)); // in a collection: only favorites made entirely from it
-    const fq = (S.favQ ?? '').toLowerCase(), wornN = k => S.log.filter(l => l.key === k).length, lastW = k => Math.max(0, ...S.log.filter(l => l.key === k).map(l => l.at ?? 0));
-    const rated = new Map(), rate = o => rated.get(o.key) ?? rated.set(o.key, (bestMode(o.items)?.score ?? -5) + Math.min(2, wornN(o.key) * 0.4) + (isHit(o.key) ? 1 : 0)).get(o.key);
-    const FS = { hits: (a, b) => isHit(b.key) - isHit(a.key) || rate(b) - rate(a), top: (a, b) => rate(b) - rate(a), new: (a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0), worn: (a, b) => wornN(b.key) - wornN(a.key), stale: (a, b) => lastW(a.key) - lastW(b.key) };
-    const list = S.saved.map(s => ({ key: s.key, savedAt: s.savedAt, mode: s.mode, items: s.ids.map(byId).filter(Boolean) })).filter(o => complete(o.items) && inC(o)) // a piece was deleted or re-tagged
-      .filter(o => !fq || o.items.some(p => `${p.name} ${p.kind} ${colorName(p.color)} ${p.brand ?? ''}`.toLowerCase().includes(fq)) || (vibeOf(o)[0] ?? '').toLowerCase().includes(fq)).sort(FS[S.favSort ?? 'new']);
+    const list = favList();
     return top + (S.saved.length ? `<div class="ctools favtools"><input type="search" data-favq placeholder="search" value="${esc(S.favQ ?? '')}" aria-label="Search favorites"><select data-favsort aria-label="Sort favorites">${[['new', 'sort: newest'], ['hits', 'sort: hits first'], ['top', 'sort: highest rated'], ['worn', 'sort: most worn'], ['stale', "sort: haven't worn lately"]].map(([k, l]) => `<option value="${k}" ${(S.favSort ?? 'new') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div><div class="row favacts"><button class="tag o" data-action="lookbook">Lookbook (PDF)</button>${S.cmp?.length === 1 ? '<span class="mono">Pick one more look to compare</span>' : '<span class="mono">Tap ⇆ on two looks to compare</span>'}</div>` : '')
       + (list.length ? `<p class="sub">Tap a look to change it in the builder.</p><div class="feed favs">${list.map(o => favCard(o)).join('')}</div>`
       : `<div class="empty"><h2>No favorites ${c ? `in ${esc(c.name)} ` : ''}yet</h2><p>Swipe right on a look in Today, or tap Save in the builder. Your keepers land here.</p><button class="btn" data-go="today">Go to Today</button></div>`);

@@ -1,2 +1,2 @@
-2026.11.22 · v5.73
-Smarter picks: looks are warm enough for the cold (a coat below 5°), every style scores on the same scale, and your hits and saves count more than luck. Work means what you set in Settings, and you can plan your week, set your time outside and name a piece's color. Hits ask what made them work. Stats show how often you wear a Today look, and Buy next flags worn-out pieces and staples that need a backup.
+2026.11.23 · v5.74
+Lookbook now uses the looks on screen: open a collection or search first and it makes a lookbook of just those.
