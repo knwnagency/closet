@@ -636,3 +636,34 @@ console.log('edges ok');
     assert.ok(!fitted.twins.length && /no fitted tees yet/.test(fitted.why), `a fitted white tee is new when yours are boxy: ${fitted.why}`); assert.ok(any.twins.some(p => p.id === 'bx'), 'any cut: the boxy one counts');
     assert.equal(m.tone({ cat: 'Bottoms', kind: 'jeans', color: '#2b3b57' }), 'dark wash', 'jeans are named by wash'); }
   console.log('buy next ok'); }
+
+// Recommendation logic V2 (v5.73): warmth, one style scale, evidence beats rules, lighter accessory pairs, type:color taste, off-season buys, name pins
+{ const m = await import('./match.js'), mk = (id, cat, kind, color, x = {}) => ({ id, cat, kind, color, name: `${kind} ${id}`, vibe: 'casual', fit: 1, ...x });
+  const tee = mk('t', 'Tops', 't-shirt', '#f2f2f0'), flan = mk('f', 'Layers', 'flannel overshirt', '#6b1e2a'), hood = mk('h', 'Layers', 'hoodie', '#7d7b78'), coat = mk('c', 'Layers', 'coat', '#1b1a19'),
+    pants = mk('p', 'Bottoms', 'jeans', '#2b3b57'), kicks = mk('s', 'Shoes', 'sneakers', '#f6f5f1'), polo = mk('po', 'Tops', 'knit polo', '#1e2a45'), boots = mk('b', 'Shoes', 'work boots', '#5b3e2a');
+  assert.ok(m.lookWarmth([tee, flan]) < m.warmthFor(-5)[0], 'tee + flannel is not enough at -5');
+  const cold = m.today([tee, flan, hood, coat, pants, kicks], { t: -5, n: 4, rand: m.seeded(3) });
+  assert.ok(cold.length && cold.every(o => o.items.includes(coat)), 'below 5° every look has the coat when you own one');
+  const hot = m.forWeather([polo, boots, hood, tee], 28); assert.ok(hot.includes(polo) && hot.includes(boots) && !hot.includes(hood), 'hot: knit polo and boots stay, hoodie goes');
+  assert.equal(m.dress(mk('x', 'Layers', 'flannel overshirt', '#6b1e2a', { name: 'Flannel button-up' })), 1, 'a flannel button-up is everyday');
+  // one scale: a look full of streetwear tags can't outscore the same look in Classic by more than the cap
+  const st = x => ({ ...x, vibe: 'streetwear' }), sw = [st(tee), st(pants), st(kicks)];
+  assert.ok(m.scoreOutfit(sw, 'street').score - m.scoreOutfit([tee, pants, kicks], 'classic').score < 2, 'streetwear tags capped');
+  // evidence: a look you wore twice comes back even if a rule blocks it
+  const two = [tee, mk('t2', 'Tops', 'button-up shirt', '#9cc3e6'), mk('f2', 'Layers', 'flannel overshirt', '#22402c'), pants, kicks];
+  m.setTaste(); const blocked = m.bestMode(two)?.score == null;
+  m.setTaste({ trusted: [two.map(p => p.id)] }); assert.ok(!blocked || m.bestMode(two)?.score != null, 'trusted look is never blocked'); m.setTaste();
+  // accessory pairs count half
+  const cap = mk('k', 'Accessories', 'baseball cap', '#1b1a19'), plain = m.scoreOutfit([tee, pants, kicks, cap], 'classic').score;
+  m.setTaste({ liked: [['k', 'p']] }); const accLift = m.scoreOutfit([tee, pants, kicks, cap], 'classic').score - plain;
+  m.setTaste({ liked: [['t', 'p']] }); const clothLift = m.scoreOutfit([tee, pants, kicks, cap], 'classic').score - plain; m.setTaste();
+  assert.ok(accLift > 0 && accLift < clothLift, 'a cap pair lifts less than a tee + pants pair');
+  // type:color taste carries over to a new piece
+  const tee2 = { ...tee, id: 'new' }, before = m.scoreOutfit([tee2, pants, kicks], 'classic').score;
+  m.setTaste({ likedKinds: [m.kindTokens([tee, pants, kicks])] }); assert.ok(m.scoreOutfit([tee2, pants, kicks], 'classic').score > before, 'a new white tee gets the old one\'s taste'); m.setTaste();
+  // off-season: shorts wait in November, not in April
+  const nov = m.buyValue([tee, pants, kicks], m.basicPiece('shorts', 'beige'), { month: 11 }), apr = m.buyValue([tee, pants, kicks], m.basicPiece('shorts', 'beige'), { month: 4 });
+  assert.ok(nov.later && nov.value < apr.value, 'shorts rank lower in November');
+  // a picked name wins
+  m.setTaste({ pins: [['#8a4a2a', 'brown']] }); assert.equal(m.colorName('#8a4a2a'), 'brown', 'pinned name'); m.setTaste(); assert.notEqual(m.colorName('#8a4a2a'), undefined);
+  console.log('logic v2 ok'); }

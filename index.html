@@ -39,10 +39,10 @@ setTimeout(() => { if (window.__appReady) return; const d = document.createEleme
 </script>
 <script type="module">
 import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } from './progress.js';
-import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade, isDenim, openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS, seeded } from './match.js';
+import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade, isDenim, openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS, seeded, kindTokens, shapeOf, blockedBy } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.22 · v5.72'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.22 · v5.73'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -108,8 +108,21 @@ const learnedDress = () => { const looks = [...S.saved, ...S.log].map(r => r.ids
   if (looks.length < 5) return 0; const avg = looks.reduce((t, ps) => t + ps.reduce((u, p) => u + dress(p), 0) / ps.length, 0) / looks.length; return Math.max(-0.6, Math.min(0.6, (avg - 1) * 0.5)); };
 const mySeason = () => COLOR_SEASONS[S.profile?.colorSeason] ?? null, colorsOn = () => !!mySeason() && !S.profile?.colorsOff; // Me › Settings › Your colors
 // v5.71: a hit (you love it, or it got compliments) counts as liked twice, so Today leans on what works on you.
-const tasteArgs = () => ({ shirtStack: !!S.profile?.shirtStack, liked: [...S.saved, ...S.saved.filter(s => s.hit)].map(s => s.ids), worn: S.log.map(l => l.ids), nope: S.nope, good: [...(colorsOn() ? mySeason().good : []), ...(S.profile?.colors?.good ?? [])], avoid: [...(colorsOn() ? mySeason().avoid : []), ...(S.profile?.colors?.avoid ?? [])],
-  skipped: S.profile?.skips ?? [], hair: S.profile?.hair ?? null, never: S.profile?.never ?? [], colorNo: S.profile?.colorNo ?? [], dressBias: (S.profile?.dressBias ?? 0) + learnedDress(), busyBias: S.profile?.busyBias ?? 0, likedColors: [...S.saved, ...S.saved.filter(s => s.hit), ...S.log].map(r => r.ids.map(id => S.items.find(i => i.id === id)).filter(Boolean).map(p => colorName(p.color))) });
+// v5.73: old looks fade (half the weight every 90 days), looks from the same season count 1.5x,
+// and a look you wore because Today suggested it counts less than one you put together yourself (so Today doesn't just copy itself).
+const seasonOfMonth = m => m >= 10 || m <= 2 ? 'cold' : m >= 4 && m <= 8 ? 'warm' : null;
+const ageW = ms => { ms ??= Date.now(); const sn = seasonNow(); return 0.5 ** ((Date.now() - ms) / (90 * 864e5)) * (sn && seasonOfMonth(new Date(ms).getMonth()) === sn ? 1.5 : 1); };
+const logW = l => ageW(l.at) * (l.sug == null ? 1 : l.sug >= 0 ? 0.6 : 1.4);
+const tasteArgs = () => { const ix = new Map(S.items.map(i => [i.id, i])), pcs = r => r.ids.map(id => ix.get(id)).filter(Boolean), hits = S.saved.filter(s => s.hit), times = {};
+  for (const l of S.log) times[l.key] = (times[l.key] ?? 0) + 1;
+  // liked: favorites, plus hits a second time. likedColors / likedKinds: the same looks plus what you wore, as color names and type:color tokens
+  const liked = [...S.saved, ...hits].map(r => ({ ids: r.ids, w: ageW(r.savedAt) })), rows = [...S.saved.map(r => [r, ageW(r.savedAt)]), ...hits.map(r => [r, ageW(r.savedAt) * (r.why === 'colors' ? 2 : 1)]), ...S.log.map(l => [l, logW(l)])];
+  return { shirtStack: !!S.profile?.shirtStack, liked, worn: S.log.map(l => ({ ids: l.ids, w: logW(l) })), nope: S.nope, good: [...(colorsOn() ? mySeason().good : []), ...(S.profile?.colors?.good ?? [])], avoid: [...(colorsOn() ? mySeason().avoid : []), ...(S.profile?.colors?.avoid ?? [])],
+    skipped: S.profile?.skips ?? [], hair: S.profile?.hair ?? null, never: S.profile?.never ?? [], colorNo: S.profile?.colorNo ?? [], dressBias: (S.profile?.dressBias ?? 0) + learnedDress(), busyBias: S.profile?.busyBias ?? 0,
+    likedColors: rows.map(([r, w]) => ({ ids: pcs(r).map(p => colorName(p.color)), w })), likedKinds: rows.map(([r, w]) => ({ ids: kindTokens(pcs(r)), w })),
+    // trusted: hits and looks worn twice; no rule blocks them. shapes: hits that worked because of the fit. pins: color names you picked.
+    trusted: [...hits.map(r => r.ids), ...S.log.filter(l => times[l.key] >= 2).map(l => l.ids)], shapes: hits.filter(r => r.why === 'fit').map(r => shapeOf(pcs(r))),
+    pins: S.items.filter(i => i.cname).map(i => [i.color, i.cname]) }; };
 const syncTaste = () => setTaste(tasteArgs());
 syncTaste();
 S.mode = MODES[S.profile?.mode] ? S.profile.mode : 'today'; // the style you picked last time; Today (a mix of every style) by default
@@ -210,6 +223,9 @@ const issueOf = it => {
   const plain = n => n.toLowerCase().replace(/\W/g, ''), generic = KINDS[it.name.toLowerCase()] || plain(it.name) === plain(it.kind ?? '') || /^(new item|item|piece)$/i.test(it.name); // "T-shirt" and "T-shirt" are just the AI's default name, not proof of a double
   const twin = !generic && S.items.find(o => o !== it && o.cat === it.cat && o.kind === it.kind && colorDist(o.color, it.color) < 22 && plain(o.name) === plain(it.name));
   if (twin && !it.dupOk) return { text: `Looks like a duplicate of another "${twin.name}"`, fix: `dup:${twin.id}`, label: 'Merge into one' };
+  // v5.73: a sporty tag on a cap, jeans or a button-up keeps it out of every Classic look
+  if ([].concat(it.vibe ?? [])[0] === 'athletic' && it.cat !== 'Shoes' && !/jersey|track|jogger|sweat|gym|athletic|sport|short|tank|compression|running|basketball|legging|golf/i.test(`${it.kind ?? ''} ${it.name}`))
+    return { text: 'Tagged sporty, which keeps it out of Classic looks. Sporty on purpose?', fix: 'vibe:casual', label: 'Make it everyday' };
   return null; };
 // Doubles, side by side: the piece you added first (kept) and the copy. Merge, or say they're different pieces.
 function openDoubles() {
@@ -344,15 +360,23 @@ const restNote = o => { const p = o.items.filter(q => q.cat !== 'Accessories' &&
 const shufN = () => (S.shuf ??= S.deck?.shuf ?? null)?.day === dayKey() ? S.shuf.n : 0;
 const rainOdds = w => (p => p ? ` (${p}%)` : '')(w?.daily?.[dayKey()]?.pop);
 // The temperature to dress for: from 4pm on, tonight's low counts too ("30°F later"); "too cold / too warm" feedback shifts it (S.profile.tempBias).
-const dressTemp = t => { if (t == null) return t; const w = weatherNow(), eve = new Date().getHours() >= 16 && w?.lo != null; return (eve ? Math.min(t, w.lo) : t) - (S.profile?.tempBias ?? 0); };
+// v5.73: "too cold / too warm" is kept per season (tempBias_cold, _warm, _mid), and time outside shifts it (mostly outside: dress 3° colder).
+const tbias = () => S.profile?.[`tempBias_${seasonNow() ?? 'mid'}`] ?? S.profile?.tempBias ?? 0;
+const tShift = () => tbias() - ({ out: -3, in: 3 }[S.profile?.outside] ?? 0);
+const dressTemp = t => { if (t == null) return t; const w = weatherNow(), eve = new Date().getHours() >= 16 && w?.lo != null; return (eve ? Math.min(t, w.lo) : t) - tShift(); };
 // Twice a year: store what the season keeps out (shorts in winter, puffers in summer), then offer them back when it flips.
 const seasonSwap = () => { const sn = seasonNow(); if (!sn) return null; const key = `${sn}-${new Date().getFullYear()}`; if (S.profile?.seasonAsked === key) return null;
   const back = S.items.filter(i => i.stored && i.storedSeason && i.storedSeason !== sn); if (back.length) return { back, key, text: `Bring back ${back.length} piece${back.length > 1 ? 's' : ''} you stored for ${back[0].storedSeason === 'cold' ? 'winter' : 'summer'}?` };
   const out = S.items.filter(i => !i.stored && !forWeather([i], null, false, sn).length); return out.length >= 3 ? { out, key, text: `Store ${out.length} ${sn === 'cold' ? 'shorts, tanks and sandals for winter' : 'heavy coats for summer'}? They leave outfits until the season turns.` } : null; };
 // Northern-hemisphere months unless your weather spot is south of the equator. April and October: weather only.
-const seasonNow = () => { const o = S.profile?.season; if (o === 'off') return null; if (o === 'cold' || o === 'warm') return o; const m = (new Date().getMonth() + ((S.profile?.wx?.lat ?? 1) < 0 ? 6 : 0)) % 12; return m >= 10 || m <= 2 ? 'cold' : m >= 4 && m <= 8 ? 'warm' : null; };
+// a function, not a const: the taste code at boot needs it before this line runs
+function seasonNow() { const o = S.profile?.season; if (o === 'off') return null; if (o === 'cold' || o === 'warm') return o; const m = (new Date().getMonth() + ((S.profile?.wx?.lat ?? 1) < 0 ? 6 : 0)) % 12; return m >= 10 || m <= 2 ? 'cold' : m >= 4 && m <= 8 ? 'warm' : null; }
 const dayHash = d => [...d].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7); // pattern on pattern: a set day in three, so Shuffle doesn't re-roll it
-const todayPicks = (items, t) => today(items, { t: dressTemp(t), season: seasonNow(), twoShirts: !!S.profile?.twoShirts, patternDay: dayHash(dayKey()) % 3 === 0, alone: !!S.profile?.hoodieAlone, like: S.like?.map(byId).filter(Boolean), rain: wetToday(), wind: windy(), fresh: restedIds(), rand: seeded(dayHash(dayKey()) + shufN() * 7919), occasion: S.occ, n: 12, skip: S.log.find(l => l.day === prevDay(dayKey()))?.ids ?? [] }); // yesterday's top rests a day
+// What Work means for you (Me › Settings): casual 1, smart 1.5 (default), dressy 2
+const occLevel = () => S.occ === 'work' ? ({ casual: 1, smart: 1.5, dressy: 2 })[S.profile?.workDress ?? 'smart'] : null;
+// The last few days of logs: tops rest 4 days, a whole look waits 2 weeks
+const loggedSince = n => { const from = dayKey(new Date(Date.now() - n * 864e5)), to = dayKey(); return S.log.filter(l => l.day.slice(0, 10) >= from && l.day.slice(0, 10) < to); };
+const todayPicks = (items, t) => today(items, { occDress: occLevel(), recent: new Set(loggedSince(14).map(l => l.key)), t: dressTemp(t), season: seasonNow(), twoShirts: !!S.profile?.twoShirts, patternDay: dayHash(dayKey()) % 3 === 0, alone: !!S.profile?.hoodieAlone, like: S.like?.map(byId).filter(Boolean), rain: wetToday(), wind: windy(), fresh: restedIds(), rand: seeded(dayHash(dayKey()) + shufN() * 7919), occasion: S.occ, n: 12, skip: loggedSince(4).flatMap(l => l.ids) }); // tops worn in the last 4 days rest
 
 // Gaps are slow-ish to compute, so cache until something about the closet changes.
 const sig = () => S.items.map(i => [i.id, i.cat, i.color, i.fit, i.vibe, i.patterned, i.name, i.kind].join()).join('|');
@@ -536,7 +560,9 @@ async function prep(blob, raw = false, tags = null, photo = null) {
   out.getContext('2d').drawImage(cv, x0, y0, cw - pad * 2, ch - pad * 2, pad, pad, cw - pad * 2, ch - pad * 2);
   const img = await new Promise(r => out.toBlob(r, 'image/webp', 0.9)); // Safari falls back to PNG, fine
   const k1 = w / bmp.width, frame = { x: (x0 - pad) / k1, y: (y0 - pad) / k1, w: cw / k1, h: ch / k1 }; // where the cut-out sits in the photo, for Restore
-  return { img, color, hard, turn, frame, accents: accentsOf(extractPalette(px, 6, 0.02), color) }; // the colors in a graphic/print besides the base. hard: the AI struggled
+  // accents: the colors in a graphic or print besides the base. color2: one of them covering 30%+ (colorblock, two-tone). hard: the AI struggled
+  const pal = extractPalette(px, 6, 0.02), accents = accentsOf(pal, color), color2 = pal.find(c => c.share >= 0.3 && accents.includes(c.hex))?.hex;
+  return { img, color, hard, turn, frame, accents, ...(color2 ? { color2 } : {}) };
 }
 
 // Phone photos are 12–48 MP: shrink before the cutout model sees them (memory + speed). Also bakes in EXIF rotation.
@@ -654,11 +680,11 @@ async function addOne(j) {
     if (j.saved) await putQuiet('queue', { id: j.id, file: j.file, name: j.name, at: j.at, tries: (j.tries ?? 0) + 1 });
     const small = await shrink(j.file), fp = await fpOf(small);
     if (S.items.some(i => i.fp && fpDist(i.fp, fp) <= FP_SAME)) { skipped++; return; }
-    const { img, color, accents, photo, tags, hard, turn, frame } = await cutout(small, status), cfp = await fpOf(img);
+    const { img, color, color2, accents, photo, tags, hard, turn, frame } = await cutout(small, status), cfp = await fpOf(img);
     if (S.items.some(i => i.cfp && fpDist(i.cfp, cfp) <= CFP_SAME)) { skipped++; return; }
     if (tags && (tags.pattern === 'graphic' || tags.pattern === 'allover') && !accents?.length) Object.assign(tags, { pattern: 'solid', patterned: false }); // no print colors found: a blank tee, not a print
     if (hard) toast('Tricky background. Light clothes cut out best on a dark, plain surface');
-    const item = { ...(tags ? { ai: { kind: tags.kind, fit: tags.fit, pattern: tags.pattern } } : {}), id: j.id, img, photo, frame, fp, cfp, color, accents, orientChecked: true, ...(turn ? { turnHint: turn } : {}), ...(tags ?? { cat: 'Tops', name: 'New item', kind: '', vibe: 'casual', patterned: false, fit: 1 }), review: !tags || !!tags.unsure?.length, wears: 0, lastWorn: null, createdAt: Date.now() };
+    const item = { ...(tags ? { ai: { kind: tags.kind, fit: tags.fit, pattern: tags.pattern } } : {}), id: j.id, img, photo, frame, fp, cfp, color, ...(color2 ? { color2 } : {}), accents, orientChecked: true, ...(turn ? { turnHint: turn } : {}), ...(tags ?? { cat: 'Tops', name: 'New item', kind: '', vibe: 'casual', patterned: false, fit: 1 }), review: !tags || !!tags.unsure?.length, wears: 0, lastWorn: null, createdAt: Date.now() };
     { const w = S.fromWish && S.wish.find(x => x.id === S.fromWish); if (w) { item.name = w.name; if (w.price) item.price = w.price; if (w.link) try { item.from = new URL(w.link).hostname.replace(/^www\./, ''); } catch { /* keep it blank */ } S.fromWish = null; } } // copped from the wishlist: it keeps the name you gave it
     try { item.thumb = await thumbOf(img); } catch (e) { console.warn(e); } // small preview now: full-size cut-outs in the grid eat the memory the AI needs
     await put('items', item); S.items.push(item); S.ideas = null; added++;
@@ -935,7 +961,7 @@ function openCapsules() {
 // The deck is saved per day + filters + weather band, so leaving and coming back shows the same looks. Shuffle makes a new one.
 const greet = () => { const h = new Date().getHours(); return h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
 const band = w => w ? (t => t < 12 ? 'cold' : t >= 24 ? 'hot' : 'mild')(dressTemp(w.t)) + (wetToday(w) ? '-rain' : '') + (windy(w) ? '-wind' : '') : 'none';
-const deckSig = () => ['v2', VERSION, colorsOn() && S.profile.colorSeason, !!S.profile?.hoodieAlone, !!S.profile?.twoShirts, !!S.profile?.shirtStack, S.profile?.season ?? '', dayKey(), S.items.length, shufN(), S.profile?.tempBias ?? 0, S.profile?.dressBias ?? 0, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', weatherNow() ? 'wx' : 'none'].join('|');
+const deckSig = () => ['v2', VERSION, colorsOn() && S.profile.colorSeason, !!S.profile?.hoodieAlone, !!S.profile?.twoShirts, !!S.profile?.shirtStack, S.profile?.season ?? '', dayKey(), S.items.length, shufN(), tShift(), S.profile?.workDress ?? '', S.profile?.dressBias ?? 0, S.src ?? '', S.like?.join() ?? '', S.mode, S.occ ?? '', S.coll ?? '', S.mode === 'palette' ? S.palette : '', S.mode === 'inspo' ? S.inspoColors : '', weatherNow() ? 'wx' : 'none'].join('|');
 // v5.70: looks you swiped past without saving or wearing teach it a little (a quarter of a "Not for me"), once per deck
 function noteSkips(d) { if (!d || d.noted || d.src || !S.profile) return; d.noted = true;
   const passed = d.looks.slice(0, d.max ?? d.at).filter(l => !wornOn(d.day, l.key) && !isFav(l.key)).map(l => l.ids); if (!passed.length) return;
@@ -996,7 +1022,7 @@ async function applyOff(key) {
   if (why.includes('colors')) { p0.colorNo = [...(p0.colorNo ?? []), ...pairsOf(st.colors)]; msg.push(`fewer looks with ${st.colors.join(' + ')}`); }
   if (why.includes('busy')) { p0.busyBias = Math.min(1.5, (p0.busyBias ?? 0) + 0.4); msg.push('calmer looks from now on'); }
   for (const k of ['dressy', 'sporty']) if (why.includes(k)) { p0.dressBias = Math.max(-1, Math.min(1, (p0.dressBias ?? 0) + (k === 'dressy' ? -0.3 : 0.3))); msg.push(k === 'dressy' ? 'more casual looks' : 'dressier looks'); }
-  for (const k of ['cold', 'warm']) if (why.includes(k)) { p0.tempBias = Math.max(-9, Math.min(9, (p0.tempBias ?? 0) + (k === 'cold' ? 3 : -3))); msg.push(k === 'cold' ? 'warmer looks from now on' : 'lighter looks from now on'); }
+  for (const k of ['cold', 'warm']) if (why.includes(k)) { const tk = `tempBias_${seasonNow() ?? 'mid'}`; p0[tk] = Math.max(-9, Math.min(9, (p0[tk] ?? p0.tempBias ?? 0) + (k === 'cold' ? 3 : -3))); msg.push(k === 'cold' ? 'warmer looks from now on' : 'lighter looks from now on'); }
   if (why.includes('today')) msg.push('hidden for today');
   if (note) p0.notes = [...(p0.notes ?? []), { at: dayKey(), why: why.join(', '), look: ps.map(p => p.name).join(' + '), text: note.slice(0, 300) }].slice(-50); // your words, for Claude
   if (why.some(k => k !== 'today')) { S.nope = [...S.nope, look.ids].slice(-200); await put('profile', { k: 'nope', list: S.nope }); } // this exact look never comes back
@@ -1040,7 +1066,7 @@ const tomorrowLine = w => { if (new Date().getHours() < 17) return ''; const f =
   const wet = RAINY(f.code ?? 0) || (f.pop ?? 0) >= 50;
   return `<small class="wxs">Tomorrow: feels ${tempText(f.t)}${wet ? `, rain${f.pop ? ` (${f.pop}%)` : ''}` : ''}${(f.wind ?? 0) >= 35 ? ', windy' : ''} · <button class="linkbtn" data-action="plantom">Plan it</button></small>`; };
 // v5.70: once a day, one tap: work day leans dressier, day off leans casual. Same as the Work / Errands filter, just asked up front
-const dayAsk = () => S.occ || S.src || S.profile?.dayOcc?.day === dayKey() || S.items.length < 10 ? '' :
+const dayAsk = () => S.occ || S.src || S.profile?.week || S.profile?.dayOcc?.day === dayKey() || S.items.length < 10 ? '' :
   `<div class="dayask"><span class="mono">What's today?</span><button class="pill" data-dayocc="work">Work day</button><button class="pill" data-dayocc="errands">Day off</button><button class="pill" data-dayocc="">Skip</button></div>`;
 // After you log today's fit: one tap if it got compliments (or you just love it). Gone once marked.
 const hitAsk = () => { const l = S.log.find(x => x.day === dayKey()); return l && !isHit(l.key) && complete(l.ids.map(byId).filter(Boolean)) ? `<button class="tag o wxnew" data-hit="${l.key}">${ic('star')} Getting compliments on today's fit? Mark it a hit</button>` : ''; };
@@ -1052,7 +1078,7 @@ function todayView() {
     setTimeout(() => toast(S.profile.lastBackup ? `Last backup ${ago(S.profile.lastBackup)}` : 'Never backed up', { label: 'Back up', fn: exportBackup }), 900); } // once a day, a week after the last backup
   if (S.profile && S.profile.streakSeen !== dayKey() && S.items.length >= 3) { S.profile = { ...S.profile, streakSeen: dayKey() }; put('profile', S.profile); const st = streaks(S.log), nx = unlocks(progressCtx()).find(u => !u.done && /streak/.test(u.need)), need = nx && +nx.need.match(/\d+/)[0] - st.cur;
     setTimeout(() => { toast(st.cur ? `Day ${st.cur} streak${st.today ? '' : ' · log today to keep it'}${nx && need > 0 ? ` · ${need} more for ${nx.name}` : ''}` : 'Log what you wear today to start a streak', { label: 'Progress', fn: () => { S.view = 'progress'; render(); } }); checkUnlocks(); }, 1200); }
-  S.occ ??= S.profile?.dayOcc?.day === dayKey() ? S.profile.dayOcc.occ || null : null; // what you said today is (work, day off) sticks till midnight
+  S.occ ??= S.profile?.dayOcc?.day === dayKey() ? S.profile.dayOcc.occ || null : S.profile?.week?.[new Date().getDay()] || null; // your week (Me › Settings) unless you said otherwise today // what you said today is (work, day off) sticks till midnight
   const date = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const nf = (S.mode !== 'today' ? 1 : 0) + (S.occ ? 1 : 0) + (S.src ? 1 : 0);
   const top = `<header class="thead"><div><div class="eyebrow">${greet()} · ${date}</div><h1>Today</h1></div><div class="right">${streakChip()}<button class="favbtn" data-favs aria-label="Favorites, ${S.saved.length} saved">${heart}<b>${S.saved.length}</b></button></div></header>
@@ -1126,7 +1152,15 @@ const isFav = k => S.saved.some(s => s.key === k), isHit = k => !!S.saved.find(s
 // A hit lives on the favorite record (synced with it). Marking an unsaved look a hit saves it too.
 async function toggleHit(k) { let r = S.saved.find(s => s.key === k);
   if (r) r.hit = !r.hit; else { const o = outfitByKey(k); if (!o || !complete(o.items)) return; r = { key: k, ids: o.items.map(x => x.id), mode: o.mode ?? bestMode(o.items)?.mode ?? 'custom', savedAt: Date.now(), hit: true }; S.saved.unshift(r); }
-  await put('outfits', r); syncTaste(); toast(r.hit ? 'Marked a hit. Today will lean on it' : 'No longer a hit'); }
+  if (!r.hit) delete r.why;
+  await put('outfits', r); syncTaste(); toast(r.hit ? 'Marked a hit. Today will lean on it' : 'No longer a hit'); return r.hit; }
+// After a hit: one tap on what made it work. Colors count double in your color pairs, fit teaches the shape, a piece gets "suggest more".
+function openHitWhy(k) { const r = S.saved.find(s => s.key === k); if (!r) return; const ps = r.ids.map(byId).filter(p => p && p.cat !== 'Accessories');
+  showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">A hit</div><h2>What made it work?</h2></div>${closeBtn}</div>
+    <div class="offlook">${flat(r.ids.map(byId).filter(Boolean))}</div><p class="sub">Optional. Today learns more from the reason.</p>
+    <div class="offs"><button class="tag o" data-hitwhy="${k}|colors">The colors</button><button class="tag o" data-hitwhy="${k}|fit">The fit</button></div>
+    <span class="mono offask">or one piece</span><div class="offpick">${ps.map(p => `<button data-hitwhy="${k}|piece:${p.id}"><img src="${src(p)}" alt="">${esc(p.name)}</button>`).join('')}</div>
+    <button class="btn ghost wide" data-action="close">Skip</button></div>`); }
 // Today's picks, one big card at a time: swipe for the next. Each card says why it fits the weather.
 const wxWhy = o => { const w = weatherNow(); if (!w) return '';
   const rain = wetToday(w), why = w.t < 12 ? (o.items.some(p => p.cat === 'Layers') ? 'layered up' : 'warmest pieces') : w.t >= 24 ? 'light, nothing heavy' : 'mild, anything goes';
@@ -1224,7 +1258,7 @@ const toldList = () => { const p = S.profile ?? {}, less = S.items.filter(i => i
     ...(p.colorNo ?? []).map((pr, i) => [`Colors that don't work: ${pr.map(esc).join(' + ')}`, `data-untold="colorNo|${i}"`]),
     ...(p.dressBias ? [[`Looks lean ${p.dressBias < 0 ? 'more casual' : 'dressier'}`, 'data-untold="dressBias|0"']] : []),
     ...(p.busyBias ? [[`Calmer looks (${p.busyBias >= 1.2 ? 'much calmer' : p.busyBias >= 0.8 ? 'calmer' : 'a little calmer'})`, 'data-untold="busyBias|0"']] : []),
-    ...(p.tempBias ? [[`Dressing ${Math.abs(p.tempBias)}° ${p.tempBias > 0 ? 'warmer' : 'lighter'} than the forecast`, 'data-untold="tempBias|0"']] : []),
+    ...['tempBias', 'tempBias_cold', 'tempBias_warm', 'tempBias_mid'].filter(k => p[k]).map(k => [`Dressing ${Math.abs(p[k])}° ${p[k] > 0 ? 'warmer' : 'lighter'} than the forecast${{ tempBias_cold: ' in the cold months', tempBias_warm: ' in the warm months', tempBias_mid: ' in spring and fall' }[k] ?? ''}`, `data-untold="${k}|0"`]),
     ...(p.notes ?? []).map((n, i) => [`Note for Claude: "${esc(n.text)}"`, `data-untold="notes|${i}"`])];
   if (!rows.length) return '';
   return `<h3><span>What you've told it</span><span>${rows.length}</span></h3><div class="told">${rows.map(([t, a]) => `<div><span>${t}</span><button class="tag o" ${a}>Undo</button></div>`).join('')}</div>`; };
@@ -1536,7 +1570,9 @@ async function logDay(day, o, quiet = false, how = null) {
   for (const it of o.items) { it.wears = (it.wears || 0) + 1; it.lastWorn = Math.max(it.lastWorn ?? 0, at); await put('items', it); }
   const mode = S.saved.find(x => x.key === o.key)?.mode ?? o.mode ?? (MODES[S.mode] && S.view !== 'build' ? S.mode : bestMode(o.items)?.mode) ?? 'custom';
   const wt = date === dayKey() ? weatherNow()?.t : null;
-  const entry = { day, key: o.key, ids: o.items.map(i => i.id), mode, at, ...(o.src ? { src: o.src } : {}), ...(wt != null ? { t: wt } : {}) }; // the day's temperature, for "what did I wear when it was this cold" 
+  // sug: where this look sat in today's Today deck (-1 = you put it together or picked it elsewhere). v: the app version, to compare versions in Stats.
+  const sug = date === dayKey() && S.deck?.day === date ? S.deck.looks.findIndex(l => l.key === o.key) : null;
+  const entry = { day, key: o.key, ids: o.items.map(i => i.id), mode, at, ...(sug != null ? { sug } : {}), v: VERSION.split('· ')[1] ?? VERSION, ...(o.src ? { src: o.src } : {}), ...(wt != null ? { t: wt } : {}) }; // the day's temperature, for "what did I wear when it was this cold" 
   await put('log', entry); S.log = [...S.log.filter(l => l.day !== day), entry]; syncTaste();
   const fresh = badges(progressCtx()).find(b => b.done && !before.has(b.id));
   setTimeout(checkUnlocks, 1200);
@@ -1679,7 +1715,12 @@ function suggestions() {
     ${st.next.length ? `<div class="snext">${ghostEl(st.next[0].ghost)}<div><span class="mono">Add next</span><b>${esc(st.next[0].ghost.name)}</b>${st.next[1] ? `<small>then ${esc(st.next.slice(1, 3).map(r => r.cname).join(', '))}</small>` : ''}</div>
       <button class="tag ${onList(st.next[0].ghost.id) ? '' : 'o'}" data-basicwish="${st.next[0].ghost.id}">${onList(st.next[0].ghost.id) ? 'Listed' : '+ List'}</button>${st.next[1] ? `<button class="tag o" data-staplecmp="${st.type}">Compare</button>` : ''}</div>`
       : `<span class="mono scovered">Covered in every usual color</span>`}</div>`;
-  return `<p class="sub">The staples a wardrobe is built on, one by one: what you own of each, and the color to add next. Only the colors each one usually comes in, base colors first, tested against everything you own.</p>
+  // v5.73: worn-out pieces to replace, and the most-worn staples you own only one of (a backup before it wears out)
+  const cnt = {}; for (const l of S.log) for (const id of l.ids) cnt[id] = (cnt[id] ?? 0) + 1;
+  const live = S.items.filter(i => !i.stored && i.cat !== 'Accessories'), alone = i => !live.some(o => o !== i && sameJob(o, i) && tone(o) === tone(i));
+  const redo = [...live.filter(i => i.wornOut).map(i => [i, 'worn out: replace it']), ...live.filter(i => !i.wornOut && (cnt[i.id] ?? 0) >= 5 && alone(i)).sort((a, b) => cnt[b.id] - cnt[a.id]).slice(0, 3).map(i => [i, `in ${cnt[i.id]} of your fits and you own one: a backup`])];
+  const backups = redo.length ? `<h3><span>Replace or back up</span><span>${redo.length}</span></h3>${redo.map(([i, why]) => `<button class="staple redo" data-open="${i.id}"><img src="${src(i)}" alt=""><span><b>${esc(i.name)}</b><span class="mono">${why}</span></span></button>`).join('')}` : '';
+  return `${backups}<p class="sub">The staples a wardrobe is built on, one by one: what you own of each, and the color to add next. Only the colors each one usually comes in, base colors first, tested against everything you own.</p>
     <h3><span>Your next buy</span></h3>
     <article class="gap glass top"><div class="gap-top">${ghostEl(top.ghost)}<div><b>${esc(top.ghost.name)}</b><span class="mono">${esc(top.why)}</span></div></div>
       ${top.examples.length ? `<div class="minis">${top.examples.map(o => flat(o.items)).join('')}</div>` : ''}
@@ -1694,7 +1735,7 @@ function suggestions() {
 // The winner goes with the most of your pieces, and loses points for being a twin of something you already have.
 function buyOpts() { const s = colorsOn() ? mySeason() : null, worn = {}; for (const l of S.log) for (const id of l.ids) worn[id] = (worn[id] ?? 0) + 1;
   const cl = [...S.log, ...S.saved].flatMap(r => r.ids.map(byId)).filter(p => p && p.cat !== 'Accessories'); // how dressy you actually dress: your worn and saved looks
-  return { good: s?.good ?? [], avoid: s?.avoid ?? [], worn, myDress: cl.length >= 15 ? cl.reduce((t, p) => t + dress(p), 0) / cl.length : null }; }
+  return { good: s?.good ?? [], avoid: s?.avoid ?? [], worn, month: new Date().getMonth() + 1, myDress: cl.length >= 15 ? cl.reduce((t, p) => t + dress(p), 0) / cl.length : null }; }
 async function runBuy(all) {
   const b = S.buy, names = all ? BASICS[b.type][3].filter(c => !buyOpts().avoid.includes(c)) : b.colors;
   b.busy = true; b.res = null; b.all = all; render();
@@ -1787,12 +1828,22 @@ function wearStats() {
   const never = cl.filter(i => !cnt[i.id] && settled(i)), idle = cl.filter(i => cnt[i.id] && last[i.id] < ago(60)).sort((a, b) => last[a.id].localeCompare(last[b.id]));
   return { cnt, last, cl, worn30, most, never, idle, pct: cl.length ? Math.round(100 * worn30.length / cl.length) : 0 };
 }
+// v5.73: is Today getting better? Of the days you logged with Today open, how often you wore one of its looks and how far down it sat. Per app version.
+function todayStats() { const L = S.log.filter(l => l.sug != null), vs = [...new Set(L.map(l => l.v))].sort().reverse();
+  const of = ls => ({ n: ls.length, pct: ls.length ? Math.round(100 * ls.filter(l => l.sug >= 0).length / ls.length) : 0, pos: (ls => ls.length ? +(ls.reduce((t, l) => t + l.sug + 1, 0) / ls.length).toFixed(1) : null)(ls.filter(l => l.sug >= 0)) });
+  return { all: of(L), now: vs[0] ? { v: vs[0], ...of(L.filter(l => l.v === vs[0])) } : null, before: vs[1] ? { v: vs[1], ...of(L.filter(l => l.v === vs[1])) } : null }; }
+// Your hits and twice-worn looks that a rule would block (they still show up): the rules worth softening
+function softenList() { const seen = new Map(), times = {}; for (const l of S.log) times[l.key] = (times[l.key] ?? 0) + 1;
+  for (const r of [...S.saved.filter(s => s.hit), ...S.log.filter(l => times[l.key] >= 2)]) { const n = blockedBy(r.ids.map(byId).filter(Boolean)); if (n && !seen.has(n)) seen.set(n, r); }
+  return [...seen.entries()].slice(0, 5); }
 function wearSection() {
   if (!S.log.length) return `<h3><span>What you wear</span></h3><p class="sub">Log what you wear (Wear today on Today) and this shows your most worn pieces, what you never wear, and how much of your closet you actually use.</p>`;
   const w = wearStats(), strip = (list, label) => `<div class="strip">${list.slice(0, 20).map(i => `<button data-open="${i.id}" aria-label="${esc(i.name)}"><img src="${src(i)}" alt=""><small>${label(i)}</small></button>`).join('')}</div>`;
   return `<h3><span>What you wear</span><span>clothes only</span></h3>
     <div class="tiles"><div><span class="mono">Worn in 30 days</span><b>${w.pct}%</b><small class="sub">${w.worn30.length} of ${w.cl.length} pieces</small></div><button data-action="wearall" data-wearlist="never"><span class="mono">Never worn ›</span><b>${w.never.length}</b></button>
       <button data-action="wearall" data-wearlist="idle"><span class="mono">Not in 60+ days ›</span><b>${w.idle.length}</b></button><button data-action="wrapped"><span class="mono">Month in review ›</span><b>${new Date().toLocaleDateString(undefined, { month: 'short' }).toLowerCase()}</b></button></div>
+    ${(t => t.all.n ? `<span class="mono">Worn from Today</span><p class="sub">${t.all.pct}% of ${t.all.n} logged day${t.all.n === 1 ? '' : 's'}${t.all.pos ? `, usually look ${t.all.pos} in the deck` : ''}.${t.before ? ` ${t.now.v}: ${t.now.pct}% · ${t.before.v}: ${t.before.pct}%.` : ''}</p>` : '')(todayStats())}
+    ${(l => l.length ? `<span class="mono">Rules your own looks break</span><p class="sub">These looks still show up, but the rules say no. Tell Claude which rule to soften.</p><ul class="soften">${l.map(([n]) => `<li>${esc(n)}</li>`).join('')}</ul>` : '')(softenList())}
     ${w.most.length ? `<span class="mono">Most worn</span>${strip(w.most, i => `${w.cnt[i.id]}×`)}` : ''}
     ${w.never.length ? `<span class="mono">Never worn · build a look around one</span>${strip(w.never, () => 'never')}` : ''}`;
 }
@@ -1856,6 +1907,11 @@ function meView() {
     <label class="chk"><input type="checkbox" data-pref="twoShirts" ${p.twoShirts ? 'checked' : ''}> Sometimes a button-up open over a tee</label>
     <label class="chk"><input type="checkbox" data-pref="shirtStack" ${p.shirtStack ? 'checked' : ''}> Rarely a shirt over a shirt (button-up under a flannel)</label>
     <label class="chk"><input type="checkbox" data-pref="hoodieAlone" ${p.hoodieAlone ? 'checked' : ''}> Hoodies and sweaters without a tee under</label>
+    <label class="cell seasonpick"><span>Work means</span><select data-workdress aria-label="What work means">${[['casual', 'Casual (tee, jeans)'], ['smart', 'Smart casual'], ['dressy', 'Dressy (trousers, loafers)']].map(([v, l]) => `<option value="${v}" ${(p.workDress ?? 'smart') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="cell seasonpick"><span>Time outside</span><select data-outside aria-label="Time outside">${[['mixed', 'Some'], ['out', 'Most of the day'], ['in', 'Mostly inside']].map(([v, l]) => `<option value="${v}" ${(p.outside ?? 'mixed') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <span class="mono">Your week · Today starts each day with it</span>
+    <div class="group">${[1, 2, 3, 4, 5, 6, 0].map(d => { const day = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d];
+      return `<label class="cell seasonpick"><span>${day}</span><select data-weekday="${d}" aria-label="${day}"><option value="">Any</option>${Object.entries(OCCASIONS).map(([k, o]) => `<option value="${k}" ${p.week?.[d] === k ? 'selected' : ''}>${o.label}</option>`).join('')}</select></label>`; }).join('')}</div>
     </details>
     <details class="sgroup" data-sg="brands" ${S.sopen?.brands || false ? 'open' : ''}><summary><span>Brands and names</span><span class="mono">${S.items.filter(i => i.brand).length} of ${S.items.length} named</span></summary>
     <p class="sub">Find logos and team names in your photos ("Lakers jersey", "Amiri t-shirt"). You confirm each one. Or tap any piece's name to rename it yourself.</p>
@@ -2013,7 +2069,7 @@ function colorAt(img, e) {
   if (!ps.length) return null;
   const ly = p => p[0] * .3 + p[1] * .59 + p[2] * .11, mid = ps.sort((a, b) => ly(a) - ly(b)).slice(Math.floor(ps.length / 3), Math.ceil(ps.length * .95)); // skip folds and shadows (darkest third) and shine
   return '#' + [0, 1, 2].map(k => Math.round(mid.reduce((t, p) => t + p[k], 0) / mid.length).toString(16).padStart(2, '0')).join(''); }
-async function setMainColor(it, h) { it.color = h; if (it.accents) it.accents = it.accents.filter(a => it.accPicked?.includes(a) || colorDist(a, h) > 90 && keepAcc(it, a, h));
+async function setMainColor(it, h) { it.color = h; if (it.cname) { delete it.cname; syncTaste(); } if (it.accents) it.accents = it.accents.filter(a => it.accPicked?.includes(a) || colorDist(a, h) > 90 && keepAcc(it, a, h));
   const f = sheet.querySelector('[name=color]'); if (f) { f.value = h; showColor(it); } const box = sheet.querySelector('#accbox'); if (box) box.innerHTML = accHtml(it); S.ideas = null; S.deck = null; await put('items', it); }
 async function addAccent(it, h) { it.accents = [...(it.accents ?? []).filter(x => x !== h), h].slice(-6); it.accPicked = [...new Set([...(it.accPicked ?? []), h])]; S.accPick = null; await put('items', it); S.ideas = null; S.deck = null;
   const box = sheet.querySelector('#accbox'); if (box) box.innerHTML = accHtml(it); toast(`Added ${colorName(h)}`); }
@@ -2092,10 +2148,12 @@ function openSheet(id) {
     <div class="group">
       <div class="cell"><span>Main color</span><span class="cname" id="cname">${tone(it)}${isNeutral(it.color) ? ' · neutral' : ''}</span><i class="cdot" id="cdot" style="background:${it.color}"></i></div>
       <div class="cpick" id="cpick">${Object.entries(isDenim(it) ? { ...WASHES, ...SWATCHES } : SWATCHES).map(([n, h]) => `<button type="button" class="${tone(it) === n ? 'on' : ''}" data-setcolor="${it.id}|${h}" aria-label="${n}"><i style="background:${h}"></i></button>`).join('')}<label aria-label="Pick any color"><i></i><input type="color" name="color" value="${it.color}"></label><button type="button" class="tag o drop" data-colordrop="${it.id}">Pick from photo</button></div>
+      ${isDenim(it) ? '' : `<label class="cell"><span>Call it</span><select name="cname" aria-label="Color name"><option value="">${esc(it.cname ? 'auto' : `${colorName(it.color)} (auto)`)}</option>${Object.keys(SWATCHES).map(n => `<option ${it.cname === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>`}
       <div id="accbox">${accHtml(it)}</div>
       <label class="cell"><span>Pattern</span><select name="pattern">${[['solid', 'Solid (plain)'], ['logo', 'Small logo'], ['graphic', 'Big graphic'], ['allover', 'All-over pattern']].map(([v, l]) => `<option value="${v}" ${patternOf(it) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="cell" ${patternOf(it) === 'allover' ? '' : 'hidden'} id="printrow"><span>Which pattern</span><select name="print"><option value="">From the name</option>${PRINTS.map(v => `<option ${it.print === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       <label class="cell"><span>In the laundry</span><input type="checkbox" class="switch" name="dirty" ${it.dirty ? 'checked' : ''}></label>
+      <label class="cell"><span>Getting worn out</span><input type="checkbox" class="switch" name="wornOut" ${it.wornOut ? 'checked' : ''}></label>
       <label class="cell"><span>Stored away (off season)</span><input type="checkbox" class="switch" name="stored" ${it.stored ? 'checked' : ''}></label>
       <label class="cell"><span>Bought</span><input type="date" name="bought" value="${it.bought ?? ''}"></label>
       <label class="cell"><span>From</span><input name="from" value="${esc(it.from ?? '')}" placeholder="store or site" autocomplete="off" maxlength="40"></label>
@@ -2118,6 +2176,8 @@ function openSheet(id) {
     Object.assign(it, { name: f.name.value, cat: f.cat.value, kind, fit: +f.fit.value, color: f.color.value, pattern: f.pattern.value, patterned: f.pattern.value === 'graphic' || f.pattern.value === 'allover', price: price > 0 ? price : null });
     if (f.pattern.value === 'allover' && f.print.value) it.print = f.print.value; else delete it.print; sheet.querySelector('#printrow').hidden = f.pattern.value !== 'allover';
     if (f.dirty.checked) it.dirty = true; else delete it.dirty;
+    if (f.wornOut.checked) it.wornOut = true; else delete it.wornOut;
+    if (e.target.name === 'cname') { if (f.cname.value) it.cname = f.cname.value; else delete it.cname; syncTaste(); S.deck = null; }
     if (f.stored.checked) it.stored = true; else delete it.stored;
     if (f.material.value) it.material = f.material.value; else delete it.material;
     if (f.brand.value.trim()) it.brand = f.brand.value.trim().slice(0, 40); else delete it.brand;
@@ -2126,6 +2186,7 @@ function openSheet(id) {
     const tg = f.tags.value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean).slice(0, 8); if (tg.length) it.tags = tg; else delete it.tags;
     if (e.target.name === 'dress') it.dress = +f.dress.value;
     if (e.target.name === 'cat') { f.fit.innerHTML = fitOptions(it); f.fit.closest('label').hidden = it.cat === 'Accessories'; f.kind.innerHTML = kindOptions(it); }
+    if (e.target.name === 'color' && it.cname) { delete it.cname; syncTaste(); }
     if (e.target.name === 'color' && it.accents) { it.accents = it.accents.filter(a => it.accPicked?.includes(a) || colorDist(a, it.color) > 90 && keepAcc(it, a)); sheet.querySelector('#accbox').innerHTML = accHtml(it); }
     showColor(it);
     S.ideas = null; await put('items', it);
@@ -2400,7 +2461,7 @@ const fillAngles = it => { for (const k of it.more ?? []) loadPic('orig', k).the
 const replaceInput = picker('image/*', false, async ([f]) => {
   const it = byId(replacing); if (!it) return;
   toast('Cutting out the new photo…');
-  try { const { img, color, accents, photo, frame } = await cutout(f, undefined, it); Object.assign(it, { img, color, accents, photo, frame, fp: await fpOf(photo), cfp: await fpOf(img), turns: 0 }); delete it.noPhoto; delete it.dupOk; /* new photo, new orientation; a quick-added piece is a real one now */ resetSrc(it); await put('items', it); S.ideas = null; openSheet(it.id); toast('Photo replaced'); }
+  try { const { img, color, color2, accents, photo, frame } = await cutout(f, undefined, it); if (color2) it.color2 = color2; else delete it.color2; Object.assign(it, { img, color, accents, photo, frame, fp: await fpOf(photo), cfp: await fpOf(img), turns: 0 }); delete it.noPhoto; delete it.dupOk; /* new photo, new orientation; a quick-added piece is a real one now */ resetSrc(it); await put('items', it); S.ideas = null; openSheet(it.id); toast('Photo replaced'); }
   catch (e) { console.warn(e); toast(`Couldn't read ${f.name}. Try a JPG`); }
 });
 const fileInput = document.getElementById('file');
@@ -2536,6 +2597,9 @@ document.addEventListener('change', async e => {
   if (e.target.matches('[data-bkevery]')) { S.profile = { k: 'me', ...S.profile, backupEvery: +e.target.value }; await put('profile', S.profile); toast(+e.target.value ? `Backup reminder every ${+e.target.value === 1 ? 'day' : `${e.target.value} days`}` : 'Reminder only after big changes'); return; }
   if (e.target.matches('[data-colorseason]')) { S.profile = { k: 'me', ...S.profile, colorSeason: e.target.value || null, colorsOff: false }; await put('profile', S.profile); syncTaste(); S.deck = null; S.ideas = null; S.best = null; render(); toast(e.target.value ? `${COLOR_SEASONS[e.target.value].label}: your colors are on` : 'Color season cleared'); return; }
   if (e.target.matches('[data-colorson]')) { S.profile = { k: 'me', ...S.profile, colorsOff: !e.target.checked }; await put('profile', S.profile); syncTaste(); S.deck = null; S.ideas = null; S.best = null; render(); toast(e.target.checked ? 'Your colors are on' : 'Your colors are off'); return; }
+  if (e.target.matches('[data-workdress], [data-outside]')) { const k = e.target.matches('[data-workdress]') ? 'workDress' : 'outside'; S.profile = { k: 'me', ...S.profile, [k]: e.target.value }; await put('profile', S.profile); S.deck = null; S.ideas = null; toast(k === 'workDress' ? 'Work looks updated' : 'Weather picks updated'); return; }
+  if (e.target.matches('[data-weekday]')) { const week = { ...(S.profile?.week ?? {}), [e.target.dataset.weekday]: e.target.value }; for (const d in week) if (!week[d]) delete week[d];
+    S.profile = { k: 'me', ...S.profile, week }; if (!Object.keys(week).length) delete S.profile.week; await put('profile', S.profile); S.occ = null; S.deck = null; S.ideas = null; toast('Your week is set'); return; }
   if (e.target.matches('[data-season]')) { S.profile = { k: 'me', ...S.profile, season: e.target.value }; await put('profile', S.profile); S.deck = null; toast('Season set'); return; }
   if (e.target.matches('[data-favsort]')) { S.favSort = e.target.value; render(); return; }
   if (e.target.matches('[data-action="fullbackup"]')) { S.profile = { k: 'me', ...S.profile, fullBackup: e.target.checked }; await put('profile', S.profile); return; }
@@ -2930,7 +2994,7 @@ ${list.map(i => `${i.id} · now called "${i.name}" · ${i.kind || i.cat} · ${co
   // Plan my week: every open day gets Today's best look for that day's forecast, with no top, layer or pants repeated in the week
   else if (ds.autoplan) { const days = ds.autoplan.split(',').filter(k => k >= dayKey() && !plannedFor(k)), used = new Set(Object.values(S.plan.days).flatMap(r => r.ids)); let n = 0;
     for (const k of days) { const f = S.profile?.wx?.daily?.[k], w = weatherNow();
-      const looks = today(pool(), { t: f ? f.t - (S.profile?.tempBias ?? 0) : dressTemp(w?.t ?? null), rain: RAINY(f?.code ?? 0), season: seasonNow(), occasion: S.occ, n: 12, skip: [...used] });
+      const looks = today(pool(), { t: f ? f.t - tShift() : dressTemp(w?.t ?? null), occDress: occLevel(), rain: RAINY(f?.code ?? 0), season: seasonNow(), occasion: S.occ, n: 12, skip: [...used] });
       const o = looks.find(l => !l.items.some(p => used.has(p.id) && p.cat !== 'Shoes' && p.cat !== 'Accessories')) ?? looks[0]; if (!o) continue;
       await setPlan(k, { key: o.key, ids: o.items.map(p => p.id) }, false); for (const p of o.items) used.add(p.id); n++; }
     render(); toast(n ? `Planned ${n} day${n > 1 ? 's' : ''}. Tap Change on any you want to swap` : 'Every day this week is already planned'); }
@@ -2982,7 +3046,10 @@ ${list.map(i => `${i.id} · now called "${i.name}" · ${i.kind || i.cat} · ${co
     if (S.build) S.build = S.build.filter(p => p.id !== ds.del);
     S.ideas = null; sheet.close(); render();
   }
-  else if (ds.hit) { await toggleHit(ds.hit); render(); if (sheet.open) openDay(openDay.k); } // only the day sheet has a hit button
+  else if (ds.hit) { const on = await toggleHit(ds.hit); render(); if (on) openHitWhy(ds.hit); else if (sheet.open) openDay(openDay.k); }
+  else if (ds.hitwhy) { const [k, why] = ds.hitwhy.split('|'), r = S.saved.find(s => s.key === k); if (!r) return;
+    if (why.startsWith('piece:')) { const it = byId(why.slice(6)); if (it) { it.rate = 1; it.rateAsked = true; await put('items', it); } r.why = 'piece'; } else r.why = why;
+    await put('outfits', r); syncTaste(); S.deck = null; sheet.close(); render(); toast(why === 'colors' ? 'Those colors count double now' : why === 'fit' ? 'Looks with that shape get a lift' : 'That piece gets suggested more'); }
   else if (ds.save) {
     const i = S.saved.findIndex(s => s.key === ds.save);
     if (i >= 0) { await del('outfits', ds.save); S.saved.splice(i, 1); }

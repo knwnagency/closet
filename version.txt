@@ -1,2 +1,2 @@
-2026.11.22 · v5.72
-Builder: neutral and pop buttons for top, layer, hat and shoes. Tap again to rotate to the next one. Fit pics: a look with a fit pic swipes between the photo and the outfit laid out, in Favorites and on the calendar day, and the Lookbook shows the photo with the outfit in the corner.
+2026.11.22 · v5.73
+Smarter picks: looks are warm enough for the cold (a coat below 5°), every style scores on the same scale, and your hits and saves count more than luck. Work means what you set in Settings, and you can plan your week, set your time outside and name a piece's color. Hits ask what made them work. Stats show how often you wear a Today look, and Buy next flags worn-out pieces and staples that need a backup.

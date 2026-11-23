@@ -52,6 +52,11 @@ tap('nav [data-go="me"]'); await wait(700); if (tap('main [data-listtab="mine"]'
   f.elements.link.value = 'example.com/shop/selftest-black-hoodie/99'; f.requestSubmit(); await wait(900);
   const row = [...d().querySelectorAll('.wish')].find(r => /selftest black hoodie/.test(r.textContent)); log(!!row, 'Wishlist adds from a link alone'); log(!!row && /black/.test(row.textContent), 'Wish type and color guessed from the name'); fits('Wishlist');
   row?.querySelector('[data-wishdel]')?.click(); await wait(500); }
+log(!d().querySelector('.bootfail'), 'The app starts (no "couldn\'t load" screen)');
+// The demo closet boots with real-looking data (v5.73: a boot crash only showed with pieces and logs, an empty closet hid it)
+{ const f3 = Object.assign(document.createElement('iframe'), { src: './?db=demo' }); f3.style.cssText = 'width:390px;height:300px'; document.body.append(f3);
+  await new Promise(r => f3.onload = r); await wait(4000); const d3 = f3.contentWindow.document;
+  log(!d3.querySelector('.bootfail') && !!d3.querySelector('.dcard'), 'Demo closet starts and Today shows looks'); f3.remove(); await wait(300); }
 // Restore / sync on a throwaway closet (?db=selftest): a backup from "another device" lands, and your real closet is never touched
 { const f2 = Object.assign(document.createElement('iframe'), { src: './?db=selftest' }); f2.style.cssText = 'width:390px;height:300px'; document.body.append(f2);
   await new Promise(r => f2.onload = r); await wait(1800); const w2 = f2.contentWindow, d2 = w2.document;

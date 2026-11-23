@@ -10,7 +10,7 @@ export const jobs = {
   // Never picked: what 8 fresh sets of Today pick, the typical score per category, and each other piece's best look
   rare: d => {
     const byId = new Map(d.items.map(p => [p.id, p])), hits = {}, picked = {}; let seed = 5; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    for (let r = 0; r < 8; r++) for (const o of today(d.items, { ...d.opts, n: 12, rand })) for (const p of o.items) { hits[p.id] = (hits[p.id] ?? 0) + 1; (picked[p.cat] ??= []).push(o.score - 0.75); } // Today adds about 0.75 of randomness
+    for (let r = 0; r < 8; r++) for (const o of today(d.items, { ...d.opts, n: 12, rand })) for (const p of o.items) { hits[p.id] = (hits[p.id] ?? 0) + 1; (picked[p.cat] ??= []).push(o.score - 0.25); } // Today adds about 0.25 of randomness (0 to 0.5 since v5.73)
     const med = Object.fromEntries(Object.entries(picked).map(([c, v]) => [c, v.sort((a, b) => a - b)[v.length >> 1]]));
     const ok = d.okIds.map(id => byId.get(id)).filter(Boolean);
     // ponytail: 800 random tries per piece, not 1500 (about 2x faster); the verdict allows for the lower best

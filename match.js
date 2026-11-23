@@ -29,7 +29,10 @@ const NEUTRAL_NAMES = new Set(['black', 'grey', 'light grey', 'white', 'cream', 
 const HUES = [[15, 'red'], [40, 'orange'], [65, 'yellow'], [85, 'lime'], [172, 'green'], [195, 'teal'], [250, 'blue'], [290, 'purple'], [325, 'magenta'], [345, 'pink'], [361, 'red']];
 // What you can pick in the item sheet. Each one reads back as its own name (match.test.mjs checks).
 export const SWATCHES = { black: '#1b1a19', grey: '#7d7b78', 'light grey': '#b9b7b3', white: '#f6f5f1', cream: '#ede4cf', navy: '#1e2a45', denim: '#4d6a8c', 'light blue': '#9cc3e6', blue: '#2f5fb5', teal: '#2a8085', green: '#3f7a52', forest: '#22402c', olive: '#5c5b33', sage: '#8aa877', beige: '#d8c7a6', camel: '#b2874e', brown: '#5b3e2a', rust: '#a8522b', orange: '#e2782c', yellow: '#e9c548', red: '#c0392b', burgundy: '#6b1e2a', pink: '#e9a2b9', purple: '#6c4a90' };
+// Names you picked on a piece ("call it rust") win over the guess, so a color between two names can't flip and swing the rules.
+const PINS = new Map();
 export function colorName(hex) {
+  const pin = PINS.get(hex); if (pin) return pin;
   const { h, s, l } = hexToHsl(hex);
   if (l < 0.13) return h >= 200 && h <= 250 && s >= 0.4 && l >= 0.09 ? 'navy' : 'black'; // a very dark but clearly blue polo is navy
   if (l < 0.25 && s < 0.25) { // dark and muted: a washed black tee is black (s ≈ 0.02), but dark olive or brown trousers keep their color
@@ -65,7 +68,8 @@ export function hslToHex(h, s, l) {
 export const hueDist = (a, b) => { const d = Math.abs(a - b) % 360; return Math.min(d, 360 - d); };
 
 const colored = ps => ps.filter(p => !isNeutral(p.color) && !isDenim(p)); // jeans in any wash, even light blue, go with everything
-const hues = ps => colored(ps).map(p => hexToHsl(p.color).h);
+// color2: a second color covering 30%+ of a two-tone or colorblock piece counts on the wheel too (v5.73)
+const hues = ps => [...colored(ps).map(p => hexToHsl(p.color).h), ...ps.filter(p => p.color2 && !isNeutral(p.color2) && !isDenim(p)).map(p => hexToHsl(p.color2).h)];
 // Prints that compete: a big graphic or an all-over pattern. A small chest logo doesn't count, and neither does a plain piece.
 // p.pattern: 'solid' | 'logo' | 'graphic' | 'allover'; older pieces only have p.patterned (true = graphic).
 // Your tag wins. Untagged: the name says it ("Camo sweats", "Aztec jacket", "Flannel shirt"); side stripes on joggers aren't an all-over pattern.
@@ -279,7 +283,10 @@ export const isDenim = p => /jean|denim|jort/i.test(`${p.kind ?? ''} ${p.name ??
 const WASH = ({ s, l }) => l > 0.85 ? 0 : l > 0.6 ? 1 : l > 0.4 ? 2 : l > 0.22 ? 3 : s < 0.15 ? 5 : 4; // white, light, mid, dark, raw, black
 const cap = s => s[0].toUpperCase() + s.slice(1);
 // ---------- dressiness: 0 sporty/lounge, 1 everyday, 2 dressy. From the type and name; p.dress overrides. ----------
-const DRESS = [[/blazer|suit|dress shirt|oxford|derby|loafer|slacks|trouser|pleated|chelsea|trench|overcoat|button|polo|sweater|knit|cardigan|chino|turtleneck|\bcoat\b/i, 2],
+// Flannels, work shirts and knits are everyday (v5.73): a flannel button-up scored like a blazer and pushed Work looks too dressy.
+// A plain button-up or polo stays dressy. Checked in order: the casual shirts first.
+const DRESS = [[/flannel|plaid|denim shirt|chambray|overshirt|shacket|camp shirt|work shirt|western|hawaiian|bowling|sweater|knit|cardigan/i, 1],
+  [/blazer|suit|dress shirt|oxford|derby|loafer|slacks|trouser|pleated|chelsea|trench|overcoat|button|polo|chino|turtleneck|\bcoat\b/i, 2],
   [/hoodie|sweat|jogger|track|tank|jersey|basketball|gym|slide|slipper|sandal|flip|foam|runner|athletic|compression/i, 0]];
 export const dress = p => p.dress ?? DRESS.find(([re]) => re.test(`${p.kind ?? ''} ${p.name ?? ''}`))?.[1] ?? ({ formal: 2, athletic: 0 }[[].concat(p.vibe ?? [])[0]] ?? 1);
 export const MATERIALS = ['cotton', 'denim', 'leather', 'suede', 'knit', 'wool', 'linen', 'nylon', 'fleece', 'corduroy', 'silk'];
@@ -378,26 +385,42 @@ export function fixTip(ps) {
 // ---------- your taste: learned from favorites, wears and "not for me" ----------
 // Pairs of pieces you keep putting together score higher; pairs from looks you rejected score lower; a rejected look never comes back.
 // ponytail: module-level state set by the app (setTaste) so every scorer sees it without threading opts through. Fine for one user.
-let TASTE = { pair: new Map(), nope: new Set(), good: [], avoid: [], hair: null, cpair: new Map(), never: new Set(), colorNo: new Set(), dressBias: 0, busyBias: 0 };
+let TASTE = { pair: new Map(), nope: new Set(), good: [], avoid: [], hair: null, cpair: new Map(), tpair: new Map(), never: new Set(), colorNo: new Set(), dressBias: 0, busyBias: 0, trusted: new Set(), shapes: new Set() };
 // liked/worn/nope: lists of piece-id arrays. good/avoid: color names. hair: black|brown|blonde|red|grey. likedColors: color-name lists of looks you saved or wore.
-export function setTaste({ liked = [], worn = [], nope = [], good = [], avoid = [], hair = null, likedColors = [], never = [], colorNo = [], dressBias = 0, busyBias = 0, shirtStack = false, skipped = [] } = {}) {
+// v5.73: an entry is a list of ids, or { ids, w } with its own weight (old wears fade, worn-from-Today counts less: the app sets w).
+// likedKinds: the same looks as type:color tokens ("hoodie:black"), so taste carries over to a new or replacement piece.
+// trusted: looks you wore twice or marked a hit; no rule can block them. shapes: the fit shape of hits that worked because of the fit.
+// pins: [hex, name] pairs you picked on a piece.
+const W = x => Array.isArray(x) ? [x, 1] : [x.ids ?? [], x.w ?? 1];
+export function setTaste({ liked = [], worn = [], nope = [], good = [], avoid = [], hair = null, likedColors = [], likedKinds = [], never = [], colorNo = [], dressBias = 0, busyBias = 0, shirtStack = false, skipped = [], trusted = [], shapes = [], pins = [] } = {}) {
+  PINS.clear(); for (const [h, n] of pins) PINS.set(h, n); isNeutral.memo?.clear();
   const pair = new Map(), bump = (ids, w) => { for (const [a, b] of pairs([...ids].sort())) pair.set(a + '|' + b, (pair.get(a + '|' + b) ?? 0) + w); };
-  liked.forEach(ids => bump(ids, 1)); worn.forEach(ids => bump(ids, 0.5)); nope.forEach(ids => bump(ids, -1)); skipped.forEach(ids => bump(ids, -0.25)); // swiped past: a nudge, not a no
-  const cpair = new Map(); // color pairs you keep choosing (black + olive), not just piece pairs
-  for (const ns of likedColors) for (const [a, b] of pairs([...new Set(ns)].sort())) cpair.set(a + '|' + b, (cpair.get(a + '|' + b) ?? 0) + 1);
-  TASTE = { pair, nope: new Set(nope.map(ids => [...ids].sort().join())), good, avoid, hair, cpair, never: new Set(never.map(p => [...p].sort().join('|'))), colorNo: new Set(colorNo.map(p => [...p].sort().join('|'))), dressBias, busyBias, shirtStack };
+  liked.forEach(x => { const [ids, w] = W(x); bump(ids, w); }); worn.forEach(x => { const [ids, w] = W(x); bump(ids, 0.5 * w); }); nope.forEach(ids => bump(ids, -1)); skipped.forEach(ids => bump(ids, -0.25)); // swiped past: a nudge, not a no
+  const cpair = new Map(), tpair = new Map(); // color pairs you keep choosing (black + olive), and type:color pairs (black hoodie + olive cargos)
+  for (const x of likedColors) { const [ns, w] = W(x); for (const [a, b] of pairs([...new Set(ns)].sort())) cpair.set(a + '|' + b, (cpair.get(a + '|' + b) ?? 0) + w); }
+  for (const x of likedKinds) { const [ks, w] = W(x); for (const [a, b] of pairs([...new Set(ks)].sort())) tpair.set(a + '|' + b, (tpair.get(a + '|' + b) ?? 0) + w); }
+  TASTE = { pair, nope: new Set(nope.map(ids => [...ids].sort().join())), good, avoid, hair, cpair, tpair, never: new Set(never.map(p => [...p].sort().join('|'))), colorNo: new Set(colorNo.map(p => [...p].sort().join('|'))), dressBias, busyBias, shirtStack,
+    trusted: new Set(trusted.map(ids => [...ids].sort().join())), shapes: new Set(shapes) };
 }
-const taste = ps => {
+// A look's type:color tokens for likedKinds (clothes only).
+export const kindTokens = ps => ps.filter(p => CLOTHES.includes(p.cat)).map(p => `${roleOf(p)}:${tone(p)}`);
+// A look's fit shape: top width, pant width, shoe weight (for hits that worked because of the fit).
+export const shapeOf = ps => { const { up, down } = proportion(ps), sh = ps.find(p => p.cat === 'Shoes'); return `${up ?? '-'}${down ?? '-'}${sh ? knownFit(sh) ?? fit(sh) : '-'}`; };
+const taste = (ps, noDress = false) => {
   const ids = ps.map(p => p.id).sort(); if (TASTE.nope.has(ids.join())) return null;
   if (pairs(ids).some(([a, b]) => TASTE.never.has(a + '|' + b))) return null; // you said these two don't go
   const cn = [...new Set(ps.filter(p => p.cat !== 'Accessories').map(p => colorName(p.color)))].sort();
   const colorPen = pairs(cn).some(([a, b]) => TASTE.colorNo.has(a + '|' + b)) ? -2 : 0; // you said these colors don't work together
-  const cl = ps.filter(p => CLOTHES.includes(p.cat)), dressPen = TASTE.dressBias && cl.length ? -Math.abs(cl.reduce((t, p) => t + dress(p), 0) / cl.length - (1 + TASTE.dressBias)) * 0.8 : 0; // too dressy / too sporty
-  const t = pairs(ids).reduce((s, [a, b]) => s + (TASTE.pair.get(a + '|' + b) ?? 0), 0);
+  const cl = ps.filter(p => CLOTHES.includes(p.cat)), dressPen = TASTE.dressBias && cl.length && !noDress ? -Math.abs(cl.reduce((t, p) => t + dress(p), 0) / cl.length - (1 + TASTE.dressBias)) * 0.8 : 0; // too dressy / too sporty
+  // an accessory pair counts half: your go-to cap has been worn with everything, so it shouldn't lift every look it's in
+  const acc = new Set(ps.filter(p => p.cat === 'Accessories').map(p => p.id));
+  const t = pairs(ids).reduce((s, [a, b]) => s + (TASTE.pair.get(a + '|' + b) ?? 0) * (acc.has(a) || acc.has(b) ? 0.5 : 1), 0);
+  const kt = pairs([...new Set(kindTokens(ps))].sort()).reduce((s, [a, b]) => s + (TASTE.tpair.get(a + '|' + b) ?? 0), 0);
+  const shape = TASTE.shapes.size && complete(ps) && TASTE.shapes.has(shapeOf(ps)) ? 0.3 : 0;
   const cs = pairs([...new Set(ps.filter(p => p.cat !== 'Accessories').map(p => colorName(p.color)))].sort()).reduce((s, [a, b]) => s + (TASTE.cpair.get(a + '|' + b) ?? 0), 0);
   // "too busy" (Not for me): every extra loud thing costs a little: a second color, prints, a second layer, a second accessory
   const busy = TASTE.busyBias ? Math.max(0, colored(cl).length - 1) + prints(ps) + Math.max(0, ps.filter(p => p.cat === 'Layers').length - 1) + Math.max(0, ps.filter(p => p.cat === 'Accessories').length - 1) : 0;
-  return Math.max(-1.5, Math.min(1.5, t * 0.25 + Math.min(0.6, cs * 0.1))) + colorPen + dressPen - TASTE.busyBias * busy * 0.5;
+  return Math.max(-1.5, Math.min(1.5, t * 0.25 + Math.min(0.6, cs * 0.1) + Math.min(0.6, kt * 0.1) + shape)) + colorPen + dressPen - TASTE.busyBias * busy * 0.5;
 };
 
 // Known sneakers have a known shape: the AI's fit guess shouldn't call Air Force 1s sleek. null = not a model we know.
@@ -411,11 +434,14 @@ const pull = ps => ps.reduce((t, p) => t + (p.rate > 0 ? 0.6 : p.rate < 0 ? -2.5
 // Returns { score, note } or null. Color mode decides if it's allowed; proportions can veto or boost.
 export function scoreOutfit(ps, mode, opts = {}) {
   // A cap or shoes repeating a color from the print up top belongs to that print's palette, so the color rule judges the fit without them.
-  const ech = echoes(ps), base = MODES[mode].score(ps, opts) ?? (ech.length ? MODES[mode].score(ps.filter(p => !ech.some(e => e.p === p)), opts) : null);
-  if (base == null) return null;
-  const tb = taste(ps); if (tb == null) return null; // you said "not for me" to this exact look
+  const ech = echoes(ps), raw = MODES[mode].score(ps, opts) ?? (ech.length ? MODES[mode].score(ps.filter(p => !ech.some(e => e.p === p)), opts) : null);
+  // a look you wore twice or marked a hit: your evidence beats the rules, in every style (it just doesn't get the style's bonus)
+  const trust = TASTE.trusted.has(ps.map(p => p.id).sort().join());
+  if (raw == null && !trust) return null;
+  const base = Math.min(3, raw ?? 1.5); // every style tops out at 3 (v5.73): Streetwear added 1.5 per streetwear piece and crowded Today
+  const tb = taste(ps, opts.noDress); if (tb == null) return null; // you said "not for me" to this exact look
   const pr = proportion(ps);
-  if (pr.veto) return null; // one deal-breaker outweighs any number of good points
+  if (pr.veto && !trust) return null; // one deal-breaker outweighs any number of good points
   const finish = Math.min(2, ps.filter(p => p.cat === 'Accessories').length) * 0.3; // a hat / chain finishes the look
   // style bonuses top out at +1.6 so one idea counted three ways can't run away; warnings always count in full
   const st = style(ps), e = ech[0], good = st.find(([v]) => v > 0); // the caption says what works; warnings go to the builder's tip (fixTip)
@@ -537,18 +563,19 @@ export function extractPalette(px, k = 5, min = 0.06) {
 }
 
 // ponytail: random sampling, not exhaustive search. Fine for a few hundred items; enumerate if results get repetitive.
-export function generate(items, mode, { anchor, fixed = [], palette, inspo, n = 12, tries = 1500, rand = Math.random, layerOdds = 0.5, maxUse = null, alone = false } = {}) {
+export function generate(items, mode, { anchor, fixed = [], palette, inspo, n = 12, tries = 1500, rand = Math.random, layerOdds = 0.5, layer2Odds = 0, maxUse = null, alone = false, noDress = false } = {}) {
   const by = Object.fromEntries(Object.keys(SLOTS).map(s => [s, items.filter(SLOTS[s])]));
   if (alone) by.Tops = items.filter(isTopish); // "wear hoodies alone": a hoodie or sweater can be the top
   const pinned = [anchor, ...fixed].filter(Boolean), forced = new Set(pinned.map(slotOf));
   for (const p of pinned) by[slotOf(p)] = [p];
   if (!by.Tops.length || !by.Bottoms.length || !by.Shoes.length) return [];
-  const pick = a => a[Math.floor(rand() * a.length)], opts = { palette, inspo };
+  const pick = a => a[Math.floor(rand() * a.length)], opts = { palette, inspo, noDress };
   const seen = new Map(), blocked = new Map();
   for (let t = 0; t < tries; t++) {
     const ps = [pick(by.Tops), pick(by.Bottoms), pick(by.Shoes)];
     const add = (slot, odds) => { const left = by[slot].filter(p => !ps.includes(p)); if (left.length && (forced.has(slot) || rand() < odds)) ps.push(pick(left)); }; // never the same piece twice
-    add('Layers', layerOdds); add('Hat', 0.8); add('Accessory', 0.5); add('Accessory', 0.06); add('Belt', 0.05); // hats + chains/bags in most fits, a belt rarely
+    // layer2Odds: a second layer on cold days (tee, hoodie, jacket)
+    add('Layers', layerOdds); if (layer2Odds && ps.some(p => p.cat === 'Layers')) add('Layers', layer2Odds); add('Hat', 0.8); add('Accessory', 0.5); add('Accessory', 0.06); add('Belt', 0.05); // hats + chains/bags in most fits, a belt rarely
     const key = ps.map(p => p.id).sort().join();
     if (seen.has(key)) continue;
     const r = scoreOutfit(ps, mode, opts);
@@ -557,6 +584,13 @@ export function generate(items, mode, { anchor, fixed = [], palette, inspo, n = 
       const pr = proportion(ps); if (pr.veto) blocked.set(pr.note, (blocked.get(pr.note) ?? 0) + 1);
     }
   }
+  // v5.73: random tries cover a sliver of a big closet. Polish the 3 best with one-piece swaps (pants, shoes, layer), 12 tries a slot.
+  // ponytail: sampled swaps, not every piece (every piece made Today 2.5x slower on 240 pieces)
+  if (tries >= 1000) { const tried = new Set(seen.keys());
+    for (const o of [...seen.values()].sort((a, b) => b.score - a.score).slice(0, 3)) for (const slot of ['Bottoms', 'Shoes', 'Layers']) {
+      const cur = !forced.has(slot) && o.items.find(SLOTS[slot]); if (!cur) continue;
+      for (let k = 0; k < Math.min(12, by[slot].length); k++) { const p = pick(by[slot]); if (o.items.includes(p)) continue; const ps = o.items.map(x => x === cur ? p : x), key = ps.map(x => x.id).sort().join(); if (tried.has(key)) continue; tried.add(key);
+        const r = scoreOutfit(ps, mode, opts); if (r) seen.set(key, { key, items: ps, note: r.note, warn: r.warn, score: r.score + rand() * 0.3 }); } } }
   // Greedy pick with a reuse penalty, so one great pair of cargos doesn't star in every idea.
   const left = [...seen.values()], used = new Map(), out = [];
   const cap = maxUse ?? Math.max(2, Math.ceil(n / 4)); // no piece in more than ~a quarter of the ideas (the same cap + chain in every fit)
@@ -624,6 +658,16 @@ export const topLooks = (items, n = 20) => { let pp = 0; return varied(collect(i
 // Builder's "see outfit possibilities": complete looks that keep every piece you've already picked.
 export const possibilities = (items, picked, n = 6) => varied(collect(items, { fixed: picked }).map(o => ({ ...o, anchor: null })), n, { Tops: 2, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 });
 
+// ---------- warmth (v5.73) ----------
+// How warm a piece is: tank 0.5, tee 1, shirt or polo 1.5, flannel 2, hoodie or knit 2.5, jacket 3, coat 5. Tops and layers add up.
+const WARM = [[/puffer|parka|down jacket|overcoat|\bcoat\b|shearling|sherpa/i, 5], [/polo|tank/i, null], [/jacket|bomber|blazer|windbreaker|anorak|trench|leather|\bvest\b/i, 3],
+  [/hoodie|sweater|knit|fleece|sweatshirt|crewneck|cardigan|quarter zip|zip-up|turtleneck/i, 2.5], [/flannel|overshirt|shacket/i, 2], [/button|oxford|long ?sleeve|denim shirt|chambray/i, 1.5]];
+export const warmth = p => { if (p.warmth != null) return p.warmth; if (p.cat !== 'Tops' && p.cat !== 'Layers') return 0;
+  const k = `${p.kind ?? ''} ${p.name ?? ''}`, hit = WARM.find(([re]) => re.test(k)); return hit ? hit[1] ?? (/tank/i.test(k) ? 0.5 : 1.5) : p.cat === 'Layers' ? 3 : 1; };
+export const lookWarmth = ps => ps.reduce((t, p) => t + warmth(p), 0);
+// What a feels-like temperature asks for: [least, most] warmth. 5°: tee + hoodie + jacket or tee + coat. 25°: a tee, maybe a shirt open over it.
+export const warmthFor = t => t == null ? [0, Infinity] : [t >= 18 ? 0 : t >= 12 ? 2.5 : t >= 5 ? 3.5 : t >= 0 ? 5.5 : 6.5, t >= 24 ? 2.5 : t >= 18 ? 4.5 : t >= 12 ? 6.5 : Infinity];
+
 // What the weather rules out. t = feels-like °C, null = unknown (nothing ruled out). rain: no suede.
 // season: 'cold' (Nov-Mar) keeps shorts, tanks and sandals out unless it's really hot today; 'warm' (May-Sep) keeps heavy coats out unless it's really cold.
 export function forWeather(items, t, rain = false, season = null) {
@@ -632,7 +676,7 @@ export function forWeather(items, t, rain = false, season = null) {
   if (season === 'cold' && !(t >= 24)) items = items.filter(p => !/\bshorts\b|\bjorts\b|tank|sandal|slipper|flip/i.test(k(p)));
   if (season === 'warm' && !(t != null && t < 12)) items = items.filter(p => !/\bcoat\b|overcoat|puffer|parka|down jacket/i.test(k(p)));
   if (t == null) return items;
-  if (t >= 24) return items.filter(p => !/coat|puffer|parka|sweater|hoodie|knit|beanie|\bboots?\b/i.test(k(p)) && (p.cat !== 'Layers' || /overshirt|flannel|shirt/i.test(k(p))));
+  if (t >= 24) return items.filter(p => warmth(p) <= 2 && !/beanie/i.test(k(p))); // by warmth, not by name (v5.73): a knit polo and work boots are fine on a hot day
   if (t < 12) return items.filter(p => !/\bshorts\b|\bjorts\b|tank|sandal|slipper|flip/i.test(k(p)));
   return items.filter(p => !/puffer|parka/i.test(k(p)));
 }
@@ -641,22 +685,35 @@ export const rainy = p => /hood|rain|shell|parka|windbreaker|anorak|puffer|trenc
 // Today: n varied outfits from every style, a little random so each visit (or Shuffle) is different. Cold days want a layer.
 // Occasions: how dressed up (0-2) and which vibe fits. A look scores by how close it lands.
 export const OCCASIONS = { work: { label: 'Work', dress: 2 }, date: { label: 'Date', dress: 1.5 }, club: { label: 'Club', dress: 1, vibe: 'streetwear' }, errands: { label: 'Errands', dress: 0.8 }, gym: { label: 'Gym', dress: 0, vibe: 'athletic' }, event: { label: 'Event', dress: 2 } };
-export const occasionFit = (ps, occ) => { const o = OCCASIONS[occ]; if (!o) return 0; const cl = ps.filter(p => CLOTHES.includes(p.cat)), avg = cl.reduce((t, p) => t + dress(p), 0) / cl.length;
-  return -Math.abs(avg - o.dress) * 1.5 + (o.vibe ? vibe(ps, o.vibe) * 0.3 : 0); };
+// level: how dressy that occasion is for you (Me › Settings: what Work means), else the default
+export const occasionFit = (ps, occ, level = null) => { const o = OCCASIONS[occ]; if (!o) return 0; const cl = ps.filter(p => CLOTHES.includes(p.cat)), avg = cl.reduce((t, p) => t + dress(p), 0) / cl.length;
+  return -Math.abs(avg - (level ?? o.dress)) * 1.5 + (o.vibe ? vibe(ps, o.vibe) * 0.3 : 0); };
 const likeness = (ps, like) => { if (!like?.length) return 0; const cn = p => colorName(p.color), lc = new Set(like.filter(p => p.cat !== 'Accessories').map(cn)), lk = new Set(like.map(p => p.kind));
   return Math.min(1.2, ps.filter(p => p.cat !== 'Accessories' && lc.has(cn(p))).length * 0.25 + ps.filter(p => lk.has(p.kind)).length * 0.15); };
-export function today(items, { t = null, rain = false, season = null, twoShirts = false, patternDay = null, occasion = null, n = 5, rand = Math.random, skip = [], like = null, alone = false, wind = false, fresh = null } = {}) {
+// occDress: how dressy the occasion is for you. recent: keys of looks worn in the last 2 weeks (not again yet).
+// Rain: white or canvas shoes and light pants lose a little. Warmth: looks too light for the cold drop out (when enough others are warm enough).
+const wetBad = p => p.cat === 'Shoes' && (['white', 'cream'].includes(colorName(p.color)) || /canvas|converse|chuck|vans|suede/i.test(`${p.kind ?? ''} ${p.name ?? ''} ${p.material ?? ''}`)) ? 0.5
+  : p.cat === 'Bottoms' && hexToHsl(p.color).l > 0.75 ? 0.4 : 0;
+// Shirts that go open over a tee: denim, chambray, flannel, work shirts. A plain button-up isn't that kind of shirt (your note, 2026-11-18).
+const overType = p => /denim|chambray|flannel|plaid|overshirt|shacket|work shirt|western|camp shirt|bowling|corduroy/i.test(`${p.kind ?? ''} ${p.name ?? ''} ${p.material ?? ''}`);
+export function today(items, { t = null, rain = false, season = null, twoShirts = false, patternDay = null, occasion = null, occDress = null, n = 5, rand = Math.random, skip = [], recent = null, like = null, alone = false, wind = false, fresh = null } = {}) {
   // wind: a windy day leans toward a layer and a shell. fresh: ids you haven't worn in weeks, nudged up so the whole closet gets used
-  // skip: what you wore yesterday. Tops and layers rest a day; pants and shoes can repeat.
+  // skip: what you wore lately (the app sends 4 days). Tops and light layers rest; jackets, coats, pants and shoes can repeat.
   if (OCCASIONS[occasion]?.dress >= 1.5) items = items.map(p => p.rate < 0 ? { ...p, rate: 0 } : p); // dressing up: pieces saved for special occasions come back
-  const pool = forWeather(items, t, rain, season).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers'))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
-  const list = collect(pool, { rand, maxUse: 3, alone, layerOdds: cold ? 1 : wind && !(t >= 20) ? 0.85 : t != null && t >= 24 ? 0.15 : 0.5 }, VISIBLE(), 30).filter(o => !cold || o.items.some(p => p.cat === 'Layers'));
+  const pool = forWeather(items, t, rain, season).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers' && warmth(p) < 3))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
+  const [lo, hi] = warmthFor(t), coat = t != null && t < 5 && pool.some(p => warmth(p) >= 5);
+  let list = collect(pool, { rand, maxUse: 3, alone, noDress: !!OCCASIONS[occasion], layerOdds: cold ? 1 : wind && !(t >= 20) ? 0.85 : t != null && t >= 24 ? 0.15 : 0.5, layer2Odds: t == null ? 0 : t < 5 ? 0.6 : t < 12 ? 0.25 : 0 }, VISIBLE(), 30)
+    .filter(o => (!cold || o.items.some(p => p.cat === 'Layers')) && !recent?.has(o.key));
+  // warm enough (v5.73): below 5° a coat when you own one; below 12° enough warmth stacked up. Only when enough looks are left.
+  const warmOk = list.filter(o => lookWarmth(o.items) >= lo && (!coat || o.items.some(p => warmth(p) >= 5)));
+  if (warmOk.length >= Math.min(n, list.length / 3)) list = warmOk;
+  const temp = o => { const w = lookWarmth(o.items); return w < lo ? -(lo - w) : w > hi ? -0.7 * (w - hi) : 0; };
   // a new top every card; pants, shoes, a layer, the same cap or chain at most twice each.
-  let twoPrints = (patternDay ?? rand() < 0.35) ? 0 : 1; const res = varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion) + likeness(o.items, like) + (rain || wind ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) + (fresh ? Math.min(0.6, o.items.filter(p => fresh.has(p.id)).length * 0.3) : 0) + rand() * 1.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
+  let twoPrints = (patternDay ?? rand() < 0.35) ? 0 : 1; const res = varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion, occDress) + likeness(o.items, like) + (rain || wind ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) - (rain ? o.items.reduce((x, p) => x + wetBad(p), 0) : 0) + temp(o) + (fresh ? Math.min(0.6, o.items.filter(p => fresh.has(p.id)).length * 0.3) : 0) + rand() * 0.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
   // Two shirts: now and then a button-up goes open over the tee (tee + denim shirt + jacket). Never on hot days, each shirt once.
   if (twoShirts && !(t >= 22)) { const used = new Set(); // only if you turned it on: at most one card per deck gets a button-up open over the tee
     for (const o of res) { if (used.size || rand() > 0.3 || o.items.some(openShirt) || o.items.filter(p => p.cat === 'Layers').length > 1 || !o.items.some(p => p.cat === 'Tops')) continue;
-      const best = pool.filter(p => openShirt(p) && !used.has(p.id)).map(p => ({ p, r: scoreOutfit([...o.items, p], o.mode) })).filter(x => x.r && x.r.score >= o.score - 1.5).sort((a, b) => b.r.score - a.r.score)[0];
+      const best = pool.filter(p => openShirt(p) && overType(p) && !used.has(p.id)).map(p => ({ p, r: scoreOutfit([...o.items, p], o.mode) })).filter(x => x.r && x.r.score >= o.score - 1.5).sort((a, b) => b.r.score - a.r.score)[0];
       if (best) { used.add(best.p.id); o.items = [...o.items, best.p]; o.key = o.items.map(p => p.id).sort().join(); } } }
   for (let k = res.length - 1; k >= 0; k--) if (patterns(res[k].items).length >= 2 && twoPrints++) res.splice(k, 1); // pattern on pattern: about one day in three, one look that day
   return res;
@@ -680,10 +737,14 @@ export function whyNot(ps) {
   return { note: 'Too many colors at once. Swap one for black, white, grey or denim', fix: 'swap' };
 }
 
+// The rule that would block one of your own looks if you hadn't worn it twice or marked it a hit (Stats: rules to soften). null = nothing blocks it.
+export function blockedBy(ps) { const t = TASTE.trusted; TASTE.trusted = new Set();
+  try { return complete(ps) && bestMode(ps)?.score == null ? whyNot(ps).note : null; } finally { TASTE.trusted = t; } }
+
 // Every rule that scored a look, biggest first: the builder's "Why?". null = no style rule takes it.
 export function explain(ps) {
   const b = bestMode(ps); if (b?.score == null) return null;
-  const ech = echoes(ps), base = MODES[b.mode].score(ps, {}) ?? MODES[b.mode].score(ps.filter(p => !ech.some(e => e.p === p)), {}) ?? 0, tb = taste(ps) ?? 0;
+  const ech = echoes(ps), base = Math.min(3, MODES[b.mode].score(ps, {}) ?? MODES[b.mode].score(ps.filter(p => !ech.some(e => e.p === p)), {}) ?? 1.5), tb = taste(ps) ?? 0;
   const rows = [[`Color rule: ${MODES[b.mode].label}`, base], ...[...proportion(ps).list, ...style(ps)].map(([v, l]) => [l, v]),
     ...ech.slice(0, 2).map(e => [`${e.p.name} picks up the ${colorName(e.p.color)} in the ${e.from.name}`, 0.7]),
     [`Finished with ${ps.filter(p => p.cat === 'Accessories').length} accessor${ps.filter(p => p.cat === 'Accessories').length === 1 ? 'y' : 'ies'}`, Math.min(2, ps.filter(p => p.cat === 'Accessories').length) * 0.3],
@@ -731,7 +792,9 @@ const soft = s => Math.max(0, Math.min(1, (s - 3) / 3));
 // One candidate, judged straight (no random sampling, so black vs grey is a fair fight): for each of your partner pieces
 // (each top, for pants), does any of your go-to fillers (most worn shoes, for pants) make a good look with it?
 // fits: partners it makes a wearable look with (3.5+). value: the soft count, cut by owning the same thing already (one twin = 67%, two = 50%), nudged by your color season.
-export function buyValue(items, cand, { good = [], avoid = [], worn = {}, myDress = null } = {}) {
+// month (1-12): off-season buys wait (v5.73). Warm-weather pieces from March, cold-weather ones from August, about 6 weeks before their season.
+const offSeason = (p, m) => m != null && (/short|sandal|tank/i.test(p.kind ?? '') ? [10, 11, 12, 1, 2].includes(m) : /coat|puffer|parka|sweater|flannel|beanie/i.test(p.kind ?? '') ? [4, 5, 6, 7].includes(m) : false);
+export function buyValue(items, cand, { good = [], avoid = [], worn = {}, myDress = null, month = null } = {}) {
   const ghost = { kind: GAP_KIND[cand.cat], vibe: 'casual', patterned: false, fit: 1, ...cand, ghost: true }, [pc, fc] = PARTNER[cand.cat];
   const live = items.filter(i => !i.stored && !i.dirty), partners = live.filter(i => i.cat === pc || pc === 'Tops' && i.cat === 'Layers' && !/jacket|coat|vest|blazer|parka|puffer/i.test(`${i.kind} ${i.name}`));
   const fillers = live.filter(i => i.cat === fc).sort((a, b) => (worn[b.id] ?? 0) - (worn[a.id] ?? 0) || isNeutral(b.color) - isNeutral(a.color)).slice(0, 6);
@@ -757,8 +820,8 @@ export function buyValue(items, cand, { good = [], avoid = [], worn = {}, myDres
   const cutKin = cand.cut == null ? kin : kin.filter(i => fit(i) === cand.cut), near = cutKin.map(i => [i, colorDist(i.color, cand.color)]).sort((a, b) => a[1] - b[1])[0];
   const spread = near ? Math.max(0, Math.min(1, (near[1] - 120) / 220)) : 1, fresh = cutKin.length ? 0.75 + 0.5 * spread : 1.25; // colorDist: tan to beige 88, to cream 179, to olive 261, to black 425
   const fitsYou = myDress == null ? 1 : [1.1, 1, 0.8][Math.min(2, Math.round(Math.abs(dress(cand) - myDress)))];
-  const value = Math.round(q * priority * fresh * fitsYou / (1 + 0.5 * twins.length) * (1 + 0.12 * season) * 10) / 10;
-  return { ghost, base, pairTop, topColors, fits, tops, q, newKind: !kin.length, newCut: !!kin.length && !cutKin.length ? CUTS[cand.cat][cand.cut] : null, near: near && spread < 0.35 ? near[0] : null, far: near && spread >= 0.7 ? near[0] : null, fitsYou, kin, of: partners.length, avg: fits ? sum / fits : 0, partnerCat: pc, twins, season, cname, role, value, examples: best.sort((a, b) => b.score - a.score).slice(0, 3) };
+  const later = offSeason(cand, month), value = Math.round(q * priority * fresh * fitsYou / (1 + 0.5 * twins.length) * (1 + 0.12 * season) * (later ? 0.4 : 1) * 10) / 10;
+  return { ghost, base, pairTop, topColors, fits, tops, q, newKind: !kin.length, newCut: !!kin.length && !cutKin.length ? CUTS[cand.cat][cand.cut] : null, near: near && spread < 0.35 ? near[0] : null, far: near && spread >= 0.7 ? near[0] : null, fitsYou, later, kin, of: partners.length, avg: fits ? sum / fits : 0, partnerCat: pc, twins, season, cname, role, value, examples: best.sort((a, b) => b.score - a.score).slice(0, 3) };
 }
 // Rank a few candidates (or every sensible color for one type). Best first, each with a one-line reason.
 export function compareBuys(items, cands, opts = {}) {
@@ -774,7 +837,7 @@ export function compareBuys(items, cands, opts = {}) {
   // what it adds first: a color (or cut) you don't have makes new outfits; a twin only repeats the looks you can already make
   for (const r of out) r.why = [r.twins.length ? `you have this: your ${r.twins.length > 1 ? many(r.twins.length, `${r.cname} ${roleOf(r.twins[0])}`) : `${r.cname} ${roleOf(r.twins[0])}`} already make${r.twins.length > 1 || /s$/.test(roleOf(r.twins[0])) ? '' : 's'} these looks` : r.newKind ? `you own no ${r.role} yet: ${many(r.great, 'new outfit')} with your ${pc(r)}` : r.newCut ? `you own no ${r.newCut} ${plural(r.role)} yet: ${many(r.great, 'new outfit')} with your ${pc(r)}` : r.near ? `${many(r.great, 'outfit')}, but close to your ${tone(r.near)} ${roleOf(r.near)} so they'd feel like repeats` : `${many(r.great, 'new outfit')} with your ${pc(r)}`,
     !r.twins.length && r.far ? `a change from your ${tone(r.far)} ${roleOf(r.far)}` : '', r.base ? 'a base color' : r.pairTop >= 0.6 ? `pairs really well with your ${r.topColors.slice(0, 2).join(' and ')}` : `weak with your ${r.topColors.slice(0, 2).join(' and ')}`,
-    r.fitsYou > 1 ? 'matches how you dress' : r.fitsYou < 1 ? 'dressier or sportier than you usually wear' : '', r.season > 0 ? 'in your colors' : r.season < 0 ? 'outside your colors' : ''].filter(Boolean).join(' · ');
+    r.fitsYou > 1 ? 'matches how you dress' : r.fitsYou < 1 ? 'dressier or sportier than you usually wear' : '', r.season > 0 ? 'in your colors' : r.season < 0 ? 'outside your colors' : '', r.later ? 'better bought closer to its season' : ''].filter(Boolean).join(' · ');
   return out;
 }
 // ---------- wardrobe basics ----------
