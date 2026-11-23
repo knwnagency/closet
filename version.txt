@@ -1,2 +1,2 @@
-2026.11.23 · v5.74
-Lookbook now uses the looks on screen: open a collection or search first and it makes a lookbook of just those.
+2026.11.23 · v5.75
+New in Favorites: 3×3×3, the styling drill. 3 tops, 3 bottoms and 3 shoes make 27 combos, even the ones that look wrong. Try them on, heart the keepers, and see which forgotten piece earns its way back.

@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade, isDenim, openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS, seeded, kindTokens, shapeOf, blockedBy } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.23 · v5.74'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.23 · v5.75'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -92,7 +92,7 @@ const S = {
   items: await all('items'), saved: await all('outfits'), log: await all('log'), wish: await all('wish'),
   colls: await all('colls'), inspo: await all('inspo'), ...await (async () => { const ps = await all('profile');
     return { profile: ps.find(p => p.k === 'me') ?? null, history: ps.find(p => p.k === 'history')?.list ?? [],
-      plan: ps.find(p => p.k === 'plan') ?? { k: 'plan', days: {}, weekly: {} }, deck: ps.find(p => p.k === 'deck') ?? null, nope: ps.find(p => p.k === 'nope')?.list ?? [], draft: ps.find(p => p.k === 'draft')?.ids ?? null, gone: ps.find(p => p.k === 'gone')?.at ?? {} }; })(), // plan: { days: {date: look}, weekly: {0-6: look} } // history: looks you swiped past, newest first
+      plan: ps.find(p => p.k === 'plan') ?? { k: 'plan', days: {}, weekly: {} }, deck: ps.find(p => p.k === 'deck') ?? null, nope: ps.find(p => p.k === 'nope')?.list ?? [], draft: ps.find(p => p.k === 'draft')?.ids ?? null, drill: ps.find(p => p.k === 'drill')?.ids ?? null, gone: ps.find(p => p.k === 'gone')?.at ?? {} }; })(), // plan: { days: {date: look}, weekly: {0-6: look} } // history: looks you swiped past, newest first
 };
 { const strays = S.items.filter(i => !i.cat && Array.isArray(i.palette)); S.items = S.items.filter(i => !strays.includes(i)); // repair: inspo pics the thumbnail maker saved into the closet (before v5.31)
   (async () => { for (const i of strays) { if (!S.inspo.some(x => x.id === i.id)) { const img = await loadPic('full', i.id); if (img) { const ins = { id: i.id, img, palette: i.palette, off: i.off ?? [], at: i.at ?? Date.now() }; await putQuiet('inspo', ins); S.inspo.push(ins); } } // only copy left: back to Inspo
@@ -811,6 +811,33 @@ function bestView() {
       <h3 class="display ftitle">${esc(lookName(o.items))}</h3><button class="mono wcount whybtn" data-whykey="${o.key}" aria-label="Why it scores ${matchPct(o.score)}">${matchPct(o.score)} match · ${esc(MODES[o.mode]?.label ?? '')} · why</button>
       <div class="facts"><button class="btn sm ghost" data-wear="${o.key}">Wear today</button><button class="icon ${saved ? 'on' : ''}" data-save="${o.key}" aria-label="${saved ? 'Saved' : 'Save to favorites'}">${heart}</button></div></article>`; }).join('')}</div>`;
 }
+// Favorites › 3×3×3, the styling drill: 3 tops, 3 bottoms, 3 shoes and all 27 combos, the bad ones too. Heart the keepers.
+const DRILL = ['Tops', 'Bottoms', 'Shoes'], DRILL_N = ['tops', 'bottoms', 'shoes'];
+const drillPool = sl => forWeather(pool(), null, false, seasonNow()).filter(p => p.cat === sl);
+// Each row: one forgotten piece (from the 3 longest unworn) plus two at random, so old things get seen in new ways
+function drillPick() {
+  return DRILL.flatMap(sl => {
+    const c = drillPool(sl).sort(() => Math.random() - 0.5), old = c.slice().sort((a, b) => restDays(b) - restDays(a)).slice(0, 3), first = old[Math.floor(Math.random() * old.length)];
+    return [first, ...c.filter(p => p !== first)].slice(0, 3).map(p => p.id);
+  });
+}
+function drillView() {
+  const c = S.coll && collById(S.coll), short = DRILL.filter(sl => drillPool(sl).length < 3);
+  if (short.length) return `<div class="empty"><h2>Need a few more pieces</h2><p>The drill takes 3 tops, 3 bottoms and 3 pairs of shoes${c ? ` from ${esc(c.name)}` : ''}. Short on ${short.map(sl => DRILL_N[DRILL.indexOf(sl)]).join(' and ')} for this season.</p></div>`;
+  const ok = DRILL.flatMap(sl => drillPool(sl).map(p => p.id));
+  if (S.drill?.length !== 9 || S.drill.some((id, i) => !ok.includes(id) || byId(id).cat !== DRILL[Math.floor(i / 3)])) { S.drill = drillPick(); put('profile', { k: 'drill', ids: S.drill }); }
+  const rows = DRILL.map((sl, r) => S.drill.slice(r * 3, r * 3 + 3).map(byId)), nope = new Set(S.nope.map(n => [...n].sort().join()));
+  S.drillLooks = rows[0].flatMap(t => rows[1].flatMap(b => rows[2].map(sh => { const items = [t, b, sh], m = bestMode(items); return { key: keyOf(items), items, mode: m?.mode ?? 'custom', score: m?.score }; })));
+  const kept = S.drillLooks.filter(o => isFav(o.key)), done = S.drillLooks.filter(o => isFav(o.key) || nope.has(o.key)).length;
+  const star = rows.flat().map(p => [p, kept.filter(o => o.items.includes(p)).length]).sort((a, b) => b[1] - a[1])[0];
+  return `<p class="sub">Every combo of these 9, even the ones that look wrong. Try them on, take a picture, and heart the keepers. It's practice, not a test.</p>
+    ${rows.map((r, ri) => `<p class="pickh">${DRILL_N[ri]} · tap to swap</p><div class="pickgrid drillrow">${r.map((p, k) => `<button data-drillswap="${ri * 3 + k}" aria-label="Swap ${esc(p.name)}"><img src="${src(p)}" alt=""><span>${esc(p.name)}</span></button>`).join('')}</div>`).join('')}
+    <div class="row favacts"><button class="tag o" data-action="drillnew">${ic('shuffle')} New 9</button><span class="mono">${done} of 27 rated · ${kept.length} keeper${kept.length === 1 ? '' : 's'}</span></div>
+    ${star[1] >= 2 ? `<p class="sub blurb">Your <b>${esc(star[0].name.toLowerCase())}</b> is in ${star[1]} of your ${kept.length} keepers.${restDays(star[0]) > 30 ? ' Time to pull it back into rotation.' : ''}</p>` : ''}
+    <div class="feed favs">${S.drillLooks.map(o => { const no = nope.has(o.key), saved = isFav(o.key); return `<article class="outfit fav ${no ? 'drillno' : ''}"><button class="flatbtn" data-buildkey="${o.key}" aria-label="Open in Build">${flat(o.items)}</button>
+      <h3 class="display ftitle">${esc(`${lookName(o.items)} · ${o.items[2].name.toLowerCase()}`)}</h3><span class="mono wcount">${no ? 'not for me' : o.score != null ? `${matchPct(o.score)} match` : "breaks a rule"}</span>
+      <div class="facts"><button class="btn sm ghost" data-wear="${o.key}">Wear today</button><button class="icon" data-nope="${o.key}" aria-label="Not for me" ${no ? 'disabled' : ''}>${svg('M7 14V4M7 14l4 6c1.2 0 2-1 1.7-2.2L12 14h5.5a2 2 0 0 0 2-2.3l-1-6A2 2 0 0 0 16.5 4H7M7 14H4V4h3')}</button><button class="icon ${saved ? 'on' : ''}" data-save="${o.key}" aria-label="${saved ? 'Saved' : 'Save to favorites'}">${heart}</button></div></article>`; }).join('')}</div>`;
+}
 function favCard(o) { const title = lookName(o.items), worn = wornOn(dayKey(), o.key), pic = picFor(o.key);
   return `<article class="outfit fav" style="--tint:${tintOf(o.items)}">${pic ? fitCar(pic, o.items, true) : `<button class="flatbtn" data-buildkey="${o.key}" aria-label="Open ${esc(title)} in the builder">${flat(o.items)}</button>`}
     <h3 class="display ftitle">${esc(title)}</h3><span class="mono wcount">${(b => b?.score != null ? `${matchPct(b.score)} match` : "doesn't pass your rules")(bestMode(o.items))}${(n => n ? ` · worn ${n}×` : '')(S.log.filter(l => l.key === o.key).length)}</span><div class="facts"><button class="btn sm ghost ${worn ? 'done' : ''}" data-wear="${o.key}">${worn ? 'Worn today ✓' : 'Wear today'}</button><button class="icon on" data-save="${o.key}" aria-label="Remove from favorites">${heart}</button><button class="btn sm ghost hitbtn ${isHit(o.key) ? 'on' : ''}" data-hit="${o.key}" aria-pressed="${isHit(o.key)}" aria-label="Got compliments">${ic('star')} ${isHit(o.key) ? 'A hit' : 'Compliments'}</button><button class="icon cmpbtn ${S.cmp?.includes(o.key) ? 'on' : ''}" data-cmp="${o.key}" aria-label="Compare this look" aria-pressed="${!!S.cmp?.includes(o.key)}">⇆</button></div></article>`; }
@@ -886,9 +913,10 @@ function favList() {
 function outfitsView() {
   const items = pool(), c = S.coll && collById(S.coll);
   if (S.tab === 'ideas' || S.tab === 'history') { S.tab = 'saved'; S.view = 'today'; return todayView(); } // old "ideas" links (collection outfits, color wheel, inspo) open Today
-  const top = head(S.tab === 'saved' ? `${S.saved.length} saved` : S.tab === 'best' ? 'by match score' : `${S.log.length} day${S.log.length === 1 ? '' : 's'} logged`, S.tab === 'saved' ? 'Favorites' : S.tab === 'best' ? 'Best outfits' : 'Calendar') + subnav('tab', [['saved', 'Favorites'], ['best', 'Best'], ['cal', 'Calendar'], ['week', 'Week']])
+  const top = head(S.tab === 'saved' ? `${S.saved.length} saved` : S.tab === 'best' ? 'by match score' : S.tab === 'drill' ? 'styling drill' : `${S.log.length} day${S.log.length === 1 ? '' : 's'} logged`, S.tab === 'saved' ? 'Favorites' : S.tab === 'best' ? 'Best outfits' : S.tab === 'drill' ? '3×3×3' : 'Calendar') + subnav('tab', [['saved', 'Favorites'], ['best', 'Best'], ['drill', '3×3×3'], ['cal', 'Calendar'], ['week', 'Week']])
     + (c && S.tab === 'saved' ? capBar() : '');
   if (S.tab === 'best') return top + bestView();
+  if (S.tab === 'drill') return top + drillView();
   if (S.tab === 'week') return top + weekView();
   if (S.tab === 'cal') return top + calView();
   if (S.tab === 'history') {
@@ -2477,7 +2505,7 @@ fileInput.onchange = () => { addFiles(fileInput.files); fileInput.value = ''; };
 
 // ---------- outfits: find one by key wherever it lives ----------
 function outfitByKey(k) {
-  const idea = S.ideas?.find(o => o.key === k) ?? S.made?.find(o => o.key === k) ?? S.best?.looks.find(o => o.key === k); if (idea) return idea;
+  const idea = S.ideas?.find(o => o.key === k) ?? S.made?.find(o => o.key === k) ?? S.best?.looks.find(o => o.key === k) ?? S.drillLooks?.find(o => o.key === k); if (idea) return idea;
   const dl = S.deck?.looks.find(o => o.key === k); if (dl) return { key: k, items: dl.ids.map(byId).filter(Boolean), mode: dl.mode };
   if (S.build && keyOf(S.build) === k) return { key: k, items: S.build };
   const s = S.saved.find(x => x.key === k) ?? S.log.find(x => x.key === k) ?? [...Object.values(S.plan.days), ...Object.values(S.plan.weekly)].find(x => x.key === k); return s && { key: k, items: s.ids.map(byId).filter(Boolean) };
@@ -2662,6 +2690,11 @@ document.addEventListener('click', async e => {
     if (sheet.open) { sheet.onclose = null; sheet.close(); } // a tap on the menu while a sheet is open: close it without a second render racing this one
     go(); } // no fade-in: on iPhone it left the top of the new screen blank until you scrolled
   else if (ds.sub) { const [k, v] = ds.sub.split(':'); S[k] = v; render(); }
+  else if (ds.action === 'drillnew') { S.drill = drillPick(); put('profile', { k: 'drill', ids: S.drill }); render(); }
+  else if (ds.drillswap) { const i = +ds.drillswap, sl = DRILL[Math.floor(i / 3)];
+    showSheet(`<div class="pad"><div class="pickhead"><div><div class="eyebrow">3×3×3</div><h2>Swap ${esc(byId(S.drill[i]).name.toLowerCase())}</h2></div>${closeBtn}</div></div>
+      <div class="pickgrid">${drillPool(sl).filter(p => !S.drill.includes(p.id)).map(p => `<button data-drillset="${i}|${p.id}"><img src="${src(p)}" alt=""><span>${esc(p.name)}</span></button>`).join('')}</div>`); }
+  else if (ds.drillset) { const [i, id] = ds.drillset.split('|'); S.drill[+i] = id; put('profile', { k: 'drill', ids: S.drill }); sheet.close(); }
   else if (ds.listtab) { S.listTab = ds.listtab; render(); }
   else if (ds.buycut !== undefined) { S.buy.cut = ds.buycut === '' ? null : +ds.buycut; S.buy.res = null; render(); }
   else if (ds.qaof) { (S.qa ??= {}).type = ds.qaof; S.buy.res = null; openQuickAdd(); }

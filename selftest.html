@@ -34,7 +34,7 @@ tap('nav [data-go="closet"]'); await wait(900); { const im = [...d().querySelect
 if (tap('.item[data-open]', 'pieces in the closet')) { await wait(500); log(!!d().querySelector('#sheet .pname'), 'A piece opens'); fits('Piece page'); await close(); }
 tap('nav [data-go="build"]'); await wait(900); log(!!d().querySelector('.stage'), 'Builder shows the outfit stage'); fits('Builder');
 if (tap('[data-swap]')) { await wait(500); fits('Pick list'); await close(); }
-for (const t of ['Best', 'Calendar', 'Week']) { tap('nav [data-go="outfits"]'); await wait(700); const b = [...d().querySelectorAll('.subnav button')].find(x => x.textContent === t); b?.click(); await wait(500); fits(`Favorites tab · ${t}`); }
+for (const t of ['Best', '3×3×3', 'Calendar', 'Week']) { tap('nav [data-go="outfits"]'); await wait(700); const b = [...d().querySelectorAll('.subnav button')].find(x => x.textContent === t); b?.click(); await wait(500); fits(`Favorites tab · ${t}`); }
 // deeper flows: select mode, long-press, capsule editing, piece Adjust, pattern review, build possibilities
 tap('nav [data-go="closet"]'); await wait(900);
 if (tap('[data-action="selmode"]', 'pieces in the closet')) { await wait(300); tap('[data-selitem]'); await wait(300); fits('Select mode'); tap('[data-action="selmode"]'); await wait(300); }
