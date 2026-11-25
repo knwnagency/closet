@@ -644,6 +644,10 @@ console.log('edges ok');
   assert.ok(m.lookWarmth([tee, flan]) < m.warmthFor(-5)[0], 'tee + flannel is not enough at -5');
   const cold = m.today([tee, flan, hood, coat, pants, kicks], { t: -5, n: 4, rand: m.seeded(3) });
   assert.ok(cold.length && cold.every(o => o.items.includes(coat)), 'below 5° every look has the coat when you own one');
+  // v5.76: one coat in a closet full of jackets shows up, but not on every card
+  const many = [...'abcdefgh'].flatMap((x, i) => [mk('t' + x, 'Tops', 't-shirt', ['#f2f2f0', '#1b1a19', '#7d7b78', '#2b3b57'][i % 4]), mk('j' + x, 'Layers', ['coach jacket', 'work jacket', 'bomber jacket', 'track jacket'][i % 4], ['#544f48', '#1b1a19', '#c7af8d', '#6b1e2a'][i % 4]), mk('h' + x, 'Layers', 'hoodie', ['#7d7b78', '#1b1a19'][i % 2])]);
+  const deck = m.today([...many, coat, pants, mk('p2', 'Bottoms', 'cargo pants', '#1b1a19'), mk('p3', 'Bottoms', 'chinos', '#c7af8d'), kicks, boots], { t: 3, n: 12, rand: m.seeded(5) }), withCoat = deck.filter(o => o.items.includes(coat)).length;
+  assert.ok(deck.length >= 8 && withCoat >= 1 && withCoat <= 3, `one coat on 1 to 3 cards at 3°, not all ${deck.length}: ${withCoat}`);
   const hot = m.forWeather([polo, boots, hood, tee], 28); assert.ok(hot.includes(polo) && hot.includes(boots) && !hot.includes(hood), 'hot: knit polo and boots stay, hoodie goes');
   assert.equal(m.dress(mk('x', 'Layers', 'flannel overshirt', '#6b1e2a', { name: 'Flannel button-up' })), 1, 'a flannel button-up is everyday');
   // one scale: a look full of streetwear tags can't outscore the same look in Classic by more than the cap

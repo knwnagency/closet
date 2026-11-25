@@ -704,10 +704,11 @@ export function today(items, { t = null, rain = false, season = null, twoShirts 
   const [lo, hi] = warmthFor(t), coat = t != null && t < 5 && pool.some(p => warmth(p) >= 5);
   let list = collect(pool, { rand, maxUse: 3, alone, noDress: !!OCCASIONS[occasion], layerOdds: cold ? 1 : wind && !(t >= 20) ? 0.85 : t != null && t >= 24 ? 0.15 : 0.5, layer2Odds: t == null ? 0 : t < 5 ? 0.6 : t < 12 ? 0.25 : 0 }, VISIBLE(), 30)
     .filter(o => (!cold || o.items.some(p => p.cat === 'Layers')) && !recent?.has(o.key));
-  // warm enough (v5.73): below 5° a coat when you own one; below 12° enough warmth stacked up. Only when enough looks are left.
-  const warmOk = list.filter(o => lookWarmth(o.items) >= lo && (!coat || o.items.some(p => warmth(p) >= 5)));
+  // warm enough (v5.73): below 12° enough warmth stacked up. Only when enough looks are left.
+  const warmOk = list.filter(o => lookWarmth(o.items) >= lo);
   if (warmOk.length >= Math.min(n, list.length / 3)) list = warmOk;
-  const temp = o => { const w = lookWarmth(o.items); return w < lo ? -(lo - w) : w > hi ? -0.7 * (w - hi) : 0; };
+  // below 5° a coat is a nudge, not a must (v5.76): your one coat was in all 12 cards; tee + hoodie + jacket is warm enough too
+  const temp = o => { const w = lookWarmth(o.items); return (w < lo ? -(lo - w) : w > hi ? -0.7 * (w - hi) : 0) + (coat && o.items.some(p => warmth(p) >= 5) ? 0.6 : 0); };
   // a new top every card; pants, shoes, a layer, the same cap or chain at most twice each.
   let twoPrints = (patternDay ?? rand() < 0.35) ? 0 : 1; const res = varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion, occDress) + likeness(o.items, like) + (rain || wind ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) - (rain ? o.items.reduce((x, p) => x + wetBad(p), 0) : 0) + temp(o) + (fresh ? Math.min(0.6, o.items.filter(p => fresh.has(p.id)).length * 0.3) : 0) + rand() * 0.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
   // Two shirts: now and then a button-up goes open over the tee (tee + denim shirt + jacket). Never on hot days, each shirt once.
