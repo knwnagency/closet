@@ -128,7 +128,8 @@ export function proportion(ps) {
   const lvl = layerLevel;
   if (layer && top && lvl(layer) < lvl(top)) add(-2, `A ${layer.kind || 'layer'} doesn't go over a ${top.kind || 'heavier top'}`);
   if (layer && top && lvl(layer) === lvl(top) && lvl(top) >= 2) add(-2, lvl(top) === 2 ? 'Two knits or hoodies stacked is too bulky' : 'Two jackets at once, drop one');
-  if (outer && layer && lvl(outer) === lvl(layer) && lvl(layer) >= 3) add(-2, 'Two jackets at once, drop one');
+  // a flannel or overshirt under a jacket is the tee + flannel + jacket look (v5.77), not two jackets. Two knits stacked is still too bulky.
+  if (outer && layer && lvl(outer) === lvl(layer) && lvl(layer) >= 2 && !(shirtish(layer) && !shirtish(outer))) add(-2, lvl(layer) === 2 ? 'Two knits or hoodies stacked is too bulky' : 'Two jackets at once, drop one');
   // shirt on shirt: a button-up under a flannel or overshirt (two collars, two sets of long sleeves). A tee goes under a flannel instead.
   if (ps.filter(shirtish).length > 1) add(TASTE.shirtStack ? -0.8 : -2, 'Two collared shirts stacked, put a tee under the flannel instead'); // shirtStack: you said rarely is fine (Settings)
   if (legs && down === 2 && feet === 0) add(-1, 'Sleek shoes can get lost under wide pants'); // a nudge, not a ban: loafers with wide trousers is a real look
@@ -510,7 +511,8 @@ export function bySlot(ps, outerId = null, acc2Id = null) {
   const tops = ps.filter(p => p.cat === 'Tops').sort((a, b) => openShirt(a) - openShirt(b) || level(a) - level(b)); // the tee goes under
   const by = {}, ls = [...tops.slice(1), ...ps.filter(p => p.cat === 'Layers')];
   for (const p of ps) { const sl = slotOf(p); if (sl && sl !== 'Layers' && !(sl === 'Tops' && p !== tops[0])) by[sl] ??= p; }
-  const out = ls.length > 1 ? ls.find(p => p.id === outerId) ?? [...ls].sort((a, b) => level(b) - level(a))[0] : null;
+  // same level: the jacket goes on top of the flannel (v5.77)
+  const out = ls.length > 1 ? ls.find(p => p.id === outerId) ?? [...ls].sort((a, b) => level(b) - level(a) || shirtish(a) - shirtish(b))[0] : null;
   if (ls.length) by.Layers = ls.find(p => p !== out); if (out) by.Outer = out;
   if (!by.Tops && by.Layers && !by.Outer && level(by.Layers) <= 2) { by.Tops = by.Layers; delete by.Layers; } // a hoodie on its own is the top
   const accs = ps.filter(p => slotOf(p) === 'Accessory'); // a chain AND a bag: the second one is Extra
@@ -696,28 +698,52 @@ const wetBad = p => p.cat === 'Shoes' && (['white', 'cream'].includes(colorName(
   : p.cat === 'Bottoms' && hexToHsl(p.color).l > 0.75 ? 0.4 : 0;
 // Shirts that go open over a tee: denim, chambray, flannel, work shirts. A plain button-up isn't that kind of shirt (your note, 2026-11-18).
 const overType = p => /denim|chambray|flannel|plaid|overshirt|shacket|work shirt|western|camp shirt|bowling|corduroy/i.test(`${p.kind ?? ''} ${p.name ?? ''} ${p.material ?? ''}`);
-export function today(items, { t = null, rain = false, season = null, twoShirts = false, patternDay = null, occasion = null, occDress = null, n = 5, rand = Math.random, skip = [], recent = null, like = null, alone = false, wind = false, fresh = null } = {}) {
+// v5.77: three on top only the ways you wear it: a tee, then a flannel or a hoodie, then a jacket or coat.
+// No polo or button-up under it (too many collars and buttons), no blazer over a hoodie, one color at most across the three.
+export const stackOk = ps => { const up = ps.filter(p => p.cat === 'Tops' || p.cat === 'Layers'); if (up.length < 3) return true;
+  const { Tops: b, Layers: m, Outer: o } = bySlot(ps), k = p => `${p.kind ?? ''} ${p.name ?? ''}`;
+  return up.length === 3 && !!(b && m && o) && !openShirt(b) && !/polo|button|oxford|collar|turtle|mock ?neck/i.test(k(b)) && !shirtish(o) && level(o) >= 3 && !/blazer/i.test(k(o))
+    && (shirtish(m) || level(m) === 2) && new Set(colored(up).map(p => colorName(p.color))).size <= 1; };
+// v5.77 moods. calm: one color at most, no all-over print. bold: a strong color, a print, or an opposite-colors look.
+export const MOODS = { calm: 'calm', bold: 'stand out' };
+const moodFit = (o, mood) => { if (!MOODS[mood]) return 0; const cl = o.items.filter(p => p.cat !== 'Accessories'), c = new Set(colored(cl).map(p => colorName(p.color))).size, pat = patterns(cl).length;
+  if (mood === 'calm') return c <= 1 && !pat ? 1.5 : -0.8 * c - pat;
+  // earthy colors read calm even when they're colors; a loud print or two prints together stand out
+  const pop = colored(cl).some(p => !EARTH.includes(colorName(p.color))) || patterns(cl).some(p => !quietPrint(p)) || pat >= 2 || ['complementary', 'triadic'].includes(o.mode); return pop ? 1.5 : -1.2; };
+const EARTH = ['olive', 'sage', 'beige', 'camel', 'brown', 'forest', 'khaki', 'tan', 'taupe', 'cream', 'navy', 'denim'];
+// v5.77: no piece of clothing on two cards in a row (the same jacket back to back). Best effort: a later card moves up.
+const spread = d => { for (let k = 1; k < d.length; k++) { const near = o => o.items.some(p => p.cat !== 'Accessories' && d[k - 1].items.includes(p));
+  if (!near(d[k])) continue; const j = d.findIndex((o, i) => i > k && !near(o)); if (j > 0) [d[k], d[j]] = [d[j], d[k]]; } return d; };
+export function today(items, { t = null, rain = false, season = null, twoShirts = false, patternDay = null, occasion = null, occDress = null, n = 5, rand = Math.random, skip = [], recent = null, like = null, alone = false, wind = false, fresh = null, mood = null, favs = null } = {}) {
   // wind: a windy day leans toward a layer and a shell. fresh: ids you haven't worn in weeks, nudged up so the whole closet gets used
   // skip: what you wore lately (the app sends 4 days). Tops and light layers rest; jackets, coats, pants and shoes can repeat.
   if (OCCASIONS[occasion]?.dress >= 1.5) items = items.map(p => p.rate < 0 ? { ...p, rate: 0 } : p); // dressing up: pieces saved for special occasions come back
   const pool = forWeather(items, t, rain, season).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers' && warmth(p) < 3))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
   const [lo, hi] = warmthFor(t), coat = t != null && t < 5 && pool.some(p => warmth(p) >= 5);
   let list = collect(pool, { rand, maxUse: 3, alone, noDress: !!OCCASIONS[occasion], layerOdds: cold ? 1 : wind && !(t >= 20) ? 0.85 : t != null && t >= 24 ? 0.15 : 0.5, layer2Odds: t == null ? 0 : t < 5 ? 0.6 : t < 12 ? 0.25 : 0 }, VISIBLE(), 30)
-    .filter(o => (!cold || o.items.some(p => p.cat === 'Layers')) && !recent?.has(o.key));
+    .filter(o => (!cold || o.items.some(p => p.cat === 'Layers')) && !recent?.has(o.key) && stackOk(o.items));
   // warm enough (v5.73): below 12° enough warmth stacked up. Only when enough looks are left.
   const warmOk = list.filter(o => lookWarmth(o.items) >= lo);
   if (warmOk.length >= Math.min(n, list.length / 3)) list = warmOk;
   // below 5° a coat is a nudge, not a must (v5.76): your one coat was in all 12 cards; tee + hoodie + jacket is warm enough too
   const temp = o => { const w = lookWarmth(o.items); return (w < lo ? -(lo - w) : w > hi ? -0.7 * (w - hi) : 0) + (coat && o.items.some(p => warmth(p) >= 5) ? 0.6 : 0); };
   // a new top every card; pants, shoes, a layer, the same cap or chain at most twice each.
-  let twoPrints = (patternDay ?? rand() < 0.35) ? 0 : 1; const res = varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion, occDress) + likeness(o.items, like) + (rain || wind ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) - (rain ? o.items.reduce((x, p) => x + wetBad(p), 0) : 0) + temp(o) + (fresh ? Math.min(0.6, o.items.filter(p => fresh.has(p.id)).length * 0.3) : 0) + rand() * 0.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
+  let twoPrints = (patternDay ?? rand() < 0.35) ? 0 : 1; const res = varied(list.map(o => ({ ...o, score: o.score + occasionFit(o.items, occasion, occDress) + likeness(o.items, like) + (rain || wind ? Math.min(1, o.items.filter(rainy).length * 0.5) : 0) - (rain ? o.items.reduce((x, p) => x + wetBad(p), 0) : 0) + temp(o) + moodFit(o, mood) + (fresh ? Math.min(0.6, o.items.filter(p => fresh.has(p.id)).length * 0.3) : 0) + rand() * 0.5 })), n, { Tops: 1, Layers: 2, Bottoms: 2, Shoes: 2, Accessories: 2 }, pool); // a layer on at most 2 cards: one favorite jacket can't crowd out the rest (varied() lifts it when you own few)
   // Two shirts: now and then a button-up goes open over the tee (tee + denim shirt + jacket). Never on hot days, each shirt once.
   if (twoShirts && !(t >= 22)) { const used = new Set(); // only if you turned it on: at most one card per deck gets a button-up open over the tee
     for (const o of res) { if (used.size || rand() > 0.3 || o.items.some(openShirt) || o.items.filter(p => p.cat === 'Layers').length > 1 || !o.items.some(p => p.cat === 'Tops')) continue;
       const best = pool.filter(p => openShirt(p) && overType(p) && !used.has(p.id)).map(p => ({ p, r: scoreOutfit([...o.items, p], o.mode) })).filter(x => x.r && x.r.score >= o.score - 1.5).sort((a, b) => b.r.score - a.r.score)[0];
       if (best) { used.add(best.p.id); o.items = [...o.items, best.p]; o.key = o.items.map(p => p.id).sort().join(); } } }
   for (let k = res.length - 1; k >= 0; k--) if (patterns(res[k].items).length >= 2 && twoPrints++) res.splice(k, 1); // pattern on pattern: about one day in three, one look that day
-  return res;
+  // v5.77: two cards riff on your favorites: the top half you saved (warm enough, nothing resting), new pants and shoes. Cards 2 and 6.
+  if (favs?.length && res.length >= 4) { const ok = new Set(pool.map(p => p.id)), upper = ps => ps.filter(p => p.cat === 'Tops' || p.cat === 'Layers'), seen = new Set(res.map(o => o.key)), done = [];
+    const cand = favs.map(ps => [rand(), ps]).sort((a, b) => a[0] - b[0]).map(x => x[1]).filter(ps => upper(ps).length && new Set(upper(ps).map(slotOf)).size === upper(ps).length && upper(ps).every(p => ok.has(p.id)) && lookWarmth(upper(ps)) >= lo && stackOk(ps));
+    for (const ps of cand) { if (done.length === 2) break; const keep = upper(ps), sig = keep.map(p => p.id).sort().join(); if (done.some(d => d.sig === sig)) continue;
+      const fav = ps.map(p => p.id).sort().join(), r = collect(pool, { fixed: keep, rand, tries: 250 }, VISIBLE(), 2).filter(o => o.key !== fav && !seen.has(o.key) && !recent?.has(o.key)).sort((a, b) => b.score - a.score)[0];
+      if (r) { seen.add(r.key); done.push({ sig, o: { ...r, anchor: null, note: 'A favorite of yours with new pants and shoes' } }); } }
+    // the card that already wears that top steps aside (a new top every card)
+    done.forEach((d, i) => { const k = res.findIndex(o => o.items.some(p => p.cat === 'Tops' && d.o.items.includes(p))); if (k >= 0) res.splice(k, 1); res.splice(Math.min(res.length, i ? 5 : 1), 0, d.o); }); res.length = Math.min(res.length, n); }
+  return spread(res);
 }
 
 // Why no style rule takes a look, and which piece to change: the one whose removal lets a rule pass. The builder shows this instead

@@ -670,4 +670,17 @@ console.log('edges ok');
   assert.ok(nov.later && nov.value < apr.value, 'shorts rank lower in November');
   // a picked name wins
   m.setTaste({ pins: [['#8a4a2a', 'brown']] }); assert.equal(m.colorName('#8a4a2a'), 'brown', 'pinned name'); m.setTaste(); assert.notEqual(m.colorName('#8a4a2a'), undefined);
+  // v5.77: a flannel under a work jacket is a layer, not two jackets; two knits still are too bulky
+  const wj = mk('wj', 'Layers', 'work jacket', '#c7af8d'), qz = mk('qz', 'Layers', 'quarter zip', '#7d7b78'), sw2 = mk('sw', 'Layers', 'sweater', '#544f48');
+  assert.ok(!m.proportion([tee, flan, wj, pants, kicks]).veto, 'tee + flannel + work jacket is fine');
+  assert.ok(m.proportion([tee, hood, sw2, pants, kicks]).veto, 'hoodie + sweater is too bulky');
+  // Today only stacks three the ways you wear it: no polo or button-up under, no flannel over a hoodie
+  assert.ok(m.stackOk([tee, flan, wj, pants]) && m.stackOk([tee, hood, wj, pants]), 'tee + flannel or hoodie + jacket');
+  assert.ok(!m.stackOk([polo, qz, wj, pants]) && !m.stackOk([mk('cs', 'Tops', 'short sleeve button-up', '#3f7a52'), qz, wj, pants]) && !m.stackOk([tee, hood, flan, pants]), 'no collar under a stack, no flannel over a hoodie');
+  // the same jacket never lands on two cards in a row; moods move the deck
+  const d2 = m.today([...many, pants, mk('p2', 'Bottoms', 'cargo pants', '#1b1a19'), mk('p3', 'Bottoms', 'chinos', '#c7af8d'), kicks, boots], { t: 8, n: 12, rand: m.seeded(9) }), L = o => o.items.filter(p => p.cat === 'Layers');
+  assert.ok(d2.every((o, k) => !k || !L(o).some(p => d2[k - 1].items.includes(p))), 'no layer back to back');
+  // a favorite comes back as a riff: its top half, new pants or shoes
+  const fv = m.today([...many, pants, mk('p2', 'Bottoms', 'cargo pants', '#1b1a19'), mk('p3', 'Bottoms', 'chinos', '#c7af8d'), kicks, boots], { t: 15, n: 12, rand: m.seeded(9), favs: [[many[0], many[1], pants, kicks]] });
+  assert.ok(fv.some(o => o.items.includes(many[0]) && o.items.includes(many[1]) && o.note?.startsWith('A favorite')), 'a favorite riff is in the deck');
   console.log('logic v2 ok'); }

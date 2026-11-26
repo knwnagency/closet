@@ -1,2 +1,2 @@
-2026.11.25 · v5.76
-Cold days: Today stopped putting the same coat on every card. Below 5° your coat still shows up, next to other warm layers like a hoodie under a jacket.
+2026.11.26 · v5.77
+Today: three layers only the way you wear them (tee, then a flannel or hoodie, then a jacket), never the same jacket twice in a row, two cards a day remix your favorites, and a mood row: calm or stand out. Build: a flannel under a jacket works now, and under 80 it shows the one swap that raises your match.
