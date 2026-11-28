@@ -704,23 +704,36 @@ export const stackOk = ps => { const up = ps.filter(p => p.cat === 'Tops' || p.c
   const { Tops: b, Layers: m, Outer: o } = bySlot(ps), k = p => `${p.kind ?? ''} ${p.name ?? ''}`;
   return up.length === 3 && !!(b && m && o) && !openShirt(b) && !/polo|button|oxford|collar|turtle|mock ?neck/i.test(k(b)) && !shirtish(o) && level(o) >= 3 && !/blazer/i.test(k(o))
     && (shirtish(m) || level(m) === 2) && new Set(colored(up).map(p => colorName(p.color))).size <= 1; };
-// v5.77 moods. calm: one color at most, no all-over print. bold: a strong color, a print, or an opposite-colors look.
-export const MOODS = { calm: 'calm', bold: 'stand out' };
-const moodFit = (o, mood) => { if (!MOODS[mood]) return 0; const cl = o.items.filter(p => p.cat !== 'Accessories'), c = new Set(colored(cl).map(p => colorName(p.color))).size, pat = patterns(cl).length;
-  if (mood === 'calm') return c <= 1 && !pat ? 1.5 : -0.8 * c - pat;
-  // earthy colors read calm even when they're colors; a loud print or two prints together stand out
-  const pop = colored(cl).some(p => !EARTH.includes(colorName(p.color))) || patterns(cl).some(p => !quietPrint(p)) || pat >= 2 || ['complementary', 'triadic'].includes(o.mode); return pop ? 1.5 : -1.2; };
+// v5.77 moods, more in v5.79. calm: one color at most, no all-over print. bold: a strong color, a print, or an opposite-colors look.
+// tonal: one color family. cozy: something soft (knit, hoodie, fleece, sweats). sharp: dressier than usual. sporty: athletic pieces.
+export const MOODS = { calm: 'calm', bold: 'stand out', tonal: 'tonal', cozy: 'cozy', sharp: 'sharp', sporty: 'sporty' };
 const EARTH = ['olive', 'sage', 'beige', 'camel', 'brown', 'forest', 'khaki', 'tan', 'taupe', 'cream', 'navy', 'denim'];
+const kn = p => `${p.kind ?? ''} ${p.name ?? ''}`;
+const MOOD_TEST = {
+  calm: (cl, o) => new Set(colored(cl).map(p => colorName(p.color))).size <= 1 && !patterns(cl).length,
+  // earthy colors read calm even when they're colors; a loud print or two prints together stand out
+  bold: (cl, o) => colored(cl).some(p => !EARTH.includes(colorName(p.color))) || patterns(cl).some(p => !quietPrint(p)) || patterns(cl).length >= 2 || ['complementary', 'triadic'].includes(o.mode),
+  tonal: (cl, o) => { const hs = colored(cl).map(p => hexToHsl(p.color).h); return o.mode === 'analogous' || hs.length >= 2 && pairs(hs).every(([a, b]) => hueDist(a, b) <= 35); },
+  cozy: cl => cl.some(p => /hoodie|sweater|knit|fleece|sherpa|sweatshirt|crewneck|cardigan|sweatpants|joggers|sweats/i.test(kn(p))),
+  sharp: cl => cl.reduce((t, p) => t + dress(p), 0) / (cl.length || 1) >= 1.3,
+  sporty: cl => cl.filter(p => [].concat(p.vibe ?? []).includes('athletic') || /track|jersey|running|trainer|athletic|gym/i.test(kn(p))).length >= 2,
+};
+const clothes = o => o.items.filter(p => p.cat !== 'Accessories');
+const moodFit = (o, mood) => !MOOD_TEST[mood] ? 0 : MOOD_TEST[mood](clothes(o), o) ? 1.5 : -1.2;
+// The mood a look reads as, for its card: the first that fits, most specific first. null = none in particular.
+export const moodOf = o => ['sporty', 'sharp', 'tonal', 'bold', 'cozy', 'calm'].find(m => MOOD_TEST[m](clothes(o), o)) ?? null;
 // v5.77: no piece of clothing on two cards in a row (the same jacket back to back). Best effort: a later card moves up.
 const spread = d => { for (let k = 1; k < d.length; k++) { const near = o => o.items.some(p => p.cat !== 'Accessories' && d[k - 1].items.includes(p));
   if (!near(d[k])) continue; const j = d.findIndex((o, i) => i > k && !near(o)); if (j > 0) [d[k], d[j]] = [d[j], d[k]]; } return d; };
-export function today(items, { t = null, rain = false, season = null, twoShirts = false, patternDay = null, occasion = null, occDress = null, n = 5, rand = Math.random, skip = [], recent = null, like = null, alone = false, wind = false, fresh = null, mood = null, favs = null } = {}) {
+export function today(items, { t = null, rain = false, season = null, twoShirts = false, patternDay = null, occasion = null, occDress = null, n = 5, rand = Math.random, skip = [], recent = null, like = null, alone = false, wind = false, fresh = null, mood = null, favs = null, pin = null } = {}) {
   // wind: a windy day leans toward a layer and a shell. fresh: ids you haven't worn in weeks, nudged up so the whole closet gets used
   // skip: what you wore lately (the app sends 4 days). Tops and light layers rest; jackets, coats, pants and shoes can repeat.
   if (OCCASIONS[occasion]?.dress >= 1.5) items = items.map(p => p.rate < 0 ? { ...p, rate: 0 } : p); // dressing up: pieces saved for special occasions come back
   const pool = forWeather(items, t, rain, season).filter(p => !(skip.includes(p.id) && (p.cat === 'Tops' || p.cat === 'Layers' && warmth(p) < 3))), cold = t != null && t < 12 && pool.some(p => p.cat === 'Layers');
   const [lo, hi] = warmthFor(t), coat = t != null && t < 5 && pool.some(p => warmth(p) >= 5);
-  let list = collect(pool, { rand, maxUse: 3, alone, noDress: !!OCCASIONS[occasion], layerOdds: cold ? 1 : wind && !(t >= 20) ? 0.85 : t != null && t >= 24 ? 0.15 : 0.5, layer2Odds: t == null ? 0 : t < 5 ? 0.6 : t < 12 ? 0.25 : 0 }, VISIBLE(), 30)
+  // pin (v5.79): a piece you said you're wearing today; every card is built around it (if the weather allows it)
+  const anchor = pin && pool.find(p => p.id === pin.id);
+  let list = collect(pool, { anchor, rand, maxUse: 3, alone, noDress: !!OCCASIONS[occasion], layerOdds: cold ? 1 : wind && !(t >= 20) ? 0.85 : t != null && t >= 24 ? 0.15 : 0.5, layer2Odds: t == null ? 0 : t < 5 ? 0.6 : t < 12 ? 0.25 : 0 }, VISIBLE(), 30)
     .filter(o => (!cold || o.items.some(p => p.cat === 'Layers')) && !recent?.has(o.key) && stackOk(o.items));
   // warm enough (v5.73): below 12° enough warmth stacked up. Only when enough looks are left.
   const warmOk = list.filter(o => lookWarmth(o.items) >= lo);
@@ -736,7 +749,7 @@ export function today(items, { t = null, rain = false, season = null, twoShirts 
       if (best) { used.add(best.p.id); o.items = [...o.items, best.p]; o.key = o.items.map(p => p.id).sort().join(); } } }
   for (let k = res.length - 1; k >= 0; k--) if (patterns(res[k].items).length >= 2 && twoPrints++) res.splice(k, 1); // pattern on pattern: about one day in three, one look that day
   // v5.77: two cards riff on your favorites: the top half you saved (warm enough, nothing resting), new pants and shoes. Cards 2 and 6.
-  if (favs?.length && res.length >= 4) { const ok = new Set(pool.map(p => p.id)), upper = ps => ps.filter(p => p.cat === 'Tops' || p.cat === 'Layers'), seen = new Set(res.map(o => o.key)), done = [];
+  if (!anchor && favs?.length && res.length >= 4) { const ok = new Set(pool.map(p => p.id)), upper = ps => ps.filter(p => p.cat === 'Tops' || p.cat === 'Layers'), seen = new Set(res.map(o => o.key)), done = [];
     const cand = favs.map(ps => [rand(), ps]).sort((a, b) => a[0] - b[0]).map(x => x[1]).filter(ps => upper(ps).length && new Set(upper(ps).map(slotOf)).size === upper(ps).length && upper(ps).every(p => ok.has(p.id)) && lookWarmth(upper(ps)) >= lo && stackOk(ps));
     for (const ps of cand) { if (done.length === 2) break; const keep = upper(ps), sig = keep.map(p => p.id).sort().join(); if (done.some(d => d.sig === sig)) continue;
       const fav = ps.map(p => p.id).sort().join(), r = collect(pool, { fixed: keep, rand, tries: 250 }, VISIBLE(), 2).filter(o => o.key !== fav && !seen.has(o.key) && !recent?.has(o.key)).sort((a, b) => b.score - a.score)[0];

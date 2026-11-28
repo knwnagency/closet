@@ -793,3 +793,13 @@
 
   /* v5.78: measures the real screen bottom for the stuck-menu fix (index.html fixStuck) */
   #vprobe { position: fixed; top: 0; left: 0; width: 1px; height: 100lvh; visibility: hidden; pointer-events: none; }
+  /* v5.79: moods are a quiet choice, not a second main button: an outline when picked, so the screen keeps one pop color */
+  .moods .pill.on { background: none; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .pinned { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -4px 0 12px; font-size: 13px; color: var(--muted); } .pinned b { color: var(--ink); font-weight: 600; }
+  /* a small bounce when you save or wear a look (iPhone web apps can't buzz) */
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
+  .popped { animation: pop .28s ease-out; } @media (prefers-reduced-motion: reduce) { .popped { animation: none; } }
+  .whyfix.boosts { display: grid; gap: 6px; justify-items: start; }
+  .tagcheck { display: grid; gap: 12px; margin-top: 12px; } .tcrow { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: start; }
+  .tcrow img { width: 64px; height: 64px; object-fit: contain; background: var(--card, #f1eee8); border-radius: 12px; } .tcrow .sub { display: block; margin: 2px 0 6px; } .tcrow .row2 { display: flex; gap: 6px; flex-wrap: wrap; }
+  .looks.nopes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; } .nope { display: grid; gap: 6px; justify-items: start; }

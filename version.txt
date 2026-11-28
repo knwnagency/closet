@@ -1,2 +1,2 @@
-2026.11.27 · v5.78
-Fix: the bottom menu and the save bar no longer get stuck in the middle of the screen after typing.
+2026.11.27 · v5.79
+The menu stuck mid-screen gets a stronger fix. Today: more moods (tonal, cozy, sharp, sporty), a mood tag on every card, "Wear it today" on a piece builds every look around it, and cards say why in your terms. Build: up to 3 swaps to raise the match, keep the top half or bottom half when you roll. Me: Check my tags. Wish list: Got it puts the piece in your closet.
