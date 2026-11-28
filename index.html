@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade, isDenim, openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS, seeded, kindTokens, shapeOf, blockedBy, MOODS, moodOf, roleOf } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.27 · v5.79'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.27 · v5.80'; // shown on Me, so you can tell the phone has the latest
 // jeans pick a wash: the plain "denim" swatch is the same color as mid wash, so it shows once (v5.79)
 const JEAN_SW = { ...WASHES, ...Object.fromEntries(Object.entries(SWATCHES).filter(([n]) => n !== 'denim')) };
 // v5.79: lock a whole half before you roll
@@ -2161,6 +2161,10 @@ const fixStuck = () => { const nav = document.querySelector('nav'); if (!solo ||
   const next = !typing && g > 2 && g < 600 ? g : 0; if (next !== stuck) { stuck = next; document.documentElement.style.setProperty('--stuck', `${next}px`); } };
 let stuckRaf = 0; const fixSoon = () => { if (!stuckRaf) stuckRaf = requestAnimationFrame(() => { stuckRaf = 0; fixStuck(); }); };
 window.fixSoon = fixSoon;
+// v5.80 TEMP: on-phone readout of the viewport numbers behind the stuck menu (phones only). Tap it to hide. Remove once fixed.
+if (Math.min(screen.width, screen.height) <= 500) { const dbg = Object.assign(document.createElement('div'), { id: 'vpdbg' }); dbg.onclick = () => dbg.remove(); document.body.append(dbg);
+  const tick = () => { if (!dbg.isConnected) return; const n = document.querySelector('nav').getBoundingClientRect(), v = window.visualViewport, cs = getComputedStyle(document.querySelector('nav'));
+    dbg.textContent = `solo ${solo} ih ${innerHeight} oh ${outerHeight} vv ${Math.round(v?.height)}/${Math.round(v?.offsetTop)}/${(v?.scale ?? 1).toFixed(2)} sc ${screen.width}x${screen.height} ch ${document.documentElement.clientHeight} nav ${Math.round(n.top)}-${Math.round(n.bottom)} pos ${cs.position} bot ${cs.bottom} pr ${Math.round(vprobe.getBoundingClientRect().bottom)} st ${stuck} y ${Math.round(scrollY)} sh ${document.documentElement.scrollHeight} b ${JSON.stringify(base)}`; setTimeout(tick, 500); }; tick(); }
 addEventListener('scroll', fixSoon, { passive: true }); window.visualViewport?.addEventListener('scroll', fixSoon); addEventListener('resize', fixSoon);
 document.addEventListener('visibilitychange', () => setTimeout(fixStuck, 200));
 const unstick = () => setTimeout(() => { scrollBy(0, 1); requestAnimationFrame(() => { scrollBy(0, -1); fixStuck(); setTimeout(fixStuck, 400); }); }, 150);
