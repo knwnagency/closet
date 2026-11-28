@@ -1,2 +1,2 @@
-2026.11.27 · v5.80
-A yellow line at the top shows screen numbers so the stuck menu can be fixed. Tap it to hide it.
+2026.11.27 · v5.81
+The bottom menu stays at the bottom: a new fix built from the numbers your phone showed. The yellow line is gone.

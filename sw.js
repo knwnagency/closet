@@ -1,6 +1,6 @@
 // Offline support. The app's own files: network first (so updates show up), this cache when there's no signal.
 // transformers.js + its wasm (versioned URLs on jsdelivr): cache first. The AI models cache themselves (transformers.js browser cache).
-const CACHE = 'closet-v106', SHELL = ['./', 'index.html', 'styles.css', 'match.js', 'style.js', 'cutout.js', 'progress.js', 'manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'version.txt', 'looks-worker.js'];
+const CACHE = 'closet-v107', SHELL = ['./', 'index.html', 'styles.css', 'match.js', 'style.js', 'cutout.js', 'progress.js', 'manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'version.txt', 'looks-worker.js'];
 const keep = (req, res) => { if (res.ok && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; };
 
 // cache: 'reload' skips the browser's 10-minute HTTP cache, so a new version never stores the old page (v5.34 got stuck on v5.33 that way)

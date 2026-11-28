@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade, isDenim, openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS, seeded, kindTokens, shapeOf, blockedBy, MOODS, moodOf, roleOf } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.27 · v5.80'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.27 · v5.81'; // shown on Me, so you can tell the phone has the latest
 // jeans pick a wash: the plain "denim" swatch is the same color as mid wash, so it shows once (v5.79)
 const JEAN_SW = { ...WASHES, ...Object.fromEntries(Object.entries(SWATCHES).filter(([n]) => n !== 'denim')) };
 // v5.79: lock a whole half before you roll
@@ -2146,27 +2146,22 @@ sheet.addEventListener('click', e => { if (e.target === sheet) sheet.close(); })
 document.addEventListener('toggle', e => { const g = e.target.dataset?.sg; if (g) (S.sopen ??= {})[g] = e.target.open; }, true); // Settings sections stay as you left them
 // iPhone: when the keyboard closes, the bottom menu can stay pinned where the keyboard's top was (mid-screen, over Build's options) until
 // the page scrolls. Put the keyboard away before a sheet goes, and nudge the page 1px and back whenever the keyboard closes.
-// v5.78: the nudge alone didn't always work (Build, 2026-11-27). Home Screen app only: measure how far the menu sits above the real screen
-// bottom (a 100lvh probe) and push the menu, Build's save bar, Today's buttons and the update banner down by that much (--stuck).
-// While typing it stays 0 so nothing hides behind the keyboard. Safari tabs skip it (100lvh there includes the hidden toolbar).
-const solo = matchMedia('(display-mode: standalone)').matches || !!navigator.standalone, vprobe = Object.assign(document.createElement('div'), { id: 'vprobe' });
-document.body.append(vprobe); let stuck = 0; const base = {};
+// v5.78-v5.81: the menu, Build's save bar and Today's buttons get pushed back down by the gap (--stuck). v5.81 reads only what the phone
+// reports reliably (the v5.80 readout: visualViewport returned junk, 100lvh counted the status bar): the tallest the page has been in this
+// orientation, and where the menu actually is. While typing that puts the menu behind the keyboard, which is fine.
+const solo = matchMedia('(display-mode: standalone)').matches || !!navigator.standalone;
+let stuck = 0; const tallest = {};
 const fixStuck = () => { const nav = document.querySelector('nav'); if (!solo || !nav) return;
-  // v5.79: the 100lvh probe can shrink with the stuck viewport too, so an iPhone also checks against the screen height. How far the menu
-  // normally sits from the screen bottom (status bar, rounding) is learned as the smallest gap seen per orientation; only more than that counts.
-  const phone = Math.min(screen.width, screen.height) <= 500, port = innerWidth < innerHeight, scr = phone ? (port ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height)) : 0;
-  const typing = document.activeElement?.matches?.('input, textarea, select, [contenteditable]'), nb = nav.getBoundingClientRect().bottom - stuck;
-  const raw = scr ? scr - (visualViewport?.offsetTop ?? 0) - nb : 0; if (scr && !typing) base[port] = Math.min(base[port] ?? Infinity, raw);
-  const g = Math.round(Math.max(vprobe.getBoundingClientRect().bottom - nb, scr && raw - (base[port] ?? raw) > 150 ? raw - base[port] : 0));
-  const next = !typing && g > 2 && g < 600 ? g : 0; if (next !== stuck) { stuck = next; document.documentElement.style.setProperty('--stuck', `${next}px`); } };
+  const o = screen.orientation?.type?.startsWith('landscape') ? 'l' : 'p', cap = o === 'p' ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+  tallest[o] = Math.min(cap, Math.max(tallest[o] ?? 0, innerHeight));
+  const g = Math.round(tallest[o] - (nav.getBoundingClientRect().bottom - stuck)), next = g > 2 && g < tallest[o] * 0.75 ? g : 0;
+  if (next !== stuck) { stuck = next; document.documentElement.style.setProperty('--stuck', `${next}px`); } };
 let stuckRaf = 0; const fixSoon = () => { if (!stuckRaf) stuckRaf = requestAnimationFrame(() => { stuckRaf = 0; fixStuck(); }); };
 window.fixSoon = fixSoon;
-// v5.80 TEMP: on-phone readout of the viewport numbers behind the stuck menu (phones only). Tap it to hide. Remove once fixed.
-if (Math.min(screen.width, screen.height) <= 500) { const dbg = Object.assign(document.createElement('div'), { id: 'vpdbg' }); dbg.onclick = () => dbg.remove(); document.body.append(dbg);
-  const tick = () => { if (!dbg.isConnected) return; const n = document.querySelector('nav').getBoundingClientRect(), v = window.visualViewport, cs = getComputedStyle(document.querySelector('nav'));
-    dbg.textContent = `solo ${solo} ih ${innerHeight} oh ${outerHeight} vv ${Math.round(v?.height)}/${Math.round(v?.offsetTop)}/${(v?.scale ?? 1).toFixed(2)} sc ${screen.width}x${screen.height} ch ${document.documentElement.clientHeight} nav ${Math.round(n.top)}-${Math.round(n.bottom)} pos ${cs.position} bot ${cs.bottom} pr ${Math.round(vprobe.getBoundingClientRect().bottom)} st ${stuck} y ${Math.round(scrollY)} sh ${document.documentElement.scrollHeight} b ${JSON.stringify(base)}`; setTimeout(tick, 500); }; tick(); }
 addEventListener('scroll', fixSoon, { passive: true }); window.visualViewport?.addEventListener('scroll', fixSoon); addEventListener('resize', fixSoon);
-document.addEventListener('visibilitychange', () => setTimeout(fixStuck, 200));
+document.addEventListener('visibilitychange', () => setTimeout(fixStuck, 200)); document.addEventListener('focusout', () => setTimeout(fixStuck, 300));
+// safety net: one measurement a second, in case the page shrank without an event
+if (solo) setInterval(fixStuck, 1000);
 const unstick = () => setTimeout(() => { scrollBy(0, 1); requestAnimationFrame(() => { scrollBy(0, -1); fixStuck(); setTimeout(fixStuck, 400); }); }, 150);
 sheet.addEventListener('close', () => { if (document.activeElement?.matches?.('input, textarea, select, [contenteditable]')) document.activeElement.blur(); unstick(); });
 document.addEventListener('focusout', e => { if (e.target.matches?.('input, textarea, [contenteditable]')) unstick(); });
