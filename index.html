@@ -42,7 +42,7 @@ import { dayKey, prevDay, streaks, badges, points, levelOf, LEVELS, unlocks } fr
 import { lookPool, lookRules, comboBook, comboLooks, topLooks, hslToHex, complete as completeLook, rainy, bySlot, whyNot, CATS, PRINTABLE, MODES, FITS, HARMONIES, SLOTS, generate, harmony, nearHue, colorName, isNeutral, hexToHsl, tryPiece, rankSwaps, bestMode, fixTip, madeWith, possibilities, combo, FIT_ORDER, patternOf, today, setTaste, knownFit, level, dress, MATERIALS, OCCASIONS, explain, forWeather, slotOf, extractPalette, colorDist, flatLayout, isHat, closestOwned, packTrip, accentsOf, echoes, SWATCHES, isShade, isDenim, openShirt, PRINTS, BASICS, basicPiece, sameJob, tone, swatch, WASHES, CUTS, seeded, kindTokens, shapeOf, blockedBy, MOODS } from './match.js';
 import { cleanAlpha, floodOut, keyOut, orient, smoothEdges, pileBoxes } from './cutout.js';
 import { COMBOS, JEANS, TROUSERS, COLOR_SEASONS } from './style.js';
-const VERSION = '2026.11.26 · v5.77'; // shown on Me, so you can tell the phone has the latest
+const VERSION = '2026.11.27 · v5.78'; // shown on Me, so you can tell the phone has the latest
 
 // ---------- storage (IndexedDB: images are blobs, too big for localStorage) ----------
 const STORES = [['items', 'id'], ['outfits', 'key'], ['log', 'day'], ['wish', 'id'], ['colls', 'id'], ['inspo', 'id'], ['profile', 'k'], ['full', 'id'], ['orig', 'id'], ['queue', 'id']];
@@ -2063,7 +2063,8 @@ function render() {
   if (S.view === 'today' && render.view === 'today' && S.deck && render.deck === S.deck && Date.now() - lastSwipe < 1500) deckAtNow();
   let html; try { html = VIEWS[S.view](); } catch (err) { console.error(err); // a broken screen says why instead of silently not opening
     html = `<div class="empty"><h2>This screen hit an error</h2><p>Screenshot this and send it to Claude. The other tabs still work.</p><pre class="crash">${esc(`${VERSION} · ${S.view}\n${err?.stack ?? err}`.slice(0, 900))}</pre><button class="btn ghost sm" data-action="copyerr">Copy error</button></div>`; }
-  app.innerHTML = html;
+  // fixSoon (stuck bottom menu) is set up further down, after the first render
+  app.innerHTML = html; window.fixSoon?.();
   scrollers().forEach((e, i) => { e.scrollLeft = keep[i] ?? 0; });
   render.view = S.view; render.deck = S.deck; upPill();
   if (S.view === 'today' && S.deck) { const dk = document.querySelector('.deck'); if (dk?.children[S.deck.at]) dk.scrollLeft = dk.children[S.deck.at].offsetLeft - dk.firstElementChild.offsetLeft; }
@@ -2081,10 +2082,22 @@ sheet.addEventListener('click', e => { if (e.target === sheet) sheet.close(); })
 document.addEventListener('toggle', e => { const g = e.target.dataset?.sg; if (g) (S.sopen ??= {})[g] = e.target.open; }, true); // Settings sections stay as you left them
 // iPhone: when the keyboard closes, the bottom menu can stay pinned where the keyboard's top was (mid-screen, over Build's options) until
 // the page scrolls. Put the keyboard away before a sheet goes, and nudge the page 1px and back whenever the keyboard closes.
-const unstick = () => setTimeout(() => { scrollBy(0, 1); scrollBy(0, -1); }, 150);
+// v5.78: the nudge alone didn't always work (Build, 2026-11-27). Home Screen app only: measure how far the menu sits above the real screen
+// bottom (a 100lvh probe) and push the menu, Build's save bar, Today's buttons and the update banner down by that much (--stuck).
+// While typing it stays 0 so nothing hides behind the keyboard. Safari tabs skip it (100lvh there includes the hidden toolbar).
+const solo = matchMedia('(display-mode: standalone)').matches || !!navigator.standalone, vprobe = Object.assign(document.createElement('div'), { id: 'vprobe' });
+document.body.append(vprobe); let stuck = 0;
+const fixStuck = () => { const nav = document.querySelector('nav'); if (!solo || !nav) return;
+  const typing = document.activeElement?.matches?.('input, textarea, select, [contenteditable]'), g = Math.round(vprobe.getBoundingClientRect().bottom - nav.getBoundingClientRect().bottom) + stuck;
+  const next = !typing && g > 2 && g < 600 ? g : 0; if (next !== stuck) { stuck = next; document.documentElement.style.setProperty('--stuck', `${next}px`); } };
+let stuckRaf = 0; const fixSoon = () => { if (!stuckRaf) stuckRaf = requestAnimationFrame(() => { stuckRaf = 0; fixStuck(); }); };
+window.fixSoon = fixSoon;
+addEventListener('scroll', fixSoon, { passive: true }); window.visualViewport?.addEventListener('scroll', fixSoon); addEventListener('resize', fixSoon);
+document.addEventListener('visibilitychange', () => setTimeout(fixStuck, 200));
+const unstick = () => setTimeout(() => { scrollBy(0, 1); requestAnimationFrame(() => { scrollBy(0, -1); fixStuck(); setTimeout(fixStuck, 400); }); }, 150);
 sheet.addEventListener('close', () => { if (document.activeElement?.matches?.('input, textarea, select, [contenteditable]')) document.activeElement.blur(); unstick(); });
 document.addEventListener('focusout', e => { if (e.target.matches?.('input, textarea, [contenteditable]')) unstick(); });
-window.visualViewport?.addEventListener('resize', () => { if (visualViewport.height >= innerHeight - 2) unstick(); });
+window.visualViewport?.addEventListener('resize', () => { fixSoon(); if (visualViewport.height >= innerHeight - 2) unstick(); });
 const closeBtn = `<button class="icon close" data-action="close" aria-label="Close">${xIcon}</button>`;
 const kindOptions = it => { const ks = Object.keys(KINDS).filter(k => KINDS[k] === it.cat); if (it.kind && !ks.includes(it.kind)) ks.unshift(it.kind);
   return ks.map(k => `<option ${k === it.kind ? 'selected' : ''}>${k}</option>`).join('') + '<option value="__other">Other (type your own)…</option>'; };

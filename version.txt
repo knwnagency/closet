@@ -1,2 +1,2 @@
-2026.11.26 · v5.77
-Today: three layers only the way you wear them (tee, then a flannel or hoodie, then a jacket), never the same jacket twice in a row, two cards a day remix your favorites, and a mood row: calm or stand out. Build: a flannel under a jacket works now, and under 80 it shows the one swap that raises your match.
+2026.11.27 · v5.78
+Fix: the bottom menu and the save bar no longer get stuck in the middle of the screen after typing.
